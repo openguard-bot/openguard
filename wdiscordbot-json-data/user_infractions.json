@@ -1,0 +1,13 @@
+{
+  "1383112747171971163_1146391317295935570": [
+    {
+      "timestamp": "2025-06-13T16:13:13.435836+00:00",
+      "rule_violated": "4",
+      "action_taken": "TIMEOUT_MEDIUM",
+      "reasoning": "The message contains the word 'nigger', which is explicitly defined as a severe violation under the server's specific rule guidance for slurs.",
+      "guild_id": 1383112747171971163
+    }
+  ],
+  "1360706427861209259_1363657432768839840": [],
+  "1360706427861209259_1383544810517958776": []
+}

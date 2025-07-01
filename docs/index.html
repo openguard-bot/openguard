@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mod Bot Documentation</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+        }
+        code {
+            background: #eee;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        .command {
+            margin-bottom: 15px;
+        }
+        .command-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .command-description {
+            margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Mod Bot Documentation</h1>
+
+        <h2>User Information (`abtuser.py`)</h2>
+        <div class="command">
+            <div class="command-name">/aboutuser [user]</div>
+            <div class="command-description">Displays detailed information about a specified user or the person who issued the command.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/userinfo_admin set [user] [key] [value]</div>
+            <div class="command-description">Sets a custom data field for a user (admin only).</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/userinfo_admin remove [user] [key]</div>
+            <div class="command-description">Removes a custom data field from a user (admin only).</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/userinfo_admin list [user]</div>
+            <div class="command-description">Lists all custom data fields for a user (admin only).</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/userinfo_admin clear [user]</div>
+            <div class="command-description">Clears all custom data for a user (admin only).</div>
+        </div>
+
+        <h2>AI Moderation (`aimod.py`)</h2>
+        <div class="command">
+            <div class="command-name">/aimod config logchannel [channel]</div>
+            <div class="command-description">Sets the channel for moderation logs.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod config setlang [language]</div>
+            <div class="command-description">Sets the bot's response language for the server.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod config suggestionschannel [channel]</div>
+            <div class="command-description">Sets the channel for user suggestions.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod config moderatorrole [role]</div>
+            <div class="command-description">Sets the role for moderators.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod config suicidalpingrole [role]</div>
+            <div class="command-description">Sets the role to be pinged for suicidal content alerts.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod config addnsfwchannel [channel]</div>
+            <div class="command-description">Adds a channel to the NSFW list.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod config removensfwchannel [channel]</div>
+            <div class="command-description">Removes a channel from the NSFW list.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod config listnsfwchannels</div>
+            <div class="command-description">Lists all configured NSFW channels.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod config enable [true/false]</div>
+            <div class="command-description">Enables or disables AI moderation for the server.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod infractions view [user]</div>
+            <div class="command-description">Views a user's infraction history.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod infractions clear [user]</div>
+            <div class="command-description">Clears a user's infraction history.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod model set [model]</div>
+            <div class="command-description">Sets the AI model for moderation.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod model get</div>
+            <div class="command-description">Displays the current AI moderation model.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod debug testmode [true/false]</div>
+            <div class="command-description">Enables or disables test mode for AI moderation.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod debug last_decisions</div>
+            <div class="command-description">Shows the last 5 AI moderation decisions.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod appeals appeal [reason]</div>
+            <div class="command-description">Submits an appeal for a moderation action.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/pull_rules</div>
+            <div class="command-description">Updates the server's rules from the designated rules channel.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/aimod globalban manage [add/remove] [userid]</div>
+            <div class="command-description">Adds or removes a user from the global ban list.</div>
+        </div>
+
+        <h2>Credits (`credits.py`)</h2>
+        <div class="command">
+            <div class="command-name">/aimodcredits</div>
+            <div class="command-description">Displays the credits for the AI Mod Bot.</div>
+        </div>
+
+        <h2>Hardware Information (`hwinfo.py`)</h2>
+        <div class="command">
+            <div class="command-name">/system check</div>
+            <div class="command-description">Shows detailed system and bot information.</div>
+        </div>
+        <div class="command">
+            <div class="command-name">/system temps</div>
+            <div class="command-description">Displays hardware temperature information.</div>
+        </div>
+
+        <h2>Information (`info.py`)</h2>
+        <div class="command">
+            <div class="command-name">/aimodinfo help</div>
+            <div class="command-description">Shows a list of all `/aimod` commands.</div>
+        </div>
+
+        <h2>Shell (`shell.py`)</h2>
+        <div class="command">
+            <div class="command-name">/shell [command]</div>
+            <div class="command-description">Executes a shell command (owner only).</div>
+        </div>
+         <div class="command">
+            <div class="command-name">/shell_app [command]</div>
+            <div class="command-description">Executes a shell command (owner only).</div>
+        </div>
+
+        <h2>Statistics (`statistics.py`)</h2>
+        <p>This module provides bot statistics but has no user-facing commands.</p>
+
+    </div>
+</body>
+</html>

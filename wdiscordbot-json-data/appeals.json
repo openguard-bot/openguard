@@ -1,0 +1,86 @@
+{
+  "efa24e32-de11-49d2-b7ba-a1f6cc8957c8": {
+    "appeal_id": "efa24e32-de11-49d2-b7ba-a1f6cc8957c8",
+    "user_id": 1146391317295935570,
+    "reason": "test",
+    "timestamp": "2025-06-13T15:59:24.200358+00:00",
+    "status": "accepted",
+    "original_infraction": {
+      "timestamp": "2025-06-13T15:58:10.402783+00:00",
+      "rule_violated": "4",
+      "action_taken": "BAN",
+      "reasoning": "The message contains the word 'nigger', which is explicitly stated as a severe violation in the specific rule guidance for slurs.",
+      "guild_id": 1383112747171971163
+    }
+  },
+  "b5733501-9e02-457e-a873-f5db70f7f348": {
+    "appeal_id": "b5733501-9e02-457e-a873-f5db70f7f348",
+    "user_id": 1146391317295935570,
+    "reason": "no",
+    "timestamp": "2025-06-13T16:00:55.597461+00:00",
+    "status": "denied",
+    "original_infraction": {
+      "timestamp": "2025-06-13T15:58:10.402783+00:00",
+      "rule_violated": "4",
+      "action_taken": "BAN",
+      "reasoning": "The message contains the word 'nigger', which is explicitly stated as a severe violation in the specific rule guidance for slurs.",
+      "guild_id": 1383112747171971163
+    }
+  },
+  "1eff8610-7757-4791-8de7-d2c49ae6c842": {
+    "appeal_id": "1eff8610-7757-4791-8de7-d2c49ae6c842",
+    "user_id": 1146391317295935570,
+    "reason": "yes",
+    "timestamp": "2025-06-13T16:01:03.423981+00:00",
+    "status": "accepted",
+    "original_infraction": {
+      "timestamp": "2025-06-13T15:58:10.402783+00:00",
+      "rule_violated": "4",
+      "action_taken": "BAN",
+      "reasoning": "The message contains the word 'nigger', which is explicitly stated as a severe violation in the specific rule guidance for slurs.",
+      "guild_id": 1383112747171971163
+    }
+  },
+  "d7d83d99-f496-4e9f-9399-57965fdb1b49": {
+    "appeal_id": "d7d83d99-f496-4e9f-9399-57965fdb1b49",
+    "user_id": 1146391317295935570,
+    "reason": "d",
+    "timestamp": "2025-06-13T16:13:34.420886+00:00",
+    "status": "accepted",
+    "original_infraction": {
+      "timestamp": "2025-06-13T16:13:13.435836+00:00",
+      "rule_violated": "4",
+      "action_taken": "TIMEOUT_MEDIUM",
+      "reasoning": "The message contains the word 'nigger', which is explicitly defined as a severe violation under the server's specific rule guidance for slurs.",
+      "guild_id": 1383112747171971163
+    }
+  },
+  "43750a3d-561f-409c-bd3b-f5e5165b7599": {
+    "appeal_id": "43750a3d-561f-409c-bd3b-f5e5165b7599",
+    "user_id": 1363657432768839840,
+    "reason": "gay sex",
+    "timestamp": "2025-06-13T22:46:02.026165+00:00",
+    "status": "accepted",
+    "original_infraction": {
+      "timestamp": "2025-06-13T22:44:27.396692+00:00",
+      "rule_violated": "4",
+      "action_taken": "TIMEOUT_LONG",
+      "reasoning": "The message explicitly refers to and advocates for the inclusion of the 'hard r' racial slur, which is defined as a severe violation and falls under prohibited discrimination.",
+      "guild_id": 1360706427861209259
+    }
+  },
+  "03356bea-8835-4509-9cb3-e0de8cbaf71c": {
+    "appeal_id": "03356bea-8835-4509-9cb3-e0de8cbaf71c",
+    "user_id": 1363657432768839840,
+    "reason": "cock joke",
+    "timestamp": "2025-06-13T23:28:29.060453+00:00",
+    "status": "accepted",
+    "original_infraction": {
+      "timestamp": "2025-06-13T23:28:04.966130+00:00",
+      "rule_violated": "3",
+      "action_taken": "TIMEOUT_LONG",
+      "reasoning": "The message contains highly explicit and aggressive language directed at another user, which constitutes a targeted personal attack and goes beyond acceptable edgy humor, violating Rule 3 (Respectful Conduct & Edgy Humor). While the server permits edgy humor, this statement is not clearly a joke within the given context and could be perceived as genuine harassment.",
+      "guild_id": 1360706427861209259
+    }
+  }
+}

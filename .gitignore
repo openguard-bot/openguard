@@ -1,0 +1,9 @@
+aimod-vertex-reference/
+__pycache__/
+*.py[cod]
+bot.log
+*venv/
+disagreement-docs/
+gen-lang-client-0935200418-e49dcdb7f33f.json
+disagrement-lib/
+refactored_bot/
