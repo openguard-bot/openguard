@@ -11,24 +11,20 @@ import random
 import os
 import asyncio
 import aiofiles
-from google.genai import types
-from google.api_core import exceptions as google_exceptions
-import google.genai as genai
 from .aimod_helpers.ui import AppealButton, AppealActions
 from .aimod_helpers.config_manager import (
-    VERTEX_PROJECT_ID, VERTEX_LOCATION, DEFAULT_VERTEX_AI_MODEL, STANDARD_SAFETY_SETTINGS,
+    VERTEX_PROJECT_ID, VERTEX_LOCATION, DEFAULT_VERTEX_AI_MODEL,
     MOD_LOG_API_SECRET_ENV_VAR,
     GUILD_CONFIG, USER_INFRACTIONS, APPEALS, GLOBAL_BANS,
     save_guild_config, save_user_infractions, save_appeals, save_global_bans,
-    get_guild_config, set_guild_config, t, GUILD_LANGUAGE_KEY, DEFAULT_LANGUAGE,
+    get_guild_config_async, set_guild_config, t, GUILD_LANGUAGE_KEY, DEFAULT_LANGUAGE,
 )
 from .aimod_helpers.utils import (
     truncate_text, format_timestamp, get_user_infraction_history, add_user_infraction
 )
 from .aimod_helpers.media_processor import MediaProcessor
 from .aimod_helpers.system_prompt import SUICIDAL_HELP_RESOURCES, SYSTEM_PROMPT_TEMPLATE
-
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+from .aimod_helpers.litellm_config import get_litellm_client
 
 DEV_AIMODTEST_USER_IDS = {1146391317295935570, 452666956353503252, 1141746562922459136}
 DEV_AIMODTEST_ENABLED = False
@@ -38,7 +34,7 @@ def is_dev_aimodtest_user(interaction: discord.Interaction) -> bool:
 
 class ModerationCog(commands.Cog):
     """
-    A Discord Cog that uses Vertex AI to moderate messages based on server rules.
+    A Discord Cog that uses LiteLLM with OpenRouter to moderate messages based on server rules.
     """
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -46,10 +42,10 @@ class ModerationCog(commands.Cog):
         self.last_ai_decisions = collections.deque(maxlen=5)
         self.media_processor = MediaProcessor()
         try:
-            self.genai_client = genai.Client(vertexai=False, api_key=GEMINI_API_KEY)
-            print("ModerationCog: GenAI client initialized successfully.")
+            self.genai_client = get_litellm_client()
+            print("ModerationCog: LiteLLM client initialized successfully.")
         except Exception as e:
-            print(f"ModerationCog: Failed to initialize GenAI client: {e}")
+            print(f"ModerationCog: Failed to initialize LiteLLM client: {e}")
             self.genai_client = None
         print("ModerationCog Initializing.")
 
@@ -57,10 +53,10 @@ class ModerationCog(commands.Cog):
         print("ModerationCog cog_load started.")
         if not self.genai_client:
             try:
-                self.genai_client = genai.Client(vertexai=False, api_key=GEMINI_API_KEY)
-                print("ModerationCog: GenAI client re-initialized on load.")
+                self.genai_client = get_litellm_client()
+                print("ModerationCog: LiteLLM client re-initialized on load.")
             except Exception as e:
-                print(f"ModerationCog: Failed to re-initialize GenAI client on load: {e}")
+                print(f"ModerationCog: Failed to re-initialize LiteLLM client on load: {e}")
         print("ModerationCog cog_load finished.")
 
         # Auto-ban any users already in servers who are on the global ban list
@@ -77,7 +73,7 @@ class ModerationCog(commands.Cog):
                         except Exception as e:
                             print(f"Could not DM globally banned user {member}: {e}")
                         # Optionally log to mod log channel
-                        log_channel_id = get_guild_config(guild.id, "MOD_LOG_CHANNEL_ID")
+                        log_channel_id = await get_guild_config_async(guild.id, "MOD_LOG_CHANNEL_ID")
                         log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                         if log_channel:
                             embed = discord.Embed(
@@ -105,13 +101,11 @@ class ModerationCog(commands.Cog):
             await self.session.close()
         print("ModerationCog Unloaded, session closed.")
 
-    aimod_group = app_commands.Group(name="aimod", description="AI Moderation commands.")
-    config_subgroup = app_commands.Group(name="config", description="Configure AI moderation settings.", parent=aimod_group)
-    infractions_subgroup = app_commands.Group(name="infractions", description="Manage user infractions.", parent=aimod_group)
-    globalban_subgroup = app_commands.Group(name="globalban", description="Manage global bans.", parent=aimod_group)
-    model_subgroup = app_commands.Group(name="model", description="Manage the AI model for moderation.", parent=aimod_group)
-    debug_subgroup = app_commands.Group(name="debug", description="Debugging commands for AI moderation.", parent=aimod_group)
-    appeals_subgroup = app_commands.Group(name="appeals", description="Manage moderation appeals.", parent=aimod_group)
+    config_subgroup = app_commands.Group(name="config", description="Configure AI moderation settings.")
+    infractions_subgroup = app_commands.Group(name="infractions", description="Manage user infractions.")
+    globalban_subgroup = app_commands.Group(name="globalban", description="Manage global bans.")
+    model_subgroup = app_commands.Group(name="model", description="Manage the AI model for moderation.")
+    debug_subgroup = app_commands.Group(name="debug", description="Debugging commands for AI moderation.")
 
     @globalban_subgroup.command(name="manage", description="Add or remove a user from the global ban list.")
     @app_commands.describe(action="Whether to add or remove the user.", userid="The ID of the user to manage.")
@@ -149,10 +143,8 @@ class ModerationCog(commands.Cog):
         else:
             await interaction.response.send_message("Invalid action. Please choose 'add' or 'remove'.", ephemeral=True)
 
-    aimoddata_group = app_commands.Group(name="aimoddata", description="AI Mod Data commands.")
-
-    @aimoddata_group.command(name="stats", description="Show bot stats")
-    async def aimoddata_stats(self, interaction: discord.Interaction):
+    @app_commands.command(name="stats", description="Show bot stats")
+    async def stats(self, interaction: discord.Interaction):
         bot_user = self.bot.user
         if not bot_user:
             await interaction.response.send_message("Bot user not found.", ephemeral=True)
@@ -166,7 +158,7 @@ class ModerationCog(commands.Cog):
         embed.set_thumbnail(url=bot_user.display_avatar.url)
         await interaction.response.send_message(embed=embed, ephemeral=False)
 
-    @aimod_group.command(name="testlog", description="Send a test moderation log embed.")
+    @app_commands.command(name="testlog", description="Send a test moderation log embed.")
     @app_commands.describe(language="The language code for the embed (e.g., 'en', 'es', 'ja')", action="The action to simulate ('timeout', 'kick', 'ban')")
     @app_commands.choices(action=[
         app_commands.Choice(name="Timeout", value="timeout"),
@@ -295,7 +287,7 @@ class ModerationCog(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def modset_add_nsfw_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         guild_id = interaction.guild.id
-        nsfw_channels: list[int] = get_guild_config(guild_id, "NSFW_CHANNEL_IDS", [])
+        nsfw_channels: list[int] = await get_guild_config_async(guild_id, "NSFW_CHANNEL_IDS", [])
         if channel.id not in nsfw_channels:
             nsfw_channels.append(channel.id)
             await set_guild_config(guild_id, "NSFW_CHANNEL_IDS", nsfw_channels)
@@ -308,7 +300,7 @@ class ModerationCog(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def modset_remove_nsfw_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         guild_id = interaction.guild.id
-        nsfw_channels: list[int] = get_guild_config(guild_id, "NSFW_CHANNEL_IDS", [])
+        nsfw_channels: list[int] = await get_guild_config_async(guild_id, "NSFW_CHANNEL_IDS", [])
         if channel.id in nsfw_channels:
             nsfw_channels.remove(channel.id)
             await set_guild_config(guild_id, "NSFW_CHANNEL_IDS", nsfw_channels)
@@ -320,7 +312,7 @@ class ModerationCog(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def modset_list_nsfw_channels(self, interaction: discord.Interaction):
         guild_id = interaction.guild.id
-        nsfw_channel_ids: list[int] = get_guild_config(guild_id, "NSFW_CHANNEL_IDS", [])
+        nsfw_channel_ids: list[int] = await get_guild_config_async(guild_id, "NSFW_CHANNEL_IDS", [])
         if not nsfw_channel_ids:
             await interaction.response.send_message("No NSFW channels are currently configured.", ephemeral=False)
             return
@@ -347,7 +339,7 @@ class ModerationCog(commands.Cog):
     @infractions_subgroup.command(name="view", description="View a user's AI moderation infraction history (mod/admin only).")
     @app_commands.describe(user="The user to view infractions for")
     async def viewinfractions(self, interaction: discord.Interaction, user: discord.Member):
-        moderator_role_id = get_guild_config(interaction.guild.id, "MODERATOR_ROLE_ID")
+        moderator_role_id = await get_guild_config_async(interaction.guild.id, "MODERATOR_ROLE_ID")
         moderator_role = interaction.guild.get_role(moderator_role_id) if moderator_role_id else None
 
         has_permission = (interaction.user.guild_permissions.administrator or
@@ -416,12 +408,12 @@ class ModerationCog(commands.Cog):
         await interaction.response.send_message(f"Cleared {len(infractions)} infraction(s) for {user.mention}.", ephemeral=False)
 
     @model_subgroup.command(name="set", description="Change the AI model used for moderation (admin only).")
-    @app_commands.describe(model="The Vertex AI model to use (e.g., 'gemini-1.5-flash-001')")
+    @app_commands.describe(model="The Vertex AI model to use (e.g., 'gemini-2.0-flash-001')")
     @app_commands.checks.has_permissions(administrator=True)
     async def modsetmodel(self, interaction: discord.Interaction, model: str):
 
         if not model or len(model) < 5:
-            await interaction.response.send_message("Invalid model format. Please provide a valid Vertex AI model ID (e.g., 'gemini-1.5-flash-001').", ephemeral=False)
+            await interaction.response.send_message("Invalid model format. Please provide a valid Vertex AI model ID (e.g., 'gemini-2.0-flash-001').", ephemeral=False)
             return
 
         guild_id = interaction.guild.id
@@ -432,7 +424,7 @@ class ModerationCog(commands.Cog):
     @model_subgroup.command(name="get", description="View the current AI model used for moderation.")
     async def modgetmodel(self, interaction: discord.Interaction):
         guild_id = interaction.guild.id
-        model_used = get_guild_config(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
+        model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
         embed = discord.Embed(
             title="AI Moderation Model",
             description=f"The current AI model used for moderation in this server is:",
@@ -440,17 +432,17 @@ class ModerationCog(commands.Cog):
         )
         embed.add_field(name="Model", value=f"`{model_used}`", inline=False)
         embed.add_field(name="Default Model", value=f"`{DEFAULT_VERTEX_AI_MODEL}`", inline=False)
-        embed.set_footer(text="Use /modsetmodel to change the model")
+        embed.set_footer(text="Use /model set to change the model")
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed, ephemeral=False)
 
     async def query_vertex_ai(self, message: discord.Message, message_content: str, user_history: str, image_data_list=None):
         """
-        Sends the message content, user history, and additional context to the Vertex AI API for analysis.
+        Sends the message content, user history, and additional context to the LiteLLM API for analysis.
         """
         guild_id = message.guild.id
-        model_used = get_guild_config(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
-        rules_text = self.get_server_rules(guild_id)
+        model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
+        rules_text = await self.get_server_rules(guild_id)
         system_prompt_text = SYSTEM_PROMPT_TEMPLATE.format(rules_text=rules_text)
 
         user_role = "Member"
@@ -460,6 +452,11 @@ class ModerationCog(commands.Cog):
             user_role = "Moderator"
         elif message.guild.owner_id == message.author.id:
             user_role = "Server Owner"
+
+        # Get user's top 10 roles, highest first
+        user_role_list = [role.name for role in reversed(message.author.roles) if not role.is_default()]
+        top_10_roles = user_role_list[:10]
+        user_roles_text = ", ".join(top_10_roles) if top_10_roles else "User has no roles."
 
         channel_category = message.channel.category.name if message.channel.category else "No Category"
         is_nsfw_channel = getattr(message.channel, 'nsfw', False)
@@ -485,6 +482,7 @@ class ModerationCog(commands.Cog):
         user_prompt = f"""
 **Context Information:**
 - User's Server Role: {user_role}
+- User's Top 10 Roles: {user_roles_text}
 - Channel Category: {channel_category}
 - Channel Age-Restricted/NSFW (Discord Setting): {is_nsfw_channel}
 - {replied_to_content}
@@ -498,31 +496,36 @@ class ModerationCog(commands.Cog):
 {message_content if message_content else "[No text content]"}
 """
         
-        request_contents = [system_prompt_text, user_prompt]
+        # Prepare messages for LiteLLM format
+        messages = [
+            {"role": "system", "content": system_prompt_text},
+            {"role": "user", "content": user_prompt}
+        ]
+
+        # Handle image attachments for LiteLLM
         if image_data_list:
+            # For now, we'll add image descriptions to the user message
+            # LiteLLM/OpenRouter vision support may vary by model
+            image_descriptions = []
             for mime_type, image_bytes, attachment_type, filename in image_data_list:
-                request_contents.append(types.Part(inline_data=types.Blob(mime_type=mime_type, data=image_bytes)))
+                image_descriptions.append(f"[{attachment_type.upper()} ATTACHMENT: {filename}]")
                 print(f"Added {attachment_type} attachment to AI analysis: {filename}")
 
+            if image_descriptions:
+                messages[-1]["content"] += "\n\nAttachments:\n" + "\n".join(image_descriptions)
+
         try:
-            thinking_config = types.ThinkingConfig(
-                thinking_budget=2048
-            )
-            generation_config = types.GenerateContentConfig(
-                temperature=0.2,
-                safety_settings=STANDARD_SAFETY_SETTINGS,
-                thinking_config=thinking_config
-            )
-            response = await self.genai_client.aio.models.generate_content(
+            response = await self.genai_client.generate_content(
                 model=model_used,
-                contents=request_contents,
-                config=generation_config,
+                messages=messages,
+                temperature=0.2,
+                max_tokens=4096
             )
             
             ai_response_text = response.text
 
             if not ai_response_text:
-                print("Error: Empty response from Vertex AI API.")
+                print("Error: Empty response from LiteLLM API.")
                 return None
 
             try:
@@ -554,11 +557,8 @@ class ModerationCog(commands.Cog):
                 print(f"Error parsing AI response as JSON: {e}")
                 print(f"Raw AI response: {ai_response_text}")
                 return None
-        except google_exceptions.GoogleAPICallError as e:
-            print(f"Vertex AI API call error: {e}")
-            return None
         except Exception as e:
-            print(f"Exception during Vertex AI API call: {e}")
+            print(f"Exception during LiteLLM API call: {e}")
             return None
 
     async def handle_violation(self, message: discord.Message, ai_decision: dict, notify_mods_message: str = None):
@@ -568,7 +568,7 @@ class ModerationCog(commands.Cog):
         guild_id = message.guild.id
         user_id = message.author.id
 
-        test_mode_enabled = get_guild_config(guild_id, "TEST_MODE_ENABLED", False)
+        test_mode_enabled = await get_guild_config_async(guild_id, "TEST_MODE_ENABLED", False)
         if test_mode_enabled:
             print(f"Test mode is enabled for guild {guild_id}. Skipping actual moderation actions.")
             ai_decision["action"] = f"TEST_MODE_{ai_decision.get('action', 'UNKNOWN')}"
@@ -578,13 +578,13 @@ class ModerationCog(commands.Cog):
         reasoning = ai_decision.get("reasoning", "No reasoning provided.")
         action = ai_decision.get("action", "NOTIFY_MODS").upper()
 
-        moderator_role_id = get_guild_config(guild_id, "MODERATOR_ROLE_ID")
+        moderator_role_id = await get_guild_config_async(guild_id, "MODERATOR_ROLE_ID")
         moderator_role = message.guild.get_role(moderator_role_id) if moderator_role_id else None
         mod_ping = moderator_role.mention if moderator_role else f"Moderators (Role ID {moderator_role_id} not found)"
 
         current_timestamp_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
         action_taken_message = ""
-        model_used = get_guild_config(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
+        model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
 
         notification_embed = discord.Embed(
             title="🚨 Rule Violation Detected 🚨",
@@ -675,7 +675,7 @@ class ModerationCog(commands.Cog):
                             f"You have been globally banned for a severe universal violation by the AI moderation system.\n"
                             f"**Reason:** {reasoning}\n"
                             f"**Rule Violated:** {rule_violated}\n"
-                            f"If you believe this was a mistake, you may appeal using the `/aimod appeal` command in any server where the bot is present."
+                            f"If you believe this was a mistake, you may appeal using the `/appeal` command in DMs or any server where the bot is present."
                         )
                     except Exception as e:
                         print(f"Could not DM globally banned user {message.author}: {e}")
@@ -699,7 +699,7 @@ class ModerationCog(commands.Cog):
                             f"You have been banned from **{message.guild.name}** by the AI moderation system.\n"
                             f"**Reason:** {reasoning}\n"
                             f"**Rule Violated:** {rule_violated}\n"
-                            f"If you believe this was a mistake, you may appeal using the `/aimod appeal` command."
+                            f"If you believe this was a mistake, you may appeal using the `/appeal` command."
                         )
                     except Exception as e:
                         print(f"Could not DM banned user: {e}")
@@ -722,7 +722,7 @@ class ModerationCog(commands.Cog):
                             f"You have been kicked from **{message.guild.name}** by the AI moderation system.\n"
                             f"**Reason:** {reasoning}\n"
                             f"**Rule Violated:** {rule_violated}\n"
-                            f"If you believe this was a mistake, you may appeal using the `/aimod appeal` command."
+                            f"If you believe this was a mistake, you may appeal using the `/appeal` command."
                         )
                     except Exception as e:
                         print(f"Could not DM kicked user: {e}")
@@ -760,7 +760,7 @@ class ModerationCog(commands.Cog):
                             f"You have been timed out in **{message.guild.name}** for {duration_readable} by the AI moderation system.\n"
                             f"**Reason:** {reasoning}\n"
                             f"**Rule Violated:** {rule_violated}\n"
-                            f"If you believe this was a mistake, you may appeal using the `/aimod appeal` command."
+                            f"If you believe this was a mistake, you may appeal using the `/appeal` command."
                         )
                     except Exception as e:
                         print(f"Could not DM timed out user: {e}")
@@ -784,7 +784,7 @@ class ModerationCog(commands.Cog):
                         await dm_channel.send(
                             f"Your recent message in **{message.guild.name}** was removed for violating Rule **{rule_violated}**. "
                             f"Reason: _{reasoning}_. Please review the server rules. This is a formal warning.\n"
-                            f"If you believe this was a mistake, you may appeal using the `/aimod appeal` command."
+                            f"If you believe this was a mistake, you may appeal using the `/appeal` command."
                         )
                         action_taken_message += " User notified via DM with warning."
                     except discord.Forbidden:
@@ -853,7 +853,7 @@ class ModerationCog(commands.Cog):
                      except discord.Forbidden:
                         print(f"FATAL: Bot lacks permission to send messages, even error notifications.")
 
-        log_channel_id = get_guild_config(message.guild.id, "MOD_LOG_CHANNEL_ID")
+        log_channel_id = await get_guild_config_async(message.guild.id, "MOD_LOG_CHANNEL_ID")
         log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
         if not log_channel:
             print(f"[MODERATION] ERROR: Moderation log channel (ID: {log_channel_id}) not found or not configured. Defaulting to message channel.")
@@ -863,7 +863,7 @@ class ModerationCog(commands.Cog):
                 return
 
         if action == "SUICIDAL":
-            suicidal_role_id = get_guild_config(message.guild.id, "SUICIDAL_PING_ROLE_ID")
+            suicidal_role_id = await get_guild_config_async(message.guild.id, "SUICIDAL_PING_ROLE_ID")
             suicidal_role = message.guild.get_role(suicidal_role_id) if suicidal_role_id else None
             ping_target = suicidal_role.mention if suicidal_role else f"Role ID {suicidal_role_id} (Suicidal Content)"
             if not suicidal_role:
@@ -896,7 +896,7 @@ class ModerationCog(commands.Cog):
                 except Exception as e:
                     print(f"Could not DM globally banned user {member}: {e}")
 
-                log_channel_id = get_guild_config(member.guild.id, "MOD_LOG_CHANNEL_ID")
+                log_channel_id = await get_guild_config_async(member.guild.id, "MOD_LOG_CHANNEL_ID")
                 log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                 if log_channel:
                     embed = discord.Embed(
@@ -917,10 +917,10 @@ class ModerationCog(commands.Cog):
 
             except discord.Forbidden:
                 print(f"WARNING: Missing permissions to ban user {member} ({member.id}) from guild {member.guild.name} ({member.guild.id}).")
-                log_channel_id = get_guild_config(member.guild.id, "MOD_LOG_CHANNEL_ID")
+                log_channel_id = await get_guild_config_async(member.guild.id, "MOD_LOG_CHANNEL_ID")
                 log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                 if log_channel:
-                     mod_role_id = get_guild_config(member.guild.id, "MODERATOR_ROLE_ID")
+                     mod_role_id = await get_guild_config_async(member.guild.id, "MODERATOR_ROLE_ID")
                      mod_ping = f"<@&{mod_role_id}>" if mod_role_id else "Moderators"
                      try:
                          await log_channel.send(f"{mod_ping} **PERMISSION ERROR!** Could not ban globally banned user {member.mention} (`{member.id}`) from this server. Please check bot permissions.")
@@ -928,10 +928,10 @@ class ModerationCog(commands.Cog):
                          print(f"FATAL: Bot lacks permission to send messages, even permission errors.")
             except Exception as e:
                 print(f"An unexpected error occurred during global ban enforcement for user {member} ({member.id}) in guild {member.guild.name}: {e}")
-                log_channel_id = get_guild_config(member.guild.id, "MOD_LOG_CHANNEL_ID")
+                log_channel_id = await get_guild_config_async(member.guild.id, "MOD_LOG_CHANNEL_ID")
                 log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                 if log_channel:
-                     mod_role_id = get_guild_config(member.guild.id, "MODERATOR_ROLE_ID")
+                     mod_role_id = await get_guild_config_async(member.guild.id, "MODERATOR_ROLE_ID")
                      mod_ping = f"<@&{mod_role_id}>" if mod_role_id else "Moderators"
                      try:
                          await log_channel.send(f"{mod_ping} **UNEXPECTED ERROR!** An error occurred while enforcing global ban for user {member.mention} (`{member.id}`). Please check bot logs.")
@@ -952,7 +952,7 @@ class ModerationCog(commands.Cog):
         if not message.guild:
             print(f"Ignoring message {message.id} from DM.")
             return
-        if not get_guild_config(message.guild.id, "ENABLED", True):
+        if not await get_guild_config_async(message.guild.id, "ENABLED", True):
             print(f"Moderation disabled for guild {message.guild.id}. Ignoring message {message.id}.")
             return
         if self.is_globally_banned(message.author.id):
@@ -963,10 +963,10 @@ class ModerationCog(commands.Cog):
                  print(f"Successfully banned globally banned user {message.author} from guild {message.guild.name} after they sent a message.")
             except discord.Forbidden:
                  print(f"WARNING: Missing permissions to ban globally banned user {message.author} ({message.author.id}) from guild {message.guild.name} after they sent a message.")
-                 log_channel_id = get_guild_config(message.guild.id, "MOD_LOG_CHANNEL_ID")
+                 log_channel_id = await get_guild_config_async(message.guild.id, "MOD_LOG_CHANNEL_ID")
                  log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                  if log_channel:
-                      mod_role_id = get_guild_config(message.guild.id, "MODERATOR_ROLE_ID")
+                      mod_role_id = await get_guild_config_async(message.guild.id, "MODERATOR_ROLE_ID")
                       mod_ping = f"<@&{mod_role_id}>" if mod_role_id else "Moderators"
                       try:
                           await log_channel.send(f"{mod_ping} **PERMISSION ERROR!** Globally banned user {message.author.mention} (`{message.author.id}`) sent a message but could not be banned from this server. Please check bot permissions.")
@@ -974,10 +974,10 @@ class ModerationCog(commands.Cog):
                           print(f"FATAL: Bot lacks permission to send messages, even error notifications.")
             except Exception as e:
                  print(f"An unexpected error occurred when banning globally banned user {message.author} ({message.author.id}) after they sent a message: {e}")
-                 log_channel_id = get_guild_config(message.guild.id, "MOD_LOG_CHANNEL_ID")
+                 log_channel_id = await get_guild_config_async(message.guild.id, "MOD_LOG_CHANNEL_ID")
                  log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                  if log_channel:
-                      mod_role_id = get_guild_config(message.guild.id, "MODERATOR_ROLE_ID")
+                      mod_role_id = await get_guild_config_async(message.guild.id, "MODERATOR_ROLE_ID")
                       mod_ping = f"<@&{mod_role_id}>" if mod_role_id else "Moderators"
                       try:
                           await log_channel.send(f"{mod_ping} **UNEXPECTED ERROR!** An error occurred while banning globally banned user {message.author.mention} (`{message.author.id}`) after they sent a message. Please check bot logs.")
@@ -1123,7 +1123,7 @@ class ModerationCog(commands.Cog):
             await interaction.response.send_message(f"An error occurred: {error}", ephemeral=True)
             print(f"Error in aidebug_last_decisions command: {error}")
 
-    @appeals_subgroup.command(name="appeal", description="Submit an appeal for a recent moderation action.")
+    @app_commands.command(name="appeal", description="Submit an appeal for a recent moderation action.")
     @app_commands.describe(reason="The reason for your appeal.")
     async def submit_appeal(self, interaction: discord.Interaction, reason: str):
         user_id = interaction.user.id
@@ -1334,7 +1334,41 @@ class ModerationCog(commands.Cog):
             return
         try:
             messages = [msg async for msg in rules_channel.history(limit=10, oldest_first=True)]
-            rules_text = "\n\n".join(msg.content for msg in messages if msg.content.strip())
+            rules_content = []
+
+            for msg in messages:
+                # Add regular message content if it exists
+                if msg.content.strip():
+                    rules_content.append(msg.content.strip())
+
+                # Add embed content if embeds exist
+                if msg.embeds:
+                    for embed in msg.embeds:
+                        embed_text_parts = []
+
+                        # Add embed title
+                        if embed.title:
+                            embed_text_parts.append(f"**{embed.title}**")
+
+                        # Add embed description
+                        if embed.description:
+                            embed_text_parts.append(embed.description)
+
+                        # Add embed fields
+                        if embed.fields:
+                            for field in embed.fields:
+                                if field.name and field.value:
+                                    embed_text_parts.append(f"**{field.name}**\n{field.value}")
+
+                        # Add embed footer
+                        if embed.footer and embed.footer.text:
+                            embed_text_parts.append(f"*{embed.footer.text}*")
+
+                        # Join all embed parts and add to rules content
+                        if embed_text_parts:
+                            rules_content.append("\n".join(embed_text_parts))
+
+            rules_text = "\n\n".join(rules_content)
         except Exception as e:
             await interaction.response.send_message(f"Failed to fetch messages from the rules channel: {e}", ephemeral=True)
             return
@@ -1348,8 +1382,8 @@ class ModerationCog(commands.Cog):
             await interaction.response.send_message(f"Failed to update rules in config: {e}", ephemeral=True)
             return
 
-    def get_server_rules(self, guild_id: int) -> str:
-        return get_guild_config(guild_id, "SERVER_RULES", globals().get("SERVER_RULES", "No rules set."))
+    async def get_server_rules(self, guild_id: int) -> str:
+        return await get_guild_config_async(guild_id, "SERVER_RULES", globals().get("SERVER_RULES", "No rules set."))
 
 async def setup(bot: commands.Bot):
     """Loads the ModerationCog."""

@@ -6,7 +6,7 @@ import datetime
 import json
 import os
 from collections import defaultdict, deque
-from .aimod_helpers.config_manager import get_guild_config, set_guild_config, save_guild_config
+from .aimod_helpers.config_manager import get_guild_config_async, set_guild_config, save_guild_config
 
 class RaidDefenceView(discord.ui.View):
     """View with Stop Raid button for guild owners"""
@@ -128,12 +128,12 @@ class RaidDefenceCog(commands.Cog):
         guild_id = member.guild.id
         
         # Check if raid defense is enabled
-        if not get_guild_config(guild_id, "RAID_DEFENSE_ENABLED", False):
+        if not await get_guild_config_async(guild_id, "RAID_DEFENSE_ENABLED", False):
             return
-        
+
         # Get configuration
-        threshold = get_guild_config(guild_id, "RAID_DEFENSE_THRESHOLD", 10)
-        timeframe = get_guild_config(guild_id, "RAID_DEFENSE_TIMEFRAME", 60)
+        threshold = await get_guild_config_async(guild_id, "RAID_DEFENSE_THRESHOLD", 10)
+        timeframe = await get_guild_config_async(guild_id, "RAID_DEFENSE_TIMEFRAME", 60)
         
         # Add join to tracking
         current_time = datetime.datetime.utcnow().timestamp()
@@ -221,7 +221,7 @@ class RaidDefenceCog(commands.Cog):
             print(f"[RAID DEFENSE] Could not DM guild owner {guild.owner}")
         
         # Send to mod log channel if configured
-        mod_log_channel_id = get_guild_config(guild.id, "MOD_LOG_CHANNEL_ID")
+        mod_log_channel_id = await get_guild_config_async(guild.id, "MOD_LOG_CHANNEL_ID")
         if mod_log_channel_id:
             mod_log_channel = guild.get_channel(mod_log_channel_id)
             if mod_log_channel:
@@ -242,7 +242,7 @@ class RaidDefenceCog(commands.Cog):
     
     async def log_raid_action(self, guild: discord.Guild, banned_count: int, failed_count: int):
         """Log raid defense action to aimod log"""
-        mod_log_channel_id = get_guild_config(guild.id, "MOD_LOG_CHANNEL_ID")
+        mod_log_channel_id = await get_guild_config_async(guild.id, "MOD_LOG_CHANNEL_ID")
         if mod_log_channel_id:
             mod_log_channel = guild.get_channel(mod_log_channel_id)
             if mod_log_channel:

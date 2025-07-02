@@ -2,44 +2,57 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from typing import Optional
-import json
-import os
+
+# Import database operations
+from database.operations import (
+    get_user_data,
+    set_user_data,
+    update_user_data_field
+)
 
 class UserInfoCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        # Legacy variables for compatibility
         self.custom_data_file = 'user_data.json'
-        self.custom_user_data = self.load_custom_data()
+        self.custom_user_data = {}
 
-    def load_custom_data(self):
-        if os.path.exists(self.custom_data_file):
-            with open(self.custom_data_file, 'r') as f:
-                return json.load(f)
-        return {}
+    async def load_custom_data(self):
+        """Legacy function - now a no-op since data is loaded from database."""
+        pass
 
-    def save_custom_data(self):
-        with open(self.custom_data_file, 'w') as f:
-            json.dump(self.custom_user_data, f, indent=4)
+    async def save_custom_data(self):
+        """Legacy function - now a no-op since data is saved directly to database."""
+        pass
 
-    def get_custom_user_data(self, user_id):
-        return self.custom_user_data.get(str(user_id), {})
+    async def get_custom_user_data(self, user_id):
+        """Get custom user data from database."""
+        try:
+            return await get_user_data(user_id)
+        except Exception as e:
+            print(f"Failed to get user data for user {user_id}: {e}")
+            return {}
 
-    def set_custom_user_value(self, user_id, key, value):
-        user_id_str = str(user_id)
-        if user_id_str not in self.custom_user_data:
-            self.custom_user_data[user_id_str] = {}
-        self.custom_user_data[user_id_str][key] = value
-        self.save_custom_data()
+    async def set_custom_user_value(self, user_id, key, value):
+        """Set a custom user value in the database."""
+        try:
+            return await update_user_data_field(user_id, key, value)
+        except Exception as e:
+            print(f"Failed to set custom user value for user {user_id}: {e}")
+            return False
 
-    def remove_custom_user_value(self, user_id, key):
-        user_id_str = str(user_id)
-        if user_id_str in self.custom_user_data and key in self.custom_user_data[user_id_str]:
-            del self.custom_user_data[user_id_str][key]
-            if not self.custom_user_data[user_id_str]:
-                del self.custom_user_data[user_id_str]
-            self.save_custom_data()
-            return True
-        return False
+    async def remove_custom_user_value(self, user_id, key):
+        """Remove a custom user value from the database."""
+        try:
+            current_data = await get_user_data(user_id)
+            if key in current_data:
+                del current_data[key]
+                await set_user_data(user_id, current_data)
+                return True
+            return False
+        except Exception as e:
+            print(f"Failed to remove custom user value for user {user_id}: {e}")
+            return False
 
     async def is_authorized_admin(self, interaction: discord.Interaction):
         return interaction.user.guild_permissions.administrator
@@ -134,7 +147,7 @@ class UserInfoCog(commands.Cog):
         if badge_str:
             embed.add_field(name="Badge", value=badge_str, inline=False)
 
-        custom_user_data = self.get_custom_user_data(member.id)
+        custom_user_data = await self.get_custom_user_data(member.id)
         organization = custom_user_data.get('organization')
         if organization:
             embed.add_field(name="Organization", value=organization, inline=False)
@@ -173,13 +186,13 @@ class UserInfoCog(commands.Cog):
             await interaction.response.send_message("❌ Value must be between 1-500 characters.", ephemeral=True)
             return
 
-        self.set_custom_user_value(user.id, key, value)
+        await self.set_custom_user_value(user.id, key, value)
         await interaction.response.send_message(f"✅ Set custom value for {user.mention}:\n**{key}:** {value}", ephemeral=True)
 
     @userinfo_admin.command(name="remove", description="Remove a custom value for a user")
     @app_commands.describe(user="The user to remove custom data from", key="The key/field name to remove")
     async def remove_custom_value(self, interaction: discord.Interaction, user: discord.Member, key: str):
-        if self.remove_custom_user_value(user.id, key):
+        if await self.remove_custom_user_value(user.id, key):
             await interaction.response.send_message(f"✅ Removed custom value '{key}' for {user.mention}", ephemeral=True)
         else:
             await interaction.response.send_message(f"❌ No custom value '{key}' found for {user.mention}", ephemeral=True)
@@ -190,7 +203,7 @@ class UserInfoCog(commands.Cog):
         if not await self.is_authorized_admin(interaction):
             return
 
-        custom_data = self.get_custom_user_data(user.id)
+        custom_data = await self.get_custom_user_data(user.id)
         if not custom_data:
             await interaction.response.send_message(f"❌ No custom data found for {user.mention}", ephemeral=True)
             return
@@ -208,13 +221,16 @@ class UserInfoCog(commands.Cog):
         if not await self.is_authorized_admin(interaction):
             return
 
-        user_id_str = str(user.id)
-        if user_id_str in self.custom_user_data:
-            del self.custom_user_data[user_id_str]
-            self.save_custom_data()
-            await interaction.response.send_message(f"✅ Cleared all custom data for {user.mention}", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"❌ No custom data found for {user.mention}", ephemeral=True)
+        try:
+            from database.operations import delete_user_data
+            success = await delete_user_data(user.id)
+            if success:
+                await interaction.response.send_message(f"✅ Cleared all custom data for {user.mention}", ephemeral=True)
+            else:
+                await interaction.response.send_message(f"❌ No custom data found for {user.mention}", ephemeral=True)
+        except Exception as e:
+            print(f"Failed to clear custom data for user {user.id}: {e}")
+            await interaction.response.send_message(f"❌ Error clearing custom data for {user.mention}", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):

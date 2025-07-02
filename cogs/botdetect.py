@@ -1,15 +1,19 @@
-import json
 import discord
 from discord.ext import commands
 from discord import app_commands
-import os
 import asyncio
-import aiofiles
 from typing import List, Dict, Any, Optional
 
-# Configuration paths
-BOTDETECT_CONFIG_DIR = os.path.join(os.getcwd(), "wdiscordbot-json-data")
-BOTDETECT_CONFIG_PATH = os.path.join(BOTDETECT_CONFIG_DIR, "botdetect_config.json")
+# Import database operations
+from database.operations import (
+    get_botdetect_config,
+    set_botdetect_config,
+    get_all_botdetect_config
+)
+
+# Legacy configuration paths (kept for compatibility but not used)
+BOTDETECT_CONFIG_DIR = "wdiscordbot-json-data"
+BOTDETECT_CONFIG_PATH = "wdiscordbot-json-data/botdetect_config.json"
 
 # Common scam bot keywords
 DEFAULT_SCAM_KEYWORDS = [
@@ -104,53 +108,78 @@ DEFAULT_SCAM_KEYWORDS = [
     "i need help urgent"
 ]
 
-# Ensure directory exists
-os.makedirs(BOTDETECT_CONFIG_DIR, exist_ok=True)
-
-# Initialize config file if it doesn't exist
-if not os.path.exists(BOTDETECT_CONFIG_PATH):
-    with open(BOTDETECT_CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump({}, f)
-
-# Load existing config
-try:
-    with open(BOTDETECT_CONFIG_PATH, "r", encoding="utf-8") as f:
-        BOTDETECT_CONFIG = json.load(f)
-except Exception as e:
-    print(f"Failed to load bot detection config from {BOTDETECT_CONFIG_PATH}: {e}")
-    BOTDETECT_CONFIG = {}
-
+# Legacy variables (now use database)
+BOTDETECT_CONFIG = {}  # Deprecated - use database functions
 CONFIG_LOCK = asyncio.Lock()
 
 async def save_botdetect_config():
-    """Save bot detection configuration to file."""
-    async with CONFIG_LOCK:
-        try:
-            async with aiofiles.open(BOTDETECT_CONFIG_PATH, "w", encoding="utf-8") as f:
-                await f.write(json.dumps(BOTDETECT_CONFIG, indent=2))
-        except Exception as e:
-            print(f"Failed to save bot detection config: {e}")
+    """Legacy function - now a no-op since data is saved directly to database."""
+    pass
 
-def get_guild_botdetect_config(guild_id: int) -> Dict[str, Any]:
-    """Get bot detection configuration for a guild."""
-    guild_str = str(guild_id)
-    if guild_str not in BOTDETECT_CONFIG:
-        BOTDETECT_CONFIG[guild_str] = {
+async def get_guild_botdetect_config(guild_id: int) -> Dict[str, Any]:
+    """Get bot detection configuration for a guild from database."""
+    try:
+        config = await get_all_botdetect_config(guild_id)
+
+        # If no config exists, return default configuration
+        if not config:
+            default_config = {
+                "enabled": False,
+                "keywords": DEFAULT_SCAM_KEYWORDS.copy(),
+                "action": "warn",
+                "timeout_duration": 300,
+                "log_channel": None,
+                "whitelist_roles": [],
+                "whitelist_users": []
+            }
+            # Save default config to database
+            for key, value in default_config.items():
+                await set_botdetect_config(guild_id, key, value)
+            return default_config
+
+        # Convert database format to expected format
+        result = {}
+        for key, value in config.items():
+            result[key] = value
+
+        # Ensure all required keys exist with defaults
+        defaults = {
             "enabled": False,
-            "keywords": DEFAULT_SCAM_KEYWORDS.copy(),  # Start with default scam keywords
-            "action": "warn",  # warn, kick, ban, timeout
-            "timeout_duration": 300,  # seconds for timeout action
+            "keywords": DEFAULT_SCAM_KEYWORDS.copy(),
+            "action": "warn",
+            "timeout_duration": 300,
             "log_channel": None,
             "whitelist_roles": [],
             "whitelist_users": []
         }
-    return BOTDETECT_CONFIG[guild_str]
+
+        for key, default_value in defaults.items():
+            if key not in result:
+                result[key] = default_value
+                await set_botdetect_config(guild_id, key, default_value)
+
+        return result
+
+    except Exception as e:
+        print(f"Failed to get botdetect config for guild {guild_id}: {e}")
+        # Return default config on error
+        return {
+            "enabled": False,
+            "keywords": DEFAULT_SCAM_KEYWORDS.copy(),
+            "action": "warn",
+            "timeout_duration": 300,
+            "log_channel": None,
+            "whitelist_roles": [],
+            "whitelist_users": []
+        }
 
 async def set_guild_botdetect_config(guild_id: int, config: Dict[str, Any]):
-    """Set bot detection configuration for a guild."""
-    guild_str = str(guild_id)
-    BOTDETECT_CONFIG[guild_str] = config
-    await save_botdetect_config()
+    """Set bot detection configuration for a guild in database."""
+    try:
+        for key, value in config.items():
+            await set_botdetect_config(guild_id, key, value)
+    except Exception as e:
+        print(f"Failed to set botdetect config for guild {guild_id}: {e}")
 
 class BotDetectCog(commands.Cog):
     """
@@ -212,7 +241,7 @@ class BotDetectCog(commands.Cog):
             return
 
         guild_id = interaction.guild.id
-        config = get_guild_botdetect_config(guild_id)
+        config = await get_guild_botdetect_config(guild_id)
         
         # If no parameters provided, show current configuration
         if all(param is None for param in [action, keywords, enabled, timeout_duration, log_channel,
@@ -455,7 +484,7 @@ class BotDetectCog(commands.Cog):
             return
 
         guild_id = interaction.guild.id
-        config = get_guild_botdetect_config(guild_id)
+        config = await get_guild_botdetect_config(guild_id)
 
         # Update the enabled status
         config["enabled"] = enabled
@@ -505,7 +534,7 @@ class BotDetectCog(commands.Cog):
             return
 
         guild_id = interaction.guild.id
-        config = get_guild_botdetect_config(guild_id)
+        config = await get_guild_botdetect_config(guild_id)
 
         # Create status embed
         embed = discord.Embed(
@@ -583,7 +612,7 @@ class BotDetectCog(commands.Cog):
             return
 
         guild_id = message.guild.id
-        config = get_guild_botdetect_config(guild_id)
+        config = await get_guild_botdetect_config(guild_id)
 
         # Check if bot detection is enabled
         if not config["enabled"]:

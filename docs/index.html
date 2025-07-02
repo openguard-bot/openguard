@@ -3,178 +3,275 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Mod Bot Documentation</title>
+    <title>OpenGuard</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
-            margin: 20px;
-            background-color: #f4f4f4;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: #667eea;
+        }
+
+        main {
+            margin-top: 80px;
+            padding: 4rem 0;
+        }
+
+        .hero {
+            text-align: center;
+            color: white;
+            padding: 4rem 0;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .features {
+            background: white;
+            padding: 4rem 0;
+            margin: 4rem 0;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
             color: #333;
         }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+
+        .feature p {
+            color: #666;
+            line-height: 1.6;
         }
-        h1, h2, h3 {
-            color: #0056b3;
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 1rem;
         }
-        code {
-            background: #eee;
-            padding: 2px 4px;
-            border-radius: 4px;
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 3rem;
         }
-        .command {
-            margin-bottom: 15px;
+
+        footer {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 4rem;
         }
-        .command-name {
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        .command-description {
-            margin-left: 15px;
+
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 200px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>AI Mod Bot Documentation</h1>
+    <header>
+        <nav class="container">
+            <div class="logo">OpenGuard</div>
+            <ul class="nav-links">
+                <li><a href="#" class="active">Home</a></li>
+                <li><a href="#" onclick="alert('Coming Soon!')">Get OpenGuard</a></li>
+                <li><a href="#" onclick="alert('Coming Soon!')">GitHub</a></li>
+                <li><a href="credits.html">Credits</a></li>
+            </ul>
+        </nav>
+    </header>
 
-        <h2>User Information (`abtuser.py`)</h2>
-        <div class="command">
-            <div class="command-name">/aboutuser [user]</div>
-            <div class="command-description">Displays detailed information about a specified user or the person who issued the command.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/userinfo_admin set [user] [key] [value]</div>
-            <div class="command-description">Sets a custom data field for a user (admin only).</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/userinfo_admin remove [user] [key]</div>
-            <div class="command-description">Removes a custom data field from a user (admin only).</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/userinfo_admin list [user]</div>
-            <div class="command-description">Lists all custom data fields for a user (admin only).</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/userinfo_admin clear [user]</div>
-            <div class="command-description">Clears all custom data for a user (admin only).</div>
-        </div>
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1>OpenGuard</h1>
+                <p>Advanced AI-powered moderation for Discord communities</p>
+                <div class="cta-buttons">
+                    <a href="#" class="btn btn-primary" onclick="alert('Coming Soon!')">Get OpenGuard</a>
+                    <a href="#" class="btn btn-secondary" onclick="alert('Coming Soon!')">View on GitHub</a>
+                </div>
+            </div>
+        </section>
 
-        <h2>AI Moderation (`aimod.py`)</h2>
-        <div class="command">
-            <div class="command-name">/aimod config logchannel [channel]</div>
-            <div class="command-description">Sets the channel for moderation logs.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod config setlang [language]</div>
-            <div class="command-description">Sets the bot's response language for the server.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod config suggestionschannel [channel]</div>
-            <div class="command-description">Sets the channel for user suggestions.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod config moderatorrole [role]</div>
-            <div class="command-description">Sets the role for moderators.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod config suicidalpingrole [role]</div>
-            <div class="command-description">Sets the role to be pinged for suicidal content alerts.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod config addnsfwchannel [channel]</div>
-            <div class="command-description">Adds a channel to the NSFW list.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod config removensfwchannel [channel]</div>
-            <div class="command-description">Removes a channel from the NSFW list.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod config listnsfwchannels</div>
-            <div class="command-description">Lists all configured NSFW channels.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod config enable [true/false]</div>
-            <div class="command-description">Enables or disables AI moderation for the server.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod infractions view [user]</div>
-            <div class="command-description">Views a user's infraction history.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod infractions clear [user]</div>
-            <div class="command-description">Clears a user's infraction history.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod model set [model]</div>
-            <div class="command-description">Sets the AI model for moderation.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod model get</div>
-            <div class="command-description">Displays the current AI moderation model.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod debug testmode [true/false]</div>
-            <div class="command-description">Enables or disables test mode for AI moderation.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod debug last_decisions</div>
-            <div class="command-description">Shows the last 5 AI moderation decisions.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod appeals appeal [reason]</div>
-            <div class="command-description">Submits an appeal for a moderation action.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/pull_rules</div>
-            <div class="command-description">Updates the server's rules from the designated rules channel.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/aimod globalban manage [add/remove] [userid]</div>
-            <div class="command-description">Adds or removes a user from the global ban list.</div>
-        </div>
+        <section class="features">
+            <div class="container">
+                <h2 class="section-title">Intelligent Moderation</h2>
+                <p class="section-subtitle">Protect your community with cutting-edge AI technology</p>
 
-        <h2>Credits (`credits.py`)</h2>
-        <div class="command">
-            <div class="command-name">/aimodcredits</div>
-            <div class="command-description">Displays the credits for the AI Mod Bot.</div>
-        </div>
+                <div class="features-grid">
+                    <div class="feature">
+                        <div class="feature-icon">🛡️</div>
+                        <h3>Smart Detection</h3>
+                        <p>Advanced AI algorithms detect harmful content, spam, and policy violations in real-time.</p>
+                    </div>
 
-        <h2>Hardware Information (`hwinfo.py`)</h2>
-        <div class="command">
-            <div class="command-name">/system check</div>
-            <div class="command-description">Shows detailed system and bot information.</div>
-        </div>
-        <div class="command">
-            <div class="command-name">/system temps</div>
-            <div class="command-description">Displays hardware temperature information.</div>
-        </div>
+                    <div class="feature">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Lightning Fast</h3>
+                        <p>Instant response times ensure your community stays safe without interrupting conversations.</p>
+                    </div>
 
-        <h2>Information (`info.py`)</h2>
-        <div class="command">
-            <div class="command-name">/aimodinfo help</div>
-            <div class="command-description">Shows a list of all `/aimod` commands.</div>
-        </div>
+                    <div class="feature">
+                        <div class="feature-icon">🎯</div>
+                        <h3>Highly Accurate</h3>
+                        <p>Machine learning models trained on millions of messages for precise moderation decisions.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
-        <h2>Shell (`shell.py`)</h2>
-        <div class="command">
-            <div class="command-name">/shell [command]</div>
-            <div class="command-description">Executes a shell command (owner only).</div>
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 OpenGuard. Built with ❤️ for Discord communities.</p>
         </div>
-         <div class="command">
-            <div class="command-name">/shell_app [command]</div>
-            <div class="command-description">Executes a shell command (owner only).</div>
-        </div>
-
-        <h2>Statistics (`statistics.py`)</h2>
-        <p>This module provides bot statistics but has no user-facing commands.</p>
-
-    </div>
+    </footer>
 </body>
 </html>

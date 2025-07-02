@@ -18,7 +18,7 @@ def get_user_infraction_history(guild_id: int, user_id: int) -> list:
     key = f"{guild_id}_{user_id}"
     return USER_INFRACTIONS.get(key, [])
 
-def add_user_infraction(guild_id: int, user_id: int, rule_violated: str, action_taken: str, reasoning: str, timestamp: str):
+async def add_user_infraction(guild_id: int, user_id: int, rule_violated: str, action_taken: str, reasoning: str, timestamp: str):
     """Adds a new infraction record for a user, keeping only the last 10."""
     key = f"{guild_id}_{user_id}"
     if key not in USER_INFRACTIONS:
@@ -35,4 +35,4 @@ def add_user_infraction(guild_id: int, user_id: int, rule_violated: str, action_
     ):
         USER_INFRACTIONS[key].append(infraction_record)
         USER_INFRACTIONS[key] = USER_INFRACTIONS[key][-10:]
-        save_user_infractions()
+        await save_user_infractions()

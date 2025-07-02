@@ -1,7 +1,7 @@
-import os
-from google import genai
-
-from .config_manager import VERTEX_PROJECT_ID, VERTEX_LOCATION
+from .litellm_config import (
+    get_litellm_client,
+    get_litellm_client_for_model,
+)
 
 __all__ = [
     "genai_client_us_central1",
@@ -10,33 +10,19 @@ __all__ = [
     "get_genai_client_for_model",
 ]
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
+# Initialize LiteLLM clients for backward compatibility
 try:
-    genai_client_us_central1 = genai.Client(
-        vertexai=False,
-        api_key=GEMINI_API_KEY,
-    )
-    genai_client_global = genai.Client(
-        vertexai=False,
-        api_key=GEMINI_API_KEY,
-    )
+    genai_client_us_central1 = get_litellm_client()
+    genai_client_global = get_litellm_client()
     genai_client = genai_client_us_central1
-    print("Google GenAI Clients initialized for us-central1 and global regions.")
-except NameError:
-    genai_client_us_central1 = None
-    genai_client_global = None
-    genai_client = None
-    print("Google GenAI SDK (genai) not imported, skipping client initialization.")
+    print("LiteLLM Clients initialized with OpenRouter backend.")
 except Exception as e:
     genai_client_us_central1 = None
     genai_client_global = None
     genai_client = None
-    print(f"Error initializing Google GenAI Clients for Vertex AI: {e}")
+    print(f"Error initializing LiteLLM Clients: {e}")
 
 
 def get_genai_client_for_model(model_name: str):
-    """Return the appropriate genai client based on the model name."""
-    if "gemini-2.5-pro" in model_name:
-        return genai_client_global
-    return genai_client_us_central1
+    """Return the appropriate LiteLLM client based on the model name."""
+    return get_litellm_client_for_model(model_name)

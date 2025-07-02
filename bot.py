@@ -10,6 +10,9 @@ from discord import app_commands
 import sys
 import io
 
+# Import database connection management
+from database.connection import initialize_database, get_pool, close_pool
+
 class DualStream:
     def __init__(self, original_stream, log_file):
         self.original_stream = original_stream
@@ -36,12 +39,14 @@ discord_token = os.getenv("DISCORD_TOKEN")
 if not discord_token:
     raise ValueError("Missing DISCORD_TOKEN environment variable.")
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.presences = True
-intents.members = True
+intents = discord.Intents.all()
+class MyBot(commands.Bot):
+    async def is_owner(self, user: discord.User | discord.Member):
+        if user is not None and getattr(user, 'id', None) is not None:
+            return user.id in (1141746562922459136, 452666956353503252)
+        raise ValueError("User/User ID was None, or user object had no ID property")
 
-bot = commands.Bot(command_prefix="/", intents=intents)
+bot = MyBot(command_prefix="o!", intents=intents, help_command=None)
 
 ERROR_NOTIFICATION_USER_ID = 1141746562922459136
 
@@ -150,55 +155,158 @@ async def on_error(event, *args, **kwargs):
 async def on_command_error(ctx, error):
     error = getattr(error, 'original', error)
 
-    tb_string = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+    # Handle specific user-facing errors
+    user_message = None
+    should_notify_owner = True
 
-    print(f"Command error in {ctx.command}:")
-    print(tb_string)
+    if isinstance(error, commands.CommandNotFound):
+        user_message = f"❌ Command `{ctx.invoked_with}` not found. Use `{ctx.prefix}help` to see available commands."
+        should_notify_owner = False
+    elif isinstance(error, commands.MissingRequiredArgument):
+        user_message = f"❌ Missing required argument: `{error.param.name}`. Use `{ctx.prefix}help {ctx.command}` for usage information."
+        should_notify_owner = False
+    elif isinstance(error, commands.BadArgument):
+        user_message = f"❌ Invalid argument provided. Use `{ctx.prefix}help {ctx.command}` for usage information."
+        should_notify_owner = False
+    elif isinstance(error, commands.TooManyArguments):
+        user_message = f"❌ Too many arguments provided. Use `{ctx.prefix}help {ctx.command}` for usage information."
+        should_notify_owner = False
+    elif isinstance(error, commands.MissingPermissions):
+        missing_perms = ", ".join(error.missing_permissions)
+        user_message = f"❌ You don't have permission to use this command. Required permissions: {missing_perms}"
+        should_notify_owner = False
+    elif isinstance(error, commands.BotMissingPermissions):
+        missing_perms = ", ".join(error.missing_permissions)
+        user_message = f"❌ I don't have the required permissions to execute this command. Missing permissions: {missing_perms}"
+        should_notify_owner = False
+    elif isinstance(error, commands.NoPrivateMessage):
+        user_message = "❌ This command cannot be used in private messages."
+        should_notify_owner = False
+    elif isinstance(error, commands.PrivateMessageOnly):
+        user_message = "❌ This command can only be used in private messages."
+        should_notify_owner = False
+    elif isinstance(error, commands.NotOwner):
+        user_message = "❌ This command can only be used by the bot owner."
+        should_notify_owner = False
+    elif isinstance(error, commands.CommandOnCooldown):
+        user_message = f"❌ Command is on cooldown. Try again in {error.retry_after:.2f} seconds."
+        should_notify_owner = False
+    elif isinstance(error, commands.DisabledCommand):
+        user_message = "❌ This command is currently disabled."
+        should_notify_owner = False
+    elif isinstance(error, commands.CheckFailure):
+        user_message = "❌ You don't have permission to use this command."
+        should_notify_owner = False
 
-    context = f"Command: {ctx.command}, Author: {ctx.author} ({ctx.author.id}), Guild: {ctx.guild.name if ctx.guild else 'DM'} ({ctx.guild.id if ctx.guild else 'N/A'}), Channel: {ctx.channel}"
-
-    await send_error_dm(
-        error_type=type(error).__name__,
-        error_message=str(error),
-        error_traceback=tb_string,
-        context_info=context
-    )
-
+    # Send user-friendly message or generic error message
     try:
-        await ctx.send(f"An error occurred while executing the command. The bot owner has been notified.")
+        if user_message:
+            await ctx.send(user_message)
+        else:
+            await ctx.send("❌ An error occurred while executing the command. The bot owner has been notified.")
     except:
         pass
+
+    # Only notify owner for unexpected errors
+    if should_notify_owner:
+        tb_string = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+
+        print(f"Command error in {ctx.command}:")
+        print(tb_string)
+
+        context = f"Command: {ctx.command}, Author: {ctx.author} ({ctx.author.id}), Guild: {ctx.guild.name if ctx.guild else 'DM'} ({ctx.guild.id if ctx.guild else 'N/A'}), Channel: {ctx.channel}"
+
+        await send_error_dm(
+            error_type=type(error).__name__,
+            error_message=str(error),
+            error_traceback=tb_string,
+            context_info=context
+        )
 
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     error = getattr(error, 'original', error)
 
-    tb_string = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+    # Handle specific user-facing errors
+    user_message = None
+    should_notify_owner = True
 
-    command_name = interaction.command.name if interaction.command else "Unknown"
-    print(f"App command error in {command_name}:")
-    print(tb_string)
+    if isinstance(error, app_commands.CommandNotFound):
+        user_message = "❌ Command not found."
+        should_notify_owner = False
+    elif isinstance(error, app_commands.MissingPermissions):
+        missing_perms = ", ".join(error.missing_permissions)
+        user_message = f"❌ You don't have permission to use this command. Required permissions: {missing_perms}"
+        should_notify_owner = False
+    elif isinstance(error, app_commands.BotMissingPermissions):
+        missing_perms = ", ".join(error.missing_permissions)
+        user_message = f"❌ I don't have the required permissions to execute this command. Missing permissions: {missing_perms}"
+        should_notify_owner = False
+    elif isinstance(error, app_commands.NoPrivateMessage):
+        user_message = "❌ This command cannot be used in private messages."
+        should_notify_owner = False
+    elif isinstance(error, app_commands.CommandOnCooldown):
+        user_message = f"❌ Command is on cooldown. Try again in {error.retry_after:.2f} seconds."
+        should_notify_owner = False
+    elif isinstance(error, app_commands.CheckFailure):
+        user_message = "❌ You don't have permission to use this command."
+        should_notify_owner = False
+    elif isinstance(error, app_commands.TransformerError):
+        user_message = f"❌ Invalid input provided: {str(error)}"
+        should_notify_owner = False
+    elif isinstance(error, commands.MissingRequiredArgument):
+        user_message = f"❌ Missing required argument: `{error.param.name}`."
+        should_notify_owner = False
+    elif isinstance(error, commands.BadArgument):
+        user_message = "❌ Invalid argument provided."
+        should_notify_owner = False
+    elif isinstance(error, commands.NotOwner):
+        user_message = "❌ This command can only be used by the bot owner."
+        should_notify_owner = False
 
-    context = f"Command: {command_name}, Author: {interaction.user} ({interaction.user.id}), Guild: {interaction.guild.name if interaction.guild else 'DM'} ({interaction.guild.id if interaction.guild else 'N/A'}), Channel: {interaction.channel}"
-
-    await send_error_dm(
-        error_type=type(error).__name__,
-        error_message=str(error),
-        error_traceback=tb_string,
-        context_info=context
-    )
-
+    # Send user-friendly message or generic error message
     try:
-        if not interaction.response.is_done():
-            await interaction.response.send_message("An error occurred while executing the command. The bot owner has been notified.", ephemeral=True)
+        if user_message:
+            if not interaction.response.is_done():
+                await interaction.response.send_message(user_message, ephemeral=True)
+            else:
+                await interaction.followup.send(user_message, ephemeral=True)
         else:
-            await interaction.followup.send("An error occurred while executing the command. The bot owner has been notified.", ephemeral=True)
+            if not interaction.response.is_done():
+                await interaction.response.send_message("❌ An error occurred while executing the command. The bot owner has been notified.", ephemeral=True)
+            else:
+                await interaction.followup.send("❌ An error occurred while executing the command. The bot owner has been notified.", ephemeral=True)
     except:
         pass
+
+    # Only notify owner for unexpected errors
+    if should_notify_owner:
+        tb_string = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+
+        command_name = interaction.command.name if interaction.command else "Unknown"
+        print(f"App command error in {command_name}:")
+        print(tb_string)
+
+        context = f"Command: {command_name}, Author: {interaction.user} ({interaction.user.id}), Guild: {interaction.guild.name if interaction.guild else 'DM'} ({interaction.guild.id if interaction.guild else 'N/A'}), Channel: {interaction.channel}"
+
+        await send_error_dm(
+            error_type=type(error).__name__,
+            error_message=str(error),
+            error_traceback=tb_string,
+            context_info=context
+        )
 
 @bot.event
 async def on_ready():
     try:
+        # Initialize database connection
+        print("Initializing database connection...")
+        db_success = await initialize_database()
+        if db_success:
+            print("Database initialized successfully!")
+        else:
+            print("Warning: Database initialization failed!")
+
         await bot.tree.sync()
         print("Commands synced successfully!")
     except Exception as e:
@@ -226,9 +334,15 @@ async def test_error_slash(interaction: discord.Interaction):
     raise ValueError("This is a test error to verify slash command error handling")
 
 async def main():
-    async with bot:
-        await load_cogs()
-        await bot.start(discord_token)
+    try:
+        async with bot:
+            await load_cogs()
+            await bot.start(discord_token)
+    finally:
+        # Clean up database connections
+        print("Closing database connections...")
+        await close_pool()
+        print("Database connections closed.")
 
 if __name__ == "__main__":
     try:

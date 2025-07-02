@@ -1,11 +1,11 @@
 """
-Settings manager adapted for JSON file storage.
-Provides the same interface as the PostgreSQL/Redis version but uses JSON files.
+Settings manager for PostgreSQL database storage.
+Provides database-backed settings management for the logging system.
 """
 
 import logging
 from typing import Dict, Any, Optional
-from .json_db import (
+from .postgresql_db import (
     get_setting,
     set_setting,
     get_mod_log_channel_id,
@@ -24,16 +24,16 @@ log = logging.getLogger(__name__)
 
 # Database initialization function
 async def initialize_database():
-    """Creates necessary JSON files if they don't exist."""
+    """Initializes the PostgreSQL database."""
     try:
         await setup_moderation_log_table()
-        log.info("JSON storage initialization complete.")
+        log.info("PostgreSQL database initialization complete.")
     except Exception as e:
-        log.exception(f"Error initializing JSON storage: {e}")
+        log.exception(f"Error initializing PostgreSQL database: {e}")
 
 async def run_migrations():
-    """Compatibility function for migrations - no-op for JSON storage."""
-    log.info("No migrations needed for JSON storage.")
+    """Compatibility function for migrations - handled by database setup."""
+    log.info("Database migrations handled by setup scripts.")
 
 # Settings access functions
 

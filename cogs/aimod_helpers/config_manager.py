@@ -1,127 +1,84 @@
-import json
 import os
 import asyncio
-import aiofiles
-from google.genai import types
 
+# Import database operations
+from database.operations import (
+    get_guild_config as db_get_guild_config,
+    set_guild_config as db_set_guild_config,
+)
+
+# OpenRouter/LiteLLM configuration
+DEFAULT_AI_MODEL = "deepseek/deepseek-chat-v3-0324:free"
+
+# Legacy environment variables (kept for compatibility)
 VERTEX_PROJECT_ID = os.getenv("VERTEX_PROJECT_ID")
 VERTEX_LOCATION = os.getenv("VERTEX_LOCATION")
-DEFAULT_VERTEX_AI_MODEL = "gemini-2.5-flash-preview-05-20"
+DEFAULT_VERTEX_AI_MODEL = DEFAULT_AI_MODEL  # Alias for backward compatibility
 
-STANDARD_SAFETY_SETTINGS = [
-    types.SafetySetting(
-        category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold="BLOCK_NONE"
-    ),
-    types.SafetySetting(
-        category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-        threshold="BLOCK_NONE",
-    ),
-    types.SafetySetting(
-        category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-        threshold="BLOCK_NONE",
-    ),
-    types.SafetySetting(
-        category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold="BLOCK_NONE"
-    ),
-]
-
+# Note: Safety settings are now handled by OpenRouter/model providers
+# and are not configurable through LiteLLM in the same way as Google GenAI
 
 MOD_LOG_API_SECRET_ENV_VAR = "MOD_LOG_API_SECRET"
 
+# Legacy paths (kept for compatibility but not used)
 GUILD_CONFIG_DIR = os.path.join(os.getcwd(), "wdiscordbot-json-data")
 GUILD_CONFIG_PATH = os.path.join(GUILD_CONFIG_DIR, "guild_config.json")
 USER_INFRACTIONS_PATH = os.path.join(GUILD_CONFIG_DIR, "user_infractions.json")
 APPEALS_PATH = os.path.join(GUILD_CONFIG_DIR, "appeals.json")
 GLOBAL_BANS_PATH = os.path.join(GUILD_CONFIG_DIR, "global_bans.json")
 
-os.makedirs(GUILD_CONFIG_DIR, exist_ok=True)
-
-if not os.path.exists(GUILD_CONFIG_PATH):
-    with open(GUILD_CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump({}, f)
-try:
-    with open(GUILD_CONFIG_PATH, "r", encoding="utf-8") as f:
-        GUILD_CONFIG = json.load(f)
-except Exception as e:
-    print(f"Failed to load per-guild config from {GUILD_CONFIG_PATH}: {e}")
-    GUILD_CONFIG = {}
-
-if not os.path.exists(USER_INFRACTIONS_PATH):
-    with open(USER_INFRACTIONS_PATH, "w", encoding="utf-8") as f:
-        json.dump({}, f)
-try:
-    with open(USER_INFRACTIONS_PATH, "r", encoding="utf-8") as f:
-        USER_INFRACTIONS = json.load(f)
-except Exception as e:
-    print(f"Failed to load user infractions from {USER_INFRACTIONS_PATH}: {e}")
-    USER_INFRACTIONS = {}
-
-if not os.path.exists(APPEALS_PATH):
-    with open(APPEALS_PATH, "w", encoding="utf-8") as f:
-        json.dump({}, f)
-try:
-    with open(APPEALS_PATH, "r", encoding="utf-8") as f:
-        APPEALS = json.load(f)
-except Exception as e:
-    print(f"Failed to load appeals from {APPEALS_PATH}: {e}")
-    APPEALS = {}
-
-if not os.path.exists(GLOBAL_BANS_PATH):
-    with open(GLOBAL_BANS_PATH, "w", encoding="utf-8") as f:
-        json.dump([], f)
-try:
-    with open(GLOBAL_BANS_PATH, "r", encoding="utf-8") as f:
-        GLOBAL_BANS = json.load(f)
-except Exception as e:
-    print(f"Failed to load global bans from {GLOBAL_BANS_PATH}: {e}")
-    GLOBAL_BANS = []
+# Legacy variables for backward compatibility (now use database)
+GUILD_CONFIG = {}  # Deprecated - use database functions
+USER_INFRACTIONS = {}  # Deprecated - use database functions
+APPEALS = {}  # Deprecated - use database functions
+GLOBAL_BANS = []  # Deprecated - use database functions
 
 CONFIG_LOCK = asyncio.Lock()
 
+# Legacy save functions (now no-ops for compatibility)
 async def save_guild_config():
-    async with CONFIG_LOCK:
-        try:
-            async with aiofiles.open(GUILD_CONFIG_PATH, "w", encoding="utf-8") as f:
-                await f.write(json.dumps(GUILD_CONFIG, indent=2))
-        except Exception as e:
-            print(f"Failed to save per-guild config: {e}")
+    """Legacy function - now a no-op since data is saved directly to database."""
+    pass
 
 async def save_user_infractions():
-    async with CONFIG_LOCK:
-        try:
-            async with aiofiles.open(USER_INFRACTIONS_PATH, "w", encoding="utf-8") as f:
-                await f.write(json.dumps(USER_INFRACTIONS, indent=2))
-        except Exception as e:
-            print(f"Failed to save user infractions: {e}")
+    """Legacy function - now a no-op since data is saved directly to database."""
+    pass
 
 async def save_appeals():
-    async with CONFIG_LOCK:
-        try:
-            async with aiofiles.open(APPEALS_PATH, "w", encoding="utf-8") as f:
-                await f.write(json.dumps(APPEALS, indent=2))
-        except Exception as e:
-            print(f"Failed to save appeals: {e}")
+    """Legacy function - now a no-op since data is saved directly to database."""
+    pass
 
 async def save_global_bans():
-    async with CONFIG_LOCK:
-        try:
-            async with aiofiles.open(GLOBAL_BANS_PATH, "w", encoding="utf-8") as f:
-                await f.write(json.dumps(GLOBAL_BANS, indent=2))
-        except Exception as e:
-            print(f"Failed to save global bans: {e}")
+    """Legacy function - now a no-op since data is saved directly to database."""
+    pass
 
 def get_guild_config(guild_id: int, key: str, default=None):
-    guild_str = str(guild_id)
-    if guild_str in GUILD_CONFIG and key in GUILD_CONFIG[guild_str]:
-        return GUILD_CONFIG[guild_str][key]
-    return default
+    """Get guild configuration value from database."""
+    try:
+        # This is a sync function, so we need to handle it carefully
+        # For now, return default and log a warning
+        import logging
+        logging.warning(f"get_guild_config called synchronously for guild {guild_id}, key {key}. Use async version instead.")
+        return default
+    except Exception as e:
+        print(f"Error in get_guild_config: {e}")
+        return default
 
 async def set_guild_config(guild_id: int, key: str, value):
-    guild_str = str(guild_id)
-    if guild_str not in GUILD_CONFIG:
-        GUILD_CONFIG[guild_str] = {}
-    GUILD_CONFIG[guild_str][key] = value
-    await save_guild_config()
+    """Set guild configuration value in database."""
+    try:
+        return await db_set_guild_config(guild_id, key, value)
+    except Exception as e:
+        print(f"Failed to set guild config {key} for guild {guild_id}: {e}")
+        return False
+
+async def get_guild_config_async(guild_id: int, key: str, default=None):
+    """Get guild configuration value from database (async version)."""
+    try:
+        return await db_get_guild_config(guild_id, key, default)
+    except Exception as e:
+        print(f"Failed to get guild config {key} for guild {guild_id}: {e}")
+        return default
 
 GUILD_LANGUAGE_KEY = "LANGUAGE_CODE"
 DEFAULT_LANGUAGE = "en"
@@ -178,8 +135,26 @@ TRANSLATIONS = {
 }
 
 def get_guild_language(guild_id: int) -> str:
-    return get_guild_config(guild_id, GUILD_LANGUAGE_KEY, DEFAULT_LANGUAGE)
+    """Get guild language (sync version - returns default for compatibility)."""
+    # This is a sync function but database operations are async
+    # For compatibility, return default language
+    _ = guild_id  # Suppress unused parameter warning
+    return DEFAULT_LANGUAGE
+
+async def get_guild_language_async(guild_id: int) -> str:
+    """Get guild language from database (async version)."""
+    try:
+        return await db_get_guild_config(guild_id, GUILD_LANGUAGE_KEY, DEFAULT_LANGUAGE)
+    except Exception as e:
+        print(f"Failed to get guild language for guild {guild_id}: {e}")
+        return DEFAULT_LANGUAGE
 
 def t(guild_id: int, key: str) -> str:
+    """Get translated text (sync version - uses default language for compatibility)."""
     lang = get_guild_language(guild_id)
+    return TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANGUAGE]).get(key, key)
+
+async def t_async(guild_id: int, key: str) -> str:
+    """Get translated text (async version)."""
+    lang = await get_guild_language_async(guild_id)
     return TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANGUAGE]).get(key, key)

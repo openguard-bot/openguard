@@ -1,16 +1,13 @@
-import discord
 from discord.ext import commands
 from discord import app_commands
 import subprocess
-import sys
-
 class Shell(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(name='shell', aliases=['exec', 'cmd'])
     @commands.is_owner()
-    async def shell_command(self, ctx, *, command: str):
+    async def shell_command(self, ctx: commands.Context, *, command: str):
         """Executes a shell command (Owner only)."""
         try:
             process = subprocess.run(
@@ -47,5 +44,5 @@ class Shell(commands.Cog):
             await ctx.send(f"An unexpected error occurred: ```\n{e}\n```")
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(Shell(bot))
