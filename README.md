@@ -1,6 +1,6 @@
-# Openguard
+# OpenGuard
 
-openguard is a modular and extensible Discord moderation bot, designed to automate server management, enforce community rules, and protect members from abuse and spam. Written in Python and licensed under GPL-3.0, AIMod integrates seamlessly into Discord servers and provides customizable features for a wide range of moderation needs.
+OpenGuard is a modular and extensible Discord moderation bot, designed to automate server management, enforce community rules, and protect members from abuse and spam. Written in Python and licensed under GPL-3.0, OpenGuard integrates seamlessly into Discord servers and provides customizable features for a wide range of moderation needs.
 
 ## Features
 
@@ -23,8 +23,8 @@ openguard is a modular and extensible Discord moderation bot, designed to automa
 
 Clone the repository:
 ```sh
-git clone https://github.com/discordaimod/openguard.git
-cd aimod
+git clone https://github.com/discordOpenGuard/OpenGuard.git
+cd OpenGuard
 ```
 
 Install dependencies:
@@ -48,7 +48,7 @@ python main.py
 
 ## Usage
 
-Once started, AIMod will join your Discord server and begin monitoring activity according to your configuration.
+Once started, OpenGuard will join your Discord server and begin monitoring activity according to your configuration.
 
 - Use `!help` in Discord to view available commands.
 - Moderators can adjust rules and actions via the configuration file or bot commands (if enabled).
@@ -68,7 +68,7 @@ This project is licensed under the GNU General Public License v3.0. See [LICENSE
 
 ## Links
 
-- [GitHub Repo](https://github.com/discordaimod/aimod)
+- [GitHub Repo](https://github.com/discordaimod/openguard)
 - [Discord Support Server](https://discord.gg/SBCzKepBWF)
 - [OpenGuard site](https://openguard.lol)
 - [Discord Developer Portal](https://discord.com/developers/applications)
