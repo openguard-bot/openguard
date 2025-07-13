@@ -41,9 +41,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /srv/http/aimod
+            cd /srv/http/openguard
             git pull origin main
-            sudo /srv/http/aimod/build_website_prod.sh
+            sudo /srv/http/openguard/build_website_prod.sh
 
   deploy-dashboard-frontend:
     needs: changes
@@ -57,9 +57,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /srv/http/aimod
+            cd /srv/http/openguard
             git pull origin main
-            sudo /srv/http/aimod/scripts/deploy_frontend.sh
+            sudo /srv/http/openguard/scripts/deploy_frontend.sh
 
   deploy-dashboard-backend:
     needs: changes
@@ -73,6 +73,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /srv/http/aimod
+            cd /srv/http/openguard
             git pull origin main
-            sudo /srv/http/aimod/scripts/deploy_backend.sh
+            sudo /srv/http/openguard/scripts/deploy_backend.sh

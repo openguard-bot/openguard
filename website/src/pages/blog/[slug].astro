@@ -1,0 +1,38 @@
+---
+export async function getStaticPaths() {
+  const postFiles = await import.meta.glob('../../content/posts/*.md');
+  const posts = await Promise.all(
+    Object.values(postFiles).map(async (file) => await file())
+  );
+
+  return posts
+    .filter((post) => post.url)
+    .map((post) => {
+      const slug = post.url.split('/').pop()?.replace('.md', '');
+      if (!slug) return null;
+
+      return {
+        params: { slug },
+        props: { post },
+      };
+    })
+    .filter(Boolean);
+}
+
+const { post } = Astro.props;
+const { Content } = post;
+---
+<Layout title={post.frontmatter.title}>
+	<Header />
+	<main class="container mx-auto py-16">
+		<article class="prose prose-invert mx-auto">
+			<a href="/blog" class="mb-8 block text-indigo-400 hover:underline">
+				&larr; Back to blog
+			</a>
+			<h1>{post.frontmatter.title}</h1>
+			<p class="text-gray-400">{new Date(post.frontmatter.date).toLocaleDateString()}</p>
+			<Content />
+		</article>
+	</main>
+	<Footer />
+</Layout>

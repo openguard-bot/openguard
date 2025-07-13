@@ -12,27 +12,48 @@ import distro
 
 try:
     import wmi
+
     WMI_AVAILABLE = True
 except ImportError:
     WMI_AVAILABLE = False
+
 
 class HwInfo(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    system_group = app_commands.Group(name="system", description="System related commands.")
+    @commands.hybrid_group(
+        name="system", description="System related commands."
+    )
+    async def system(self, ctx: commands.Context):
+        """System related commands."""
+        await ctx.send_help(ctx.command)
 
-
-    @system_group.command(name="check", description="Shows detailed system and bot information.")
-    async def systemcheck(self, interaction: discord.Interaction):
+    @system.command(
+        name="check", description="Shows detailed system and bot information."
+    )
+    async def systemcheck(self, ctx: commands.Context):
         """Check the bot and system status."""
-        await interaction.response.defer(thinking=True)
+        if ctx.interaction: # Check if it's an application command
+            await ctx.interaction.response.defer(thinking=True)
+        else:
+            await ctx.defer() # For prefix commands
         try:
-            embed = await self._system_check_logic(interaction)
-            await interaction.followup.send(embed=embed)
+            embed = await self._system_check_logic(ctx) # Pass ctx
+            if ctx.interaction:
+                await ctx.interaction.followup.send(embed=embed)
+            else:
+                await ctx.send(embed=embed) # For prefix commands
         except Exception as e:
             print(f"Error in systemcheck command: {e}")
-            await interaction.followup.send(f"An error occurred while checking system status: {e}")
+            if ctx.interaction:
+                await ctx.interaction.followup.send(
+                    f"An error occurred while checking system status: {e}"
+                )
+            else:
+                await ctx.send(
+                    f"An error occurred while checking system status: {e}"
+                )
 
     async def _system_check_logic(self, context_or_interaction):
         """Return detailed bot and system information as a Discord embed."""
@@ -147,38 +168,40 @@ class HwInfo(commands.Cog):
             embed.add_field(
                 name="🤖 Bot Information",
                 value=f"**Name:** {bot_user.name}\n"
-                      f"**ID:** {bot_user.id}\n"
-                      f"**Servers:** {guild_count}\n"
-                      f"**Unique Users:** {user_count}",
-                inline=False
+                f"**ID:** {bot_user.id}\n"
+                f"**Servers:** {guild_count}\n"
+                f"**Unique Users:** {user_count}",
+                inline=False,
             )
         else:
             embed.add_field(
                 name="🤖 Bot Information",
                 value="Bot user information not available.",
-                inline=False
+                inline=False,
             )
 
         embed.add_field(
             name="🖥️ System Information",
             value=f"**OS:** {os_info}{distro_info_str}\n"
-                  f"**Hostname:** {hostname}\n"
-                  f"**Uptime:** {uptime}",
-            inline=False
+            f"**Hostname:** {hostname}\n"
+            f"**Uptime:** {uptime}",
+            inline=False,
         )
 
         embed.add_field(
             name="⚙️ Hardware Information",
             value=f"**Device Model:** {motherboard_info}\n"
-                  f"**CPU:** {cpu_name}\n"
-                  f"**CPU Usage:** {cpu_usage}%\n"
-                  f"**RAM Usage:** {ram_usage}\n"
-                  f"**GPU Info:**\n{gpu_info}",
-            inline=False
+            f"**CPU:** {cpu_name}\n"
+            f"**CPU Usage:** {cpu_usage}%\n"
+            f"**RAM Usage:** {ram_usage}\n"
+            f"**GPU Info:**\n{gpu_info}",
+            inline=False,
         )
 
         if user:
-            embed.set_footer(text=f"Requested by: {user.display_name}", icon_url=avatar_url)
+            embed.set_footer(
+                text=f"Requested by: {user.display_name}", icon_url=avatar_url
+            )
 
         embed.timestamp = discord.utils.utcnow()
         return embed
@@ -208,19 +231,25 @@ class HwInfo(commands.Cog):
             print(f"Error getting motherboard info: {e}")
             return "Error retrieving motherboard info"
 
-
-    @system_group.command(name="temps", description="Runs the 'sensors' command and sends its output to chat.")
-    async def temps(self, interaction: discord.Interaction):
+    @system.command(
+        name="temps",
+        description="Runs the 'sensors' command and sends its output to chat.",
+    )
+    async def temps(self, ctx: commands.Context):
         """Executes the sensors command and returns the output."""
         try:
             process = await asyncio.create_subprocess_exec(
                 "sensors",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await process.communicate()
 
-            output = stdout.decode("utf-8").strip() or stderr.decode("utf-8").strip() or "No output."
+            output = (
+                stdout.decode("utf-8").strip()
+                or stderr.decode("utf-8").strip()
+                or "No output."
+            )
         except Exception as e:
             output = f"Error executing sensors command: {e}"
 
@@ -228,9 +257,19 @@ class HwInfo(commands.Cog):
             file_name = "temps.txt"
             with open(file_name, "w") as f:
                 f.write(output)
-            await interaction.response.send_message("Output was too long; see attached file:", file=discord.File(file_name))
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(
+                    "Output was too long; see attached file:", file=discord.File(file_name)
+                )
+            else:
+                await ctx.send(
+                    "Output was too long; see attached file:", file=discord.File(file_name)
+                )
         else:
-            await interaction.response.send_message(f"```\n{output}\n```")
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(f"```\n{output}\n```")
+            else:
+                await ctx.send(f"```\n{output}\n```")
 
 
 async def setup(bot: commands.Bot):

@@ -6,11 +6,20 @@ import cv2
 import numpy as np
 from PIL import Image
 
+
 class MediaProcessor:
     def __init__(self):
-        self.image_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.heic', '.heif']
-        self.gif_extensions = ['.gif']
-        self.video_extensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv']
+        self.image_extensions = [
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp",
+            ".bmp",
+            ".heic",
+            ".heif",
+        ]
+        self.gif_extensions = [".gif"]
+        self.video_extensions = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".flv"]
 
     async def process_image(self, attachment: discord.Attachment) -> tuple[str, bytes]:
         """Process an image attachment and return its raw bytes."""
@@ -42,7 +51,9 @@ class MediaProcessor:
             print(f"Error processing video: {e}")
             return None, None
 
-    async def process_attachment(self, attachment: discord.Attachment) -> tuple[str, bytes, str]:
+    async def process_attachment(
+        self, attachment: discord.Attachment
+    ) -> tuple[str, bytes, str]:
         """Process any attachment and return the appropriate image data."""
         if not attachment:
             return None, None, None
@@ -50,13 +61,13 @@ class MediaProcessor:
         _, ext = os.path.splitext(filename)
         if ext in self.image_extensions:
             mime_type, image_bytes = await self.process_image(attachment)
-            return mime_type, image_bytes, 'image'
+            return mime_type, image_bytes, "image"
         elif ext in self.gif_extensions:
             mime_type, image_bytes = await self.process_gif(attachment)
-            return mime_type, image_bytes, 'gif'
+            return mime_type, image_bytes, "gif"
         elif ext in self.video_extensions:
             mime_type, image_bytes = await self.process_video(attachment)
-            return mime_type, image_bytes, 'video'
+            return mime_type, image_bytes, "video"
         else:
             print(f"Unsupported file type: {ext}")
             return None, None, None

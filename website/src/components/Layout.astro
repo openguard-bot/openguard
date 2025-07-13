@@ -1,0 +1,30 @@
+---
+import '../styles/globals.css';
+
+interface Props {
+    title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="bg-gray-900 text-white">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content="OpenGuard: AI-powered Discord moderation bot. Protect your community with smart detection, fast response, and easy configuration." />
+        <meta name="keywords" content="OpenGuard, Discord, moderation, AI, bot, community, spam detection, safety, automation" />
+        <meta name="author" content="OpenGuard Team" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content="OpenGuard is an advanced AI-powered moderation bot for Discord communities." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://openguard.lol" />
+        <meta property="og:image" content="/dashboard/logo192.png" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <title>{title}</title>
+    </head>
+    <body class="font-sans">
+        <slot />
+    </body>
+</html>

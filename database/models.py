@@ -13,6 +13,7 @@ import uuid
 
 class AppealStatus(Enum):
     """Status options for appeals."""
+
     PENDING = "pending"
     ACCEPTED = "accepted"
     REJECTED = "rejected"
@@ -20,6 +21,7 @@ class AppealStatus(Enum):
 
 class ActionType(Enum):
     """Moderation action types."""
+
     WARN = "WARN"
     TIMEOUT_SHORT = "TIMEOUT_SHORT"
     TIMEOUT_MEDIUM = "TIMEOUT_MEDIUM"
@@ -34,6 +36,7 @@ class ActionType(Enum):
 @dataclass
 class GuildConfig:
     """Guild configuration model."""
+
     guild_id: int
     key: str
     value: Any
@@ -44,6 +47,7 @@ class GuildConfig:
 @dataclass
 class UserInfraction:
     """User infraction model."""
+
     id: Optional[int]
     guild_id: int
     user_id: int
@@ -57,6 +61,7 @@ class UserInfraction:
 @dataclass
 class Appeal:
     """Appeal model."""
+
     appeal_id: str
     user_id: int
     reason: str
@@ -70,6 +75,7 @@ class Appeal:
 @dataclass
 class GlobalBan:
     """Global ban model."""
+
     id: Optional[int]
     user_id: int
     reason: Optional[str]
@@ -80,6 +86,7 @@ class GlobalBan:
 @dataclass
 class ModerationLog:
     """Moderation log model."""
+
     case_id: Optional[int]
     guild_id: int
     moderator_id: int
@@ -95,6 +102,7 @@ class ModerationLog:
 @dataclass
 class GuildSetting:
     """Guild setting model."""
+
     guild_id: int
     key: str
     value: Any
@@ -105,6 +113,7 @@ class GuildSetting:
 @dataclass
 class LogEventToggle:
     """Log event toggle model."""
+
     guild_id: int
     event_key: str
     enabled: bool = True
@@ -115,6 +124,7 @@ class LogEventToggle:
 @dataclass
 class BotDetectConfig:
     """Bot detection configuration model."""
+
     guild_id: int
     key: str
     value: Any
@@ -125,8 +135,35 @@ class BotDetectConfig:
 @dataclass
 class UserData:
     """User data model for custom user information."""
+
     user_id: int
     data: Dict[str, Any]
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+@dataclass
+class GuildAPIKey:
+    """Guild API Key model."""
+
+    guild_id: int
+    api_provider: Optional[str] = None
+    api_key: Optional[str] = None
+    github_auth_info: Optional[Dict[str, Any]] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+@dataclass
+class BlogPost:
+    """Blog Post model."""
+
+    id: Optional[int] = None
+    title: str = ""
+    content: str = ""
+    author_id: int = 0
+    published: bool = False
+    slug: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -190,6 +227,15 @@ CREATE TABLE IF NOT EXISTS moderation_logs (
     channel_id BIGINT
 );
 
+-- Command logs table
+CREATE TABLE IF NOT EXISTS command_logs (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    command_name VARCHAR(255) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Guild settings table
 CREATE TABLE IF NOT EXISTS guild_settings (
     guild_id BIGINT NOT NULL,
@@ -227,6 +273,28 @@ CREATE TABLE IF NOT EXISTS user_data (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Blog posts table
+CREATE TABLE IF NOT EXISTS blog_posts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    author_id BIGINT NOT NULL,
+    published BOOLEAN DEFAULT false,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Guild API Keys table
+CREATE TABLE IF NOT EXISTS guild_api_keys (
+    guild_id BIGINT PRIMARY KEY,
+    api_provider VARCHAR(100),
+    encrypted_api_key TEXT,
+    encrypted_github_auth_info TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Index creation SQL
@@ -243,6 +311,13 @@ CREATE INDEX IF NOT EXISTS idx_guild_config_guild_id ON guild_config(guild_id);
 CREATE INDEX IF NOT EXISTS idx_guild_settings_guild_id ON guild_settings(guild_id);
 CREATE INDEX IF NOT EXISTS idx_log_event_toggles_guild_id ON log_event_toggles(guild_id);
 CREATE INDEX IF NOT EXISTS idx_botdetect_config_guild_id ON botdetect_config(guild_id);
+CREATE INDEX IF NOT EXISTS idx_command_logs_guild_id ON command_logs(guild_id);
+CREATE INDEX IF NOT EXISTS idx_command_logs_user_id ON command_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_command_logs_timestamp ON command_logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_guild_api_keys_guild_id ON guild_api_keys(guild_id);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON blog_posts(author_id);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published ON blog_posts(published);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
 """
 
 # Trigger creation SQL for automatic updated_at timestamps
@@ -256,22 +331,12 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for updated_at columns (with IF NOT EXISTS equivalent)
-DROP TRIGGER IF EXISTS update_guild_config_updated_at ON guild_config;
+-- Create triggers for updated_at columns
 CREATE TRIGGER update_guild_config_updated_at BEFORE UPDATE ON guild_config FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_appeals_updated_at ON appeals;
 CREATE TRIGGER update_appeals_updated_at BEFORE UPDATE ON appeals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_guild_settings_updated_at ON guild_settings;
 CREATE TRIGGER update_guild_settings_updated_at BEFORE UPDATE ON guild_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_log_event_toggles_updated_at ON log_event_toggles;
 CREATE TRIGGER update_log_event_toggles_updated_at BEFORE UPDATE ON log_event_toggles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_botdetect_config_updated_at ON botdetect_config;
 CREATE TRIGGER update_botdetect_config_updated_at BEFORE UPDATE ON botdetect_config FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_user_data_updated_at ON user_data;
 CREATE TRIGGER update_user_data_updated_at BEFORE UPDATE ON user_data FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_guild_api_keys_updated_at BEFORE UPDATE ON guild_api_keys FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 """

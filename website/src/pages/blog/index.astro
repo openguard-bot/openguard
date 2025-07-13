@@ -1,0 +1,24 @@
+---
+import Layout from '../../components/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const postFiles = await import.meta.glob('../../content/posts/*.md');
+const posts = await Promise.all(Object.values(postFiles).map(async (file) => await file()));
+---
+
+<Layout title="Blog - OpenGuard">
+	<Header />
+	<main class="container mx-auto py-16">
+		<h1 class="mb-12 text-center text-4xl font-bold">Blog</h1>
+		<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+			{posts.map(post => (
+				<a href={post.url} class="block rounded-lg bg-gray-800 p-8 hover:bg-gray-700">
+					<h2 class="text-2xl font-bold">{post.frontmatter.title}</h2>
+					<p class="mt-4 text-gray-400">{new Date(post.frontmatter.date).toLocaleDateString()}</p>
+				</a>
+			))}
+		</div>
+	</main>
+	<Footer />
+</Layout>

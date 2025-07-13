@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenGuard Backend API Service
+After=network.target
+
+[Service]
+User=http
+Group=http
+WorkingDirectory=/srv/http/openguard/dashboard/backend
+Environment="PYTHONPATH=/srv/http/openguard"
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 5030
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

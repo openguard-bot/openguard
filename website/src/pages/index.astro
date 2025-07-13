@@ -1,0 +1,32 @@
+---
+import Layout from '../components/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+---
+
+<Layout title="OpenGuard">
+	<Header />
+	<main>
+		<section class="bg-gradient-to-r from-indigo-700 to-purple-800 py-20 text-center">
+			<div class="container mx-auto">
+				<h1 class="text-5xl font-bold">Moderation Powered by AI</h1>
+				<p class="mt-4 text-xl">Keep your community safe with the OpenGuard bot.</p>
+				<div class="mt-8 space-x-4">
+					<a href="https://discord.com/oauth2/authorize?client_id=1381359157109854268&permissions=1374926793926&integration_type=0&scope=bot+applications.commands" class="rounded bg-white px-6 py-3 text-lg text-indigo-600 hover:bg-gray-200">Add to Server</a>
+					<a href="/dashboard" class="rounded bg-gray-700 px-6 py-3 text-lg hover:bg-gray-600">Go to Dashboard</a>
+				</div>
+			</div>
+		</section>
+
+		<section class="container mx-auto py-16">
+			<h2 class="mb-12 text-center text-4xl font-bold">Features</h2>
+			<div class="grid grid-cols-1 gap-8 md:grid-cols-3">
+				<FeatureCard title="Smart Detection" description="Automatically flag spam, toxicity, and unwanted content." />
+				<FeatureCard title="Fast Response" description="Our system reacts instantly to keep conversations clean." />
+				<FeatureCard title="Easy Configuration" description="Manage settings directly from your dashboard." />
+			</div>
+		</section>
+	</main>
+	<Footer />
+</Layout>

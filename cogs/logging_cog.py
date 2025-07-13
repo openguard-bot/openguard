@@ -9,6 +9,7 @@ from typing import Optional, Union
 
 # Import our JSON-based settings manager
 from .logging_helpers import settings_manager
+from .aimod_helpers.config_manager import get_guild_config_async
 
 log = logging.getLogger(__name__)  # Setup logger for this cog
 
@@ -94,9 +95,6 @@ class LoggingCog(commands.Cog):
             asyncio.create_task(
                 self.start_audit_log_poller_when_ready()
             )  # Keep this for initial start
-
-    # Slash command group for logging
-    log_group = app_commands.Group(name="log", description="Logging configuration commands.")
 
     class LogView(ui.LayoutView):
         """View used for logging messages."""
@@ -200,8 +198,9 @@ class LoggingCog(commands.Cog):
     async def initialize_cog(self):
         """Asynchronous initialization tasks."""
         log.info("Initializing LoggingCog...")
-        self.session = aiohttp.ClientSession()
-        log.info("aiohttp ClientSession created for LoggingCog.")
+        if not self.session or self.session.closed:
+            self.session = aiohttp.ClientSession()
+            log.info("aiohttp ClientSession created for LoggingCog.")
         await self.initialize_audit_log_ids()
         if not self.poll_audit_log.is_running():
             self.poll_audit_log.start()
@@ -271,6 +270,7 @@ class LoggingCog(commands.Cog):
 
         webhook_url = await settings_manager.get_logging_webhook(guild.id)
 
+        log.info(f"For guild {guild.id}, retrieved webhook_url: {webhook_url} (type: {type(webhook_url)})")
         if not webhook_url:
             # log.debug(f"Logging webhook not configured for guild {guild.id}. Skipping log.") # Can be noisy
             return
@@ -383,301 +383,7 @@ class LoggingCog(commands.Cog):
         except Exception:
             return False
 
-    # --- Slash Commands ---
-
-    @log_group.command(name="channel", description="Sets the channel for logging and creates/updates the webhook.")
-    @app_commands.describe(channel="The text channel to send logs to")
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.guild_only()
-    async def log_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        """Sets the channel for logging and creates/updates the webhook. (Admin Only)"""
-        await interaction.response.defer(thinking=True)
-
-        guild = interaction.guild
-        me = guild.me
-
-        # 1. Check bot permissions
-        if not channel.permissions_for(me).manage_webhooks:
-            await interaction.followup.send(
-                f"❌ I don't have the 'Manage Webhooks' permission in {channel.mention}. Please grant it and try again.",
-                allowed_mentions=AllowedMentions.none(),
-                ephemeral=True
-            )
-            return
-        if not channel.permissions_for(me).send_messages:
-            await interaction.followup.send(
-                f"❌ I don't have the 'Send Messages' permission in {channel.mention}. Please grant it and try again (needed for webhook creation confirmation).",
-                allowed_mentions=AllowedMentions.none(),
-                ephemeral=True
-            )
-            return
-
-        # 2. Check existing webhook setting
-        existing_url = await settings_manager.get_logging_webhook(guild.id)
-        if existing_url:
-            # Try to fetch the existing webhook to see if it's still valid and in the right channel
-            try:
-                if not self.session or self.session.closed:
-                    self.session = aiohttp.ClientSession()  # Ensure session exists
-                existing_webhook = await discord.Webhook.from_url(
-                    existing_url, session=self.session
-                ).fetch()
-                if existing_webhook.channel_id == channel.id:
-                    await interaction.followup.send(
-                        f"✅ Logging is already configured for {channel.mention} using webhook `{existing_webhook.name}`.",
-                        allowed_mentions=AllowedMentions.none(),
-                        ephemeral=True
-                    )
-                    return
-                else:
-                    await interaction.followup.send(
-                        f"⚠️ Logging webhook is currently set for a different channel (<#{existing_webhook.channel_id}>). I will create a new one for {channel.mention}.",
-                        allowed_mentions=AllowedMentions.none(),
-                        ephemeral=True
-                    )
-            except (
-                discord.NotFound,
-                discord.Forbidden,
-                ValueError,
-                aiohttp.ClientError,
-            ):
-                await interaction.followup.send(
-                    f"⚠️ Could not verify the existing webhook URL. It might be invalid or deleted. I will create a new one for {channel.mention}.",
-                    allowed_mentions=AllowedMentions.none(),
-                    ephemeral=True
-                )
-            except Exception as e:
-                log.exception(
-                    f"Error fetching existing webhook during setup for guild {guild.id}"
-                )
-                await interaction.followup.send(
-                    f"⚠️ An error occurred while checking the existing webhook. Proceeding to create a new one for {channel.mention}.",
-                    allowed_mentions=AllowedMentions.none(),
-                    ephemeral=True
-                )
-
-        # 3. Create new webhook
-        try:
-            webhook_name = f"{self.bot.user.name} Logger"
-            # Use bot's avatar if possible
-            avatar_bytes = None
-            try:
-                avatar_bytes = await self.bot.user.display_avatar.read()
-            except Exception:
-                log.warning(
-                    f"Could not read bot avatar for webhook creation in guild {guild.id}."
-                )
-
-            new_webhook = await channel.create_webhook(
-                name=webhook_name,
-                avatar=avatar_bytes,
-                reason=f"Logging setup by {interaction.user} ({interaction.user.id})",
-            )
-            log.info(
-                f"Created logging webhook '{webhook_name}' in channel {channel.id} for guild {guild.id}"
-            )
-        except discord.HTTPException as e:
-            log.error(
-                f"Failed to create webhook in {channel.mention} for guild {guild.id}: {e}"
-            )
-            await interaction.followup.send(
-                f"❌ Failed to create webhook. Error: {e}. This could be due to hitting the channel webhook limit (15).",
-                allowed_mentions=AllowedMentions.none(),
-                ephemeral=True
-            )
-            return
-        except Exception as e:
-            log.exception(
-                f"Unexpected error creating webhook in {channel.mention} for guild {guild.id}"
-            )
-            await interaction.followup.send(
-                "❌ An unexpected error occurred while creating the webhook.",
-                allowed_mentions=AllowedMentions.none(),
-                ephemeral=True
-            )
-            return
-
-        # 4. Save webhook URL
-        success = await settings_manager.set_logging_webhook(guild.id, new_webhook.url)
-        if success:
-            await interaction.followup.send(
-                f"✅ Successfully configured logging to send messages to {channel.mention} via the new webhook `{new_webhook.name}`.",
-                allowed_mentions=AllowedMentions.none(),
-            )
-            # Test send (optional)
-            try:
-                test_view = self._create_log_embed(
-                    "✅ Logging Setup Complete",
-                    f"Logs will now be sent to this channel via the webhook `{new_webhook.name}`.",
-                    color=discord.Color.green(),
-                )
-                await new_webhook.send(
-                    view=test_view,
-                    username=webhook_name,
-                    avatar_url=self.bot.user.display_avatar.url,
-                    allowed_mentions=AllowedMentions.none(),
-                )
-            except Exception as e:
-                log.error(
-                    f"Failed to send test message via new webhook for guild {guild.id}: {e}"
-                )
-                await interaction.followup.send(
-                    "⚠️ Could not send a test message via the new webhook, but the URL has been saved.",
-                    allowed_mentions=AllowedMentions.none(),
-                    ephemeral=True
-                )
-        else:
-            log.error(
-                f"Failed to save webhook URL {new_webhook.url} to database for guild {guild.id}"
-            )
-            await interaction.followup.send(
-                "❌ Successfully created the webhook, but failed to save its URL to my settings. Please try again or contact support.",
-                allowed_mentions=AllowedMentions.none(),
-                ephemeral=True
-            )
-            # Attempt to delete the created webhook to avoid orphans
-            try:
-                await new_webhook.delete(reason="Failed to save URL to settings")
-                log.info(
-                    f"Deleted orphaned webhook '{new_webhook.name}' for guild {guild.id}"
-                )
-            except Exception as del_e:
-                log.error(
-                    f"Failed to delete orphaned webhook '{new_webhook.name}' for guild {guild.id}: {del_e}"
-                )
-
-    @log_group.command(name="toggle", description="Toggles logging for a specific event type (on/off).")
-    @app_commands.describe(
-        event_key="The event key to toggle (use /log list_keys to see available keys)",
-        enabled_status="Enable or disable the event (leave empty to flip current status)"
-    )
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.guild_only()
-    async def log_toggle(
-        self,
-        interaction: discord.Interaction,
-        event_key: str,
-        enabled_status: Optional[bool] = None,
-    ):
-        """Toggles logging for a specific event type (on/off).
-
-        Use '/log list_keys' to see available event keys.
-        If enabled_status is not provided, the current status will be flipped.
-        """
-        guild_id = interaction.guild.id
-        event_key = event_key.lower()  # Ensure case-insensitivity
-
-        if event_key not in ALL_EVENT_KEYS:
-            await interaction.response.send_message(
-                f"❌ Invalid event key: `{event_key}`. Use `/log list_keys` to see valid keys.",
-                allowed_mentions=AllowedMentions.none(),
-                ephemeral=True
-            )
-            return
-
-        # Determine the new status
-        if enabled_status is None:
-            # Fetch current status (defaults to True if not explicitly set)
-            current_status = await settings_manager.is_log_event_enabled(
-                guild_id, event_key, default_enabled=True
-            )
-            new_status = not current_status
-        else:
-            new_status = enabled_status
-
-        # Save the new status
-        success = await settings_manager.set_log_event_enabled(
-            guild_id, event_key, new_status
-        )
-
-        if success:
-            status_str = "ENABLED" if new_status else "DISABLED"
-            await interaction.response.send_message(
-                f"✅ Logging for event `{event_key}` is now **{status_str}**.",
-                allowed_mentions=AllowedMentions.none(),
-            )
-        else:
-            await interaction.response.send_message(
-                f"❌ Failed to update setting for event `{event_key}`. Please check logs or try again.",
-                allowed_mentions=AllowedMentions.none(),
-                ephemeral=True
-            )
-
-    @log_group.command(name="status", description="Shows the current enabled/disabled status for all loggable events.")
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.guild_only()
-    async def log_status(self, interaction: discord.Interaction):
-        """Shows the current enabled/disabled status for all loggable events."""
-        guild_id = interaction.guild.id
-        toggles = await settings_manager.get_all_log_event_toggles(guild_id)
-
-        lines = []
-        for key in ALL_EVENT_KEYS:
-            is_enabled = toggles.get(key, True)
-            status_emoji = "✅" if is_enabled else "❌"
-            lines.append(f"{status_emoji} `{key}`")
-
-        description = ""
-        for line in lines:
-            if len(description) + len(line) + 1 > 4000:
-                view = self._create_log_embed(
-                    title=f"Logging Status for {interaction.guild.name}",
-                    description=description.strip(),
-                    color=discord.Color.blue(),
-                )
-                await interaction.response.send_message(view=view, allowed_mentions=AllowedMentions.none())
-                description = line + "\n"
-            else:
-                description += line + "\n"
-
-        if description:
-            view = self._create_log_embed(
-                title=f"Logging Status for {interaction.guild.name}",
-                description=description.strip(),
-                color=discord.Color.blue(),
-            )
-            if not interaction.response.is_done():
-                await interaction.response.send_message(view=view, allowed_mentions=AllowedMentions.none())
-            else:
-                await interaction.followup.send(view=view, allowed_mentions=AllowedMentions.none())
-
-    @log_group.command(name="list_keys", description="Lists all valid event keys for use with the 'log toggle' command.")
-    async def log_list_keys(self, interaction: discord.Interaction):
-        """Lists all valid event keys for use with the 'log toggle' command."""
-        keys_text = "\n".join(f"`{key}`" for key in ALL_EVENT_KEYS)
-
-        if len(keys_text) > 4000:
-            parts = []
-            current_part = ""
-            for key in ALL_EVENT_KEYS:
-                line = f"`{key}`\n"
-                if len(current_part) + len(line) > 4000:
-                    parts.append(current_part)
-                    current_part = line
-                else:
-                    current_part += line
-            if current_part:
-                parts.append(current_part)
-
-            first = True
-            for part in parts:
-                view = self._create_log_embed(
-                    title="Available Logging Event Keys" if first else "",
-                    description=part.strip(),
-                    color=discord.Color.purple(),
-                )
-                if first and not interaction.response.is_done():
-                    await interaction.response.send_message(view=view, allowed_mentions=AllowedMentions.none())
-                else:
-                    await interaction.followup.send(view=view, allowed_mentions=AllowedMentions.none())
-                first = False
-        else:
-            view = self._create_log_embed(
-                title="Available Logging Event Keys",
-                description=keys_text,
-                color=discord.Color.purple(),
-            )
-            await interaction.response.send_message(view=view, allowed_mentions=AllowedMentions.none())
+    # --- Event Listeners ---
 
     # Simple audit log poller (placeholder)
     @tasks.loop(minutes=5)
@@ -692,17 +398,6 @@ class LoggingCog(commands.Cog):
         await self.bot.wait_until_ready()
 
     # --- Event Listeners ---
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        """Initialize when the cog is ready (called after bot on_ready)."""
-        log.info(f"{self.__class__.__name__} cog is ready.")
-        # Ensure the poller is running if it wasn't started earlier
-        if self.bot.is_ready() and not self.poll_audit_log.is_running():
-            log.warning(
-                "Poll audit log task was not running after on_ready, attempting to start."
-            )
-            await self.initialize_cog()  # Re-initialize just in case
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):

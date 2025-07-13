@@ -8,7 +8,7 @@ from database.operations import (
 )
 
 # OpenRouter/LiteLLM configuration
-DEFAULT_AI_MODEL = "deepseek/deepseek-chat-v3-0324:free"
+DEFAULT_AI_MODEL = "github_copilot/gpt-4.1"
 
 # Legacy environment variables (kept for compatibility)
 VERTEX_PROJECT_ID = os.getenv("VERTEX_PROJECT_ID")
@@ -19,6 +19,10 @@ DEFAULT_VERTEX_AI_MODEL = DEFAULT_AI_MODEL  # Alias for backward compatibility
 # and are not configurable through LiteLLM in the same way as Google GenAI
 
 MOD_LOG_API_SECRET_ENV_VAR = "MOD_LOG_API_SECRET"
+
+# Channel-specific configuration keys
+CHANNEL_EXCLUSIONS_KEY = "AI_EXCLUDED_CHANNELS"
+CHANNEL_RULES_KEY = "AI_CHANNEL_RULES"
 
 # Legacy paths (kept for compatibility but not used)
 GUILD_CONFIG_DIR = os.path.join(os.getcwd(), "wdiscordbot-json-data")
@@ -35,22 +39,27 @@ GLOBAL_BANS = []  # Deprecated - use database functions
 
 CONFIG_LOCK = asyncio.Lock()
 
+
 # Legacy save functions (now no-ops for compatibility)
 async def save_guild_config():
     """Legacy function - now a no-op since data is saved directly to database."""
     pass
 
+
 async def save_user_infractions():
     """Legacy function - now a no-op since data is saved directly to database."""
     pass
+
 
 async def save_appeals():
     """Legacy function - now a no-op since data is saved directly to database."""
     pass
 
+
 async def save_global_bans():
     """Legacy function - now a no-op since data is saved directly to database."""
     pass
+
 
 def get_guild_config(guild_id: int, key: str, default=None):
     """Get guild configuration value from database."""
@@ -58,11 +67,15 @@ def get_guild_config(guild_id: int, key: str, default=None):
         # This is a sync function, so we need to handle it carefully
         # For now, return default and log a warning
         import logging
-        logging.warning(f"get_guild_config called synchronously for guild {guild_id}, key {key}. Use async version instead.")
+
+        logging.warning(
+            f"get_guild_config called synchronously for guild {guild_id}, key {key}. Use async version instead."
+        )
         return default
     except Exception as e:
         print(f"Error in get_guild_config: {e}")
         return default
+
 
 async def set_guild_config(guild_id: int, key: str, value):
     """Set guild configuration value in database."""
@@ -72,6 +85,7 @@ async def set_guild_config(guild_id: int, key: str, value):
         print(f"Failed to set guild config {key} for guild {guild_id}: {e}")
         return False
 
+
 async def get_guild_config_async(guild_id: int, key: str, default=None):
     """Get guild configuration value from database (async version)."""
     try:
@@ -79,6 +93,7 @@ async def get_guild_config_async(guild_id: int, key: str, default=None):
     except Exception as e:
         print(f"Failed to get guild config {key} for guild {guild_id}: {e}")
         return default
+
 
 GUILD_LANGUAGE_KEY = "LANGUAGE_CODE"
 DEFAULT_LANGUAGE = "en"
@@ -130,9 +145,10 @@ TRANSLATIONS = {
         "rules_not_found": "Non è stato possibile trovare un canale delle regole in questo server.",
         "rules_channel_empty": "Il canale delle regole è vuoto o non è stato possibile leggerlo.",
         "rules_set": "Le regole sono state impostate per questo server.",
-        "no_permission": "Non hai il permesso di usare questo comando."
-    }
+        "no_permission": "Non hai il permesso di usare questo comando.",
+    },
 }
+
 
 def get_guild_language(guild_id: int) -> str:
     """Get guild language (sync version - returns default for compatibility)."""
@@ -140,6 +156,7 @@ def get_guild_language(guild_id: int) -> str:
     # For compatibility, return default language
     _ = guild_id  # Suppress unused parameter warning
     return DEFAULT_LANGUAGE
+
 
 async def get_guild_language_async(guild_id: int) -> str:
     """Get guild language from database (async version)."""
@@ -149,10 +166,70 @@ async def get_guild_language_async(guild_id: int) -> str:
         print(f"Failed to get guild language for guild {guild_id}: {e}")
         return DEFAULT_LANGUAGE
 
+
 def t(guild_id: int, key: str) -> str:
     """Get translated text (sync version - uses default language for compatibility)."""
     lang = get_guild_language(guild_id)
     return TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANGUAGE]).get(key, key)
+
+
+# Channel-specific AI moderation configuration functions
+
+async def get_excluded_channels(guild_id: int) -> list:
+    """Get list of channels excluded from AI moderation."""
+    return await get_guild_config_async(guild_id, CHANNEL_EXCLUSIONS_KEY, [])
+
+
+async def add_excluded_channel(guild_id: int, channel_id: int) -> bool:
+    """Add a channel to the AI moderation exclusion list."""
+    excluded_channels = await get_excluded_channels(guild_id)
+    if channel_id not in excluded_channels:
+        excluded_channels.append(channel_id)
+        return await set_guild_config(guild_id, CHANNEL_EXCLUSIONS_KEY, excluded_channels)
+    return True  # Already excluded
+
+
+async def remove_excluded_channel(guild_id: int, channel_id: int) -> bool:
+    """Remove a channel from the AI moderation exclusion list."""
+    excluded_channels = await get_excluded_channels(guild_id)
+    if channel_id in excluded_channels:
+        excluded_channels.remove(channel_id)
+        return await set_guild_config(guild_id, CHANNEL_EXCLUSIONS_KEY, excluded_channels)
+    return True  # Already not excluded
+
+
+async def is_channel_excluded(guild_id: int, channel_id: int) -> bool:
+    """Check if a channel is excluded from AI moderation."""
+    excluded_channels = await get_excluded_channels(guild_id)
+    return channel_id in excluded_channels
+
+
+async def get_channel_rules(guild_id: int, channel_id: int) -> str:
+    """Get custom rules for a specific channel."""
+    channel_rules = await get_guild_config_async(guild_id, CHANNEL_RULES_KEY, {})
+    return channel_rules.get(str(channel_id), "")
+
+
+async def set_channel_rules(guild_id: int, channel_id: int, rules: str) -> bool:
+    """Set custom rules for a specific channel."""
+    channel_rules = await get_guild_config_async(guild_id, CHANNEL_RULES_KEY, {})
+    channel_rules[str(channel_id)] = rules
+    return await set_guild_config(guild_id, CHANNEL_RULES_KEY, channel_rules)
+
+
+async def remove_channel_rules(guild_id: int, channel_id: int) -> bool:
+    """Remove custom rules for a specific channel."""
+    channel_rules = await get_guild_config_async(guild_id, CHANNEL_RULES_KEY, {})
+    if str(channel_id) in channel_rules:
+        del channel_rules[str(channel_id)]
+        return await set_guild_config(guild_id, CHANNEL_RULES_KEY, channel_rules)
+    return True  # Already no custom rules
+
+
+async def get_all_channel_rules(guild_id: int) -> dict:
+    """Get all channel-specific rules for a guild."""
+    return await get_guild_config_async(guild_id, CHANNEL_RULES_KEY, {})
+
 
 async def t_async(guild_id: int, key: str) -> str:
     """Get translated text (async version)."""

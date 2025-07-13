@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+psycopg2-binary
+redis
+python-dotenv
+requests
+PyJWT
+python-jose[cryptography]
+aiohttp
+SQLAlchemy
+asyncpg
+cachetools

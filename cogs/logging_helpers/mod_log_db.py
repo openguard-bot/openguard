@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 
 # Compatibility wrapper functions that maintain the original interface
 
+
 async def create_connection_with_retry(pool=None, max_retries: int = 3):
     """
     Compatibility function for the original interface.
@@ -31,12 +32,14 @@ async def create_connection_with_retry(pool=None, max_retries: int = 3):
     _ = pool, max_retries  # Suppress unused parameter warnings
     return True, True
 
+
 async def setup_moderation_log_table(pool=None):
     """
     Ensures the PostgreSQL database tables exist.
     """
     _ = pool  # Suppress unused parameter warning
     return await _setup_moderation_log_table()
+
 
 async def add_mod_log(
     pool,  # Ignored for PostgreSQL (uses connection pooling)
@@ -58,10 +61,12 @@ async def add_mod_log(
         duration_seconds,
     )
 
+
 async def update_mod_log_reason(pool, case_id: int, new_reason: str) -> bool:
     """Updates the reason for a specific moderation log entry."""
     _ = pool  # Suppress unused parameter warning
     return await _update_mod_log_reason(case_id, new_reason)
+
 
 async def update_mod_log_message_details(
     pool, case_id: int, message_id: int, channel_id: int
@@ -70,10 +75,12 @@ async def update_mod_log_message_details(
     _ = pool  # Suppress unused parameter warning
     return await _update_mod_log_message_details(case_id, message_id, channel_id)
 
+
 async def get_mod_log(pool, case_id: int) -> Optional[Dict[str, Any]]:
     """Retrieves a specific moderation log entry by case_id."""
     _ = pool  # Suppress unused parameter warning
     return await _get_mod_log(case_id)
+
 
 async def get_user_mod_logs(
     pool, guild_id: int, target_user_id: int, limit: int = 50
@@ -82,6 +89,7 @@ async def get_user_mod_logs(
     _ = pool  # Suppress unused parameter warning
     return await _get_user_mod_logs(guild_id, target_user_id, limit)
 
+
 async def get_guild_mod_logs(
     pool, guild_id: int, limit: int = 50
 ) -> List[Dict[str, Any]]:
@@ -89,10 +97,12 @@ async def get_guild_mod_logs(
     _ = pool  # Suppress unused parameter warning
     return await _get_guild_mod_logs(guild_id, limit)
 
+
 async def delete_mod_log(pool, case_id: int, guild_id: int) -> bool:
     """Deletes a specific moderation log entry by case_id, ensuring it belongs to the guild."""
     _ = pool, guild_id  # Suppress unused parameter warnings
     return await _delete_mod_log(case_id)  # Note: guild_id check removed for simplicity
+
 
 async def clear_user_mod_logs(pool, guild_id: int, target_user_id: int) -> int:
     """Deletes all moderation log entries for a specific user in a guild. Returns the number of deleted logs."""
@@ -100,7 +110,9 @@ async def clear_user_mod_logs(pool, guild_id: int, target_user_id: int) -> int:
     success = await _clear_user_mod_logs(guild_id, target_user_id)
     return 1 if success else 0  # Convert boolean to count for compatibility
 
+
 # Thread-safe functions for cross-thread operations
+
 
 async def add_mod_log_safe(
     bot_instance,
@@ -125,6 +137,7 @@ async def add_mod_log_safe(
         duration_seconds,
     )
 
+
 async def update_mod_log_message_details_safe(
     bot_instance, case_id: int, message_id: int, channel_id: int
 ) -> bool:
@@ -133,6 +146,7 @@ async def update_mod_log_message_details_safe(
     Since we're using JSON files, this is the same as the regular function.
     """
     return await update_mod_log_message_details(None, case_id, message_id, channel_id)
+
 
 async def log_action_safe(
     bot_instance,
@@ -183,15 +197,14 @@ async def log_action_safe(
         )
 
         # Get the case_id from the most recent log entry for this user
-        recent_logs = await get_user_mod_logs(
-            None, guild_id, target_user_id, limit=1
-        )
+        recent_logs = await get_user_mod_logs(None, guild_id, target_user_id, limit=1)
         case_id = recent_logs[0]["case_id"] if recent_logs else None
         return case_id
 
     except Exception as e:
         log.exception(f"Error in log_action_safe: {e}")
         return None
+
 
 # Helper function for running in bot loop (compatibility)
 def run_in_bot_loop(bot_instance, coro_func):
