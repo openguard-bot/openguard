@@ -410,12 +410,12 @@ async def get_user_analytics(
 
     # Get total active users (users who ran commands)
     active_users_result = await db.execute(
-        text(f"""
+        text("""
             SELECT COUNT(DISTINCT user_id) as active_users
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
-        """),
-        {"guild_id": guild_id} if guild_id else {}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
+        """.replace("{guild_filter}", guild_filter)),
+        {"guild_id": guild_id, "days": f"{days} days"} if guild_id else {"days": f"{days} days"}
     )
     total_active_users = active_users_result.fetchone()[0] or 0
 
@@ -424,18 +424,18 @@ async def get_user_analytics(
 
     # Get activity timeline
     activity_result = await db.execute(
-        text(f"""
+        text("""
             SELECT
                 DATE(timestamp) as date,
                 COUNT(DISTINCT user_id) as active_users,
                 0 as new_users,  -- Placeholder
                 COUNT(*) as commands_used
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
-        """),
-        {"guild_id": guild_id} if guild_id else {}
+        """.replace("{guild_filter}", guild_filter)),
+        {"guild_id": guild_id, "days": f"{days} days"} if guild_id else {"days": f"{days} days"}
     )
 
     activity_timeline = [
