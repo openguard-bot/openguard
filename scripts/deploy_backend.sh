@@ -1,8 +1,13 @@
 #!/bin/bash
 set -e
 
+cd /srv/http/openguard
+
+echo "Activating virtual environment..."
+source .venv/bin/activate
+
 echo "Installing Python dependencies..."
-(cd dashboard/backend && pip install -r requirements.txt)
+pip install -r dashboard/backend/requirements.txt
 
 echo "Restarting backend service..."
 systemctl restart openguard-backend

@@ -43,7 +43,7 @@ jobs:
           script: |
             cd /srv/http/openguard
             git pull origin main
-            sudo /srv/http/openguard/build_website_prod.sh
+            sudo /srv/http/openguard/scripts/build_website_prod.sh
 
   deploy-dashboard-frontend:
     needs: changes
