@@ -9,7 +9,7 @@ import pkg_resources
 import re
 
 # The user IDs that can run the update command
-AUTHORIZED_USER_IDS = (1141746562922459136, 452666956353503252)
+AUTHORIZED_USER_IDS = (1141746562922459136, 452666956353503252, 1146391317295935570)
 
 
 class UpdateCog(commands.Cog):
