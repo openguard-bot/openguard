@@ -13,8 +13,8 @@ class UserInfoCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.developer_badges = {
-            Owners.ILIKEPANCAKES.value: f"{CustomEmoji.STAFF_BLUE.value}OpenGuard Developer",
-            Owners.SLIPSTREAM.value: f"{CustomEmoji.STAFF_PINK.value}OpenGuard Developer",
+            Owners.ILIKEPANCAKES: f"{CustomEmoji.STAFF_BLUE.value}OpenGuard Developer",
+            Owners.SLIPSTREAM: f"{CustomEmoji.STAFF_PINK.value}OpenGuard Developer",
         }
         # Legacy variables for compatibility
         self.custom_data_file = "user_data.json"

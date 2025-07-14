@@ -6,7 +6,7 @@ import collections
 import datetime
 import os
 
-from lists import Owners
+from lists import Owners, OwnersTuple
 from .aimod_helpers.config_manager import (
     DEFAULT_VERTEX_AI_MODEL,
     GLOBAL_BANS,
@@ -29,7 +29,7 @@ from .aimod_helpers.litellm_config import get_litellm_client
 from .aimod_helpers.ui import ActionConfirmationView
 from database.operations import get_guild_api_key
 
-DEV_AIMODTEST_USER_IDS = tuple(member.value for member in Owners)
+DEV_AIMODTEST_USER_IDS = OwnersTuple
 DEV_AIMODTEST_ENABLED = False
 
 

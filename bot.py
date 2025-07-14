@@ -134,8 +134,7 @@ async def prefix_update_listener():
 bot = MyBot(command_prefix=get_prefix, intents=intents, help_command=None)
 bot.launch_time = discord.utils.utcnow()
 
-ERROR_NOTIFICATION_USER_ID = Owners.ILIKEPANCAKES.value
-
+ERROR_NOTIFICATION_USER_ID = Owners.ILIKEPANCAKES
 
 def catch_exceptions(func):
     @functools.wraps(func)

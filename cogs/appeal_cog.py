@@ -83,7 +83,7 @@ class AppealCog(commands.Cog, name="Appeals"):
         APPEALS[appeal_id] = appeal_data
         await save_appeals()
 
-        admin_user_id = Owners.ILIKEPANCAKES.value
+        admin_user_id = Owners.ILIKEPANCAKES
         admin_user = self.bot.get_user(admin_user_id)
 
         if not admin_user:
@@ -157,7 +157,7 @@ class AppealCog(commands.Cog, name="Appeals"):
         if not custom_id.startswith("appeal_"):
             return
 
-        admin_user_id = Owners.ILIKEPANCAKES.value
+        admin_user_id = Owners.ILIKEPANCAKES
         if interaction.user.id != admin_user_id:
             await interaction.response.send_message(
                 "You are not authorized to handle this appeal.", ephemeral=True
