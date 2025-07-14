@@ -10,49 +10,6 @@ from .db import redis_client
 logger = logging.getLogger(__name__)
 
 
-async def get_guild_config(db: Session, guild_id: int) -> schemas.GuildConfig:
-    """Retrieve all configuration entries for a guild."""
-    result = await db.execute(
-        text("SELECT key, value FROM guild_settings WHERE guild_id = :guild_id"),
-        {"guild_id": guild_id},
-    )
-
-    config_data: Dict[str, Any] = {}
-    for key, value in result.fetchall():
-        if isinstance(value, str):
-            try:
-                value = json.loads(value)
-            except json.JSONDecodeError:
-                pass
-        config_data[key] = value
-
-    return schemas.GuildConfig(**config_data)
-
-
-async def update_guild_config(
-    db: Session, guild_id: int, config_data: schemas.GuildConfigUpdate
-) -> schemas.GuildConfig:
-    """Update a guild's configuration."""
-    for key, value in config_data.dict(exclude_unset=True).items():
-        json_value = json.dumps(value)
-        await db.execute(
-            text(
-                """
-                INSERT INTO guild_settings (guild_id, key, value)
-                VALUES (:guild_id, :key, :value)
-                ON CONFLICT (guild_id, key)
-                DO UPDATE SET value = :value
-                """
-            ),
-            {"guild_id": guild_id, "key": key, "value": json_value},
-        )
-
-    await db.commit()
-
-    # Return the updated configuration
-    return await get_guild_config(db, guild_id)
-
-
 async def get_general_settings(db: Session, guild_id: int) -> schemas.GeneralSettings:
     """Retrieve general settings for a guild."""
     result = await db.execute(
@@ -910,30 +867,6 @@ async def count_blog_posts(db: Session, published_only: bool = False) -> int:
 # Enhanced Configuration CRUD Functions
 
 
-async def get_comprehensive_guild_config(
-    db: Session, guild_id: int
-) -> schemas.ComprehensiveGuildConfig:
-    """Get all configuration settings for a guild."""
-    # Get all individual configs
-    general = await get_general_settings(db, guild_id)
-    moderation = await get_moderation_settings(db, guild_id)
-    logging = await get_logging_settings(db, guild_id)
-    advanced_logging = await get_advanced_logging_config(db, guild_id)
-    bot_detection = await get_bot_detection_config(db, guild_id)
-    raid_defense = await get_raid_defense_config(db, guild_id)
-    message_rate = await get_message_rate_config(db, guild_id)
-
-    return schemas.ComprehensiveGuildConfig(
-        general=general,
-        moderation=moderation,
-        logging=logging,
-        advanced_logging=advanced_logging,
-        bot_detection=bot_detection,
-        raid_defense=raid_defense,
-        message_rate=message_rate,
-    )
-
-
 async def get_bot_detection_config(
     db: Session, guild_id: int
 ) -> schemas.BotDetectionSettings:
@@ -1117,10 +1050,10 @@ async def delete_channel_rules(db: Session, guild_id: int, channel_id: str) -> d
         return {"message": f"No custom rules found for channel {channel_id}."}
 
 
-async def get_message_rate_config(
+async def get_rate_limiting_settings(
     db: Session, guild_id: int
-) -> schemas.MessageRateSettings:
-    """Get message rate limiting configuration for a guild."""
+) -> schemas.RateLimitingSettings:
+    """Get rate limiting configuration for a guild."""
     result = await db.execute(
         text(
             """
@@ -1154,13 +1087,13 @@ async def get_message_rate_config(
         if key not in config_data:
             config_data[key] = default_value
 
-    return schemas.MessageRateSettings(**config_data)
+    return schemas.RateLimitingSettings(**config_data)
 
 
-async def update_message_rate_config(
-    db: Session, guild_id: int, settings: schemas.MessageRateSettingsUpdate
-) -> schemas.MessageRateSettings:
-    """Update message rate limiting configuration for a guild."""
+async def update_rate_limiting_settings(
+    db: Session, guild_id: int, settings: schemas.RateLimitingSettingsUpdate
+) -> schemas.RateLimitingSettings:
+    """Update rate limiting configuration for a guild."""
     for key, value in settings.dict(exclude_unset=True).items():
         if value is not None:
             prefixed_key = f"message_rate_{key}"
@@ -1177,7 +1110,74 @@ async def update_message_rate_config(
             )
 
     await db.commit()
-    return await get_message_rate_config(db, guild_id)
+    return await get_rate_limiting_settings(db, guild_id)
+
+
+async def get_security_settings(
+    db: Session, guild_id: int
+) -> schemas.SecuritySettings:
+    """Get security settings for a guild."""
+    bot_detection = await get_bot_detection_config(db, guild_id)
+    return schemas.SecuritySettings(bot_detection=bot_detection)
+
+
+async def update_security_settings(
+    db: Session, guild_id: int, settings: schemas.SecuritySettingsUpdate
+) -> schemas.SecuritySettings:
+    """Update security settings for a guild."""
+    if settings.bot_detection:
+        await update_bot_detection_config(
+            db, guild_id, settings.bot_detection
+        )
+    return await get_security_settings(db, guild_id)
+
+
+async def get_ai_settings(db: Session, guild_id: int) -> schemas.AISettings:
+    """Get AI settings for a guild."""
+    channel_exclusions = await get_channel_exclusions(db, guild_id)
+    channel_rules = await get_channel_rules(db, guild_id)
+    return schemas.AISettings(
+        channel_exclusions=channel_exclusions, channel_rules=channel_rules
+    )
+
+
+async def update_ai_settings(
+    db: Session, guild_id: int, settings: schemas.AISettingsUpdate
+) -> schemas.AISettings:
+    """Update AI settings for a guild."""
+    if settings.channel_exclusions:
+        await update_channel_exclusions(db, guild_id, settings.channel_exclusions)
+    if settings.channel_rules:
+        await update_channel_rules(db, guild_id, settings.channel_rules)
+    return await get_ai_settings(db, guild_id)
+
+
+async def get_channels_settings(
+    db: Session, guild_id: int
+) -> schemas.ChannelsSettings:
+    """Get channels settings for a guild."""
+    exclusions = await get_channel_exclusions(db, guild_id)
+    rules = await get_channel_rules(db, guild_id)
+    return schemas.ChannelsSettings(
+        exclusions=exclusions.excluded_channels, rules=rules.channel_rules
+    )
+
+
+async def update_channels_settings(
+    db: Session, guild_id: int, settings: schemas.ChannelsSettingsUpdate
+) -> schemas.ChannelsSettings:
+    """Update channels settings for a guild."""
+    if settings.exclusions:
+        await update_channel_exclusions(
+            db,
+            guild_id,
+            schemas.ChannelExclusionSettings(excluded_channels=settings.exclusions),
+        )
+    if settings.rules:
+        await update_channel_rules(
+            db, guild_id, schemas.ChannelRulesUpdate(channel_rules=settings.rules)
+        )
+    return await get_channels_settings(db, guild_id)
 
 
 async def get_raid_defense_config(
@@ -1239,120 +1239,3 @@ async def update_raid_defense_config(
     return await get_raid_defense_config(db, guild_id)
 
 
-async def get_advanced_logging_config(
-    db: Session, guild_id: int
-) -> schemas.AdvancedLoggingSettings:
-    """Get advanced logging configuration for a guild."""
-    # Get webhook URL and mod log settings
-    webhook_result = await db.execute(
-        text(
-            """
-            SELECT value FROM guild_settings
-            WHERE guild_id = :guild_id AND key = 'logging_webhook_url'
-        """
-        ),
-        {"guild_id": guild_id},
-    )
-    webhook_row = webhook_result.fetchone()
-    webhook_url = webhook_row[0] if webhook_row else None
-
-    mod_log_result = await db.execute(
-        text(
-            """
-            SELECT key, value FROM guild_settings
-            WHERE guild_id = :guild_id AND key IN ('mod_log_enabled', 'mod_log_channel_id')
-        """
-        ),
-        {"guild_id": guild_id},
-    )
-
-    mod_log_data = {row[0]: row[1] for row in mod_log_result.fetchall()}
-
-    # Get event toggles
-    toggles_result = await db.execute(
-        text(
-            """
-            SELECT event_key, enabled FROM log_event_toggles
-            WHERE guild_id = :guild_id
-        """
-        ),
-        {"guild_id": guild_id},
-    )
-
-    event_toggles = [
-        schemas.LogEventToggle(event_key=row[0], enabled=row[1])
-        for row in toggles_result.fetchall()
-    ]
-
-    return schemas.AdvancedLoggingSettings(
-        webhook_url=webhook_url,
-        mod_log_enabled=mod_log_data.get("mod_log_enabled", False),
-        mod_log_channel_id=mod_log_data.get("mod_log_channel_id"),
-        event_toggles=event_toggles,
-    )
-
-
-async def update_advanced_logging_config(
-    db: Session, guild_id: int, settings: schemas.AdvancedLoggingSettingsUpdate
-) -> schemas.AdvancedLoggingSettings:
-    """Update advanced logging configuration for a guild."""
-    update_data = settings.dict(exclude_unset=True)
-
-    # Update webhook URL
-    if "webhook_url" in update_data:
-        await db.execute(
-            text(
-                """
-                INSERT INTO guild_settings (guild_id, key, value)
-                VALUES (:guild_id, :key, :value)
-                ON CONFLICT (guild_id, key)
-                DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-            """
-            ),
-            {
-                "guild_id": guild_id,
-                "key": "logging_webhook_url",
-                "value": update_data["webhook_url"],
-            },
-        )
-
-    # Update mod log settings
-    for key in ["mod_log_enabled", "mod_log_channel_id"]:
-        if key in update_data:
-            await db.execute(
-                text(
-                    """
-                    INSERT INTO guild_settings (guild_id, key, value)
-                    VALUES (:guild_id, :key, :value)
-                    ON CONFLICT (guild_id, key)
-                    DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-                """
-                ),
-                {
-                    "guild_id": guild_id,
-                    "key": key,
-                    "value": json.dumps(update_data[key]),
-                },
-            )
-
-    # Update event toggles
-    if "event_toggles" in update_data and update_data["event_toggles"]:
-        for toggle in update_data["event_toggles"]:
-            await db.execute(
-                text(
-                    """
-                    INSERT INTO log_event_toggles (guild_id, event_key, enabled)
-                    VALUES (:guild_id, :event_key, :enabled)
-                    ON CONFLICT (guild_id, event_key)
-                    DO UPDATE SET enabled = :enabled, updated_at = CURRENT_TIMESTAMP
-                """
-                ),
-                {
-                    "guild_id": guild_id,
-                    "event_key": toggle.event_key,
-                    "enabled": toggle.enabled,
-                },
-            )
-
-    await db.commit()
-    return await get_advanced_logging_config(db, guild_id)
