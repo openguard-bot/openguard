@@ -253,37 +253,37 @@ async def get_command_analytics(
 
     # Get total commands
     total_result = await db.execute(
-        text(f"""
+        text("""
             SELECT COUNT(*) as total_commands
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
     total_commands = total_result.fetchone()[0] or 0
 
     # Get unique commands
     unique_result = await db.execute(
-        text(f"""
+        text("""
             SELECT COUNT(DISTINCT command_name) as unique_commands
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
     unique_commands = unique_result.fetchone()[0] or 0
 
     # Get top commands
     top_commands_result = await db.execute(
-        text(f"""
+        text("""
             SELECT command_name, COUNT(*) as usage_count, MAX(timestamp) as last_used
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
             GROUP BY command_name
             ORDER BY usage_count DESC
             LIMIT 10
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
 
     top_commands = [
