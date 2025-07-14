@@ -261,7 +261,7 @@ async def callback(code: str, db: Session = Depends(get_db)):
     response = RedirectResponse(
         url="/dashboard/"
     )  # Redirect to frontend dashboard with trailing slash
-    response.set_cookie(key="access_token", value=f"Bearer {jwt_token}", httponly=True)
+    response.set_cookie(key="access_token", value=f"Bearer {jwt_token}", httponly=True, secure=True, samesite="Strict")
     return response
 
 
