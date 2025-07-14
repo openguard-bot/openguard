@@ -9,6 +9,9 @@ on:
       - "dashboard/frontend/**"
       - "dashboard/backend/**"
 
+permissions:
+  contents: read
+
 jobs:
   changes:
     runs-on: ubuntu-latest
