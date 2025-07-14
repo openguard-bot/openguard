@@ -6,10 +6,10 @@ import asyncio
 
 import discord
 from discord.ext import commands
-import humanize
+import humanize # type: ignore
 import psutil
 
-from programmer_jokes import jokes
+from lists import jokes
 from database import get_redis, get_connection
 
 
