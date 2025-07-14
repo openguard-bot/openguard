@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: read
+  deployments: write
+  statuses: write
 
 jobs:
   changes:
@@ -37,6 +39,15 @@ jobs:
     if: ${{ needs.changes.outputs.website == 'true' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production
+          ref: ${{ github.sha }}
+
       - name: Deploy Website
         uses: appleboy/ssh-action@master
         with:
@@ -48,11 +59,40 @@ jobs:
             git pull origin main
             sudo /srv/http/openguard/scripts/build_website_prod.sh
 
+      - name: Mark Deployment as Successful
+        if: success()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production
+          status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Mark Deployment as Failed
+        if: failure()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production
+          status: failure
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
   deploy-dashboard-frontend:
     needs: changes
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: frontend-prod
+          ref: ${{ github.sha }}
+
       - name: Deploy Dashboard Frontend
         uses: appleboy/ssh-action@master
         with:
@@ -64,11 +104,40 @@ jobs:
             git pull origin main
             sudo /srv/http/openguard/scripts/deploy_frontend.sh
 
+      - name: Mark Deployment as Successful
+        if: success()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: frontend-prod
+          status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Mark Deployment as Failed
+        if: failure()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: frontend-prod
+          status: failure
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
   deploy-dashboard-backend:
     needs: changes
     if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: backend-prod
+          ref: ${{ github.sha }}
+
       - name: Deploy Dashboard Backend
         uses: appleboy/ssh-action@master
         with:
@@ -79,3 +148,23 @@ jobs:
             cd /home/discordbot/openguard
             git pull origin main
             sudo /home/discordbot/openguard/scripts/deploy_backend.sh
+
+      - name: Mark Deployment as Successful
+        if: success()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: backend-prod
+          status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Mark Deployment as Failed
+        if: failure()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: backend-prod
+          status: failure
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
