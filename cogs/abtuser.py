@@ -6,14 +6,15 @@ from datetime import datetime, timezone
 
 # Import database operations
 from database.operations import get_user_data, set_user_data, update_user_data_field
+from lists import CustomEmoji
 
 
 class UserInfoCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.developer_badges = {
-            1141746562922459136: "<:8377staffblue:1390036493392810129>OpenGuard Developer",
-            452666956353503252: "<:8377staffblue:1390036493392810129>OpenGuard Developer",
+            1141746562922459136: f"{CustomEmoji.STAFF_BLUE}OpenGuard Developer",
+            452666956353503252: f"{CustomEmoji.STAFF_PINK}OpenGuard Developer",
         }
         # Legacy variables for compatibility
         self.custom_data_file = "user_data.json"
