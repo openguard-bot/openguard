@@ -13,10 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Edit } from "lucide-react";
+import { Edit, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const Navbar = () => {
+const Navbar = ({ toggleSidebar }) => {
   const { theme = "system", setTheme } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -44,7 +44,17 @@ const Navbar = () => {
 
   return (
     <nav className="flex items-center justify-between border-b px-4 py-2">
-      <h1 className="text-xl font-semibold">Discord Dashboard</h1>
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={toggleSidebar}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+        <h1 className="text-xl font-semibold">Discord Dashboard</h1>
+      </div>
       <div className="flex items-center gap-4">
         {isBlogAdmin && (
           <Button

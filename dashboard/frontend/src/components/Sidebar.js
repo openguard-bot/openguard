@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { RefreshCw } from "lucide-react";
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, toggleSidebar }) => {
   const [guilds, setGuilds] = useState([]);
   const [error, setError] = useState(null);
   const { guildId } = useParams();
@@ -52,7 +52,11 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="flex min-h-screen w-64 flex-col border-r bg-background">
+    <div
+      className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-background p-4 transition-transform duration-300 ease-in-out md:relative md:z-auto md:translate-x-0 ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       <div className="flex items-center justify-between p-4">
         <h2 className="text-xl font-semibold">Your Guilds</h2>
         <Button
