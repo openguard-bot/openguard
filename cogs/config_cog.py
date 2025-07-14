@@ -364,6 +364,26 @@ class ConfigCog(commands.Cog, name="Configuration"):
             ephemeral=False if ctx.interaction else False,
         )
 
+    @config.command(
+        name="testmode",
+        description="Enable or disable AI moderation test mode for this guild (admin only).",
+    )
+    @app_commands.describe(enabled="Enable test mode (true/false)")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def config_testmode(self, ctx: commands.Context, enabled: bool):
+        """Enables or disables AI moderation test mode."""
+        if not ctx.guild:
+            await ctx.reply(
+                "This command can only be used in a server.", ephemeral=True
+            )
+            return
+
+        await set_guild_config(ctx.guild.id, "TEST_MODE_ENABLED", enabled)
+        await ctx.reply(
+            f"AI moderation test mode is now {'enabled' if enabled else 'disabled'} for this guild.",
+            ephemeral=False,
+        )
+
     @app_commands.command(
         name="pull_rules",
         description="Update the AI moderation rules for this guild from the rules channel.",
