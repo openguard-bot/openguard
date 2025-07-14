@@ -98,9 +98,11 @@ async def set_cache(key: str, value: Any, expire: int | None = None) -> None:
     client = await get_redis()
     if client is None:
         return
+
     def datetime_converter(o):
         if isinstance(o, datetime):
             return o.isoformat()
+
     data = json.dumps(value, default=datetime_converter)
     await client.set(key, data, ex=expire)
 

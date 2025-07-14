@@ -188,9 +188,7 @@ class BotDetectCog(commands.Cog):
         self.bot = bot
         print("BotDetectCog initialized.")
 
-    @commands.hybrid_group(
-        name="botdetect", description="Bot detection commands."
-    )
+    @commands.hybrid_group(name="botdetect", description="Bot detection commands.")
     async def botdetect(self, ctx: commands.Context):
         """Bot detection commands."""
         await ctx.send_help(ctx.command)

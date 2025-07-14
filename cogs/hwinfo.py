@@ -22,9 +22,7 @@ class HwInfo(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.hybrid_group(
-        name="system", description="System related commands."
-    )
+    @commands.hybrid_group(name="system", description="System related commands.")
     async def system(self, ctx: commands.Context):
         """System related commands."""
         await ctx.send_help(ctx.command)
@@ -34,16 +32,16 @@ class HwInfo(commands.Cog):
     )
     async def systemcheck(self, ctx: commands.Context):
         """Check the bot and system status."""
-        if ctx.interaction: # Check if it's an application command
+        if ctx.interaction:  # Check if it's an application command
             await ctx.interaction.response.defer(thinking=True)
         else:
-            await ctx.defer() # For prefix commands
+            await ctx.defer()  # For prefix commands
         try:
-            embed = await self._system_check_logic(ctx) # Pass ctx
+            embed = await self._system_check_logic(ctx)  # Pass ctx
             if ctx.interaction:
                 await ctx.interaction.followup.send(embed=embed)
             else:
-                await ctx.send(embed=embed) # For prefix commands
+                await ctx.send(embed=embed)  # For prefix commands
         except Exception as e:
             print(f"Error in systemcheck command: {e}")
             if ctx.interaction:
@@ -51,9 +49,7 @@ class HwInfo(commands.Cog):
                     f"An error occurred while checking system status: {e}"
                 )
             else:
-                await ctx.send(
-                    f"An error occurred while checking system status: {e}"
-                )
+                await ctx.send(f"An error occurred while checking system status: {e}")
 
     async def _system_check_logic(self, context_or_interaction):
         """Return detailed bot and system information as a Discord embed."""
@@ -259,11 +255,13 @@ class HwInfo(commands.Cog):
                 f.write(output)
             if ctx.interaction:
                 await ctx.interaction.response.send_message(
-                    "Output was too long; see attached file:", file=discord.File(file_name)
+                    "Output was too long; see attached file:",
+                    file=discord.File(file_name),
                 )
             else:
                 await ctx.send(
-                    "Output was too long; see attached file:", file=discord.File(file_name)
+                    "Output was too long; see attached file:",
+                    file=discord.File(file_name),
                 )
         else:
             if ctx.interaction:

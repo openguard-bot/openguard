@@ -175,6 +175,7 @@ def t(guild_id: int, key: str) -> str:
 
 # Channel-specific AI moderation configuration functions
 
+
 async def get_excluded_channels(guild_id: int) -> list:
     """Get list of channels excluded from AI moderation."""
     return await get_guild_config_async(guild_id, CHANNEL_EXCLUSIONS_KEY, [])
@@ -185,7 +186,9 @@ async def add_excluded_channel(guild_id: int, channel_id: int) -> bool:
     excluded_channels = await get_excluded_channels(guild_id)
     if channel_id not in excluded_channels:
         excluded_channels.append(channel_id)
-        return await set_guild_config(guild_id, CHANNEL_EXCLUSIONS_KEY, excluded_channels)
+        return await set_guild_config(
+            guild_id, CHANNEL_EXCLUSIONS_KEY, excluded_channels
+        )
     return True  # Already excluded
 
 
@@ -194,7 +197,9 @@ async def remove_excluded_channel(guild_id: int, channel_id: int) -> bool:
     excluded_channels = await get_excluded_channels(guild_id)
     if channel_id in excluded_channels:
         excluded_channels.remove(channel_id)
-        return await set_guild_config(guild_id, CHANNEL_EXCLUSIONS_KEY, excluded_channels)
+        return await set_guild_config(
+            guild_id, CHANNEL_EXCLUSIONS_KEY, excluded_channels
+        )
     return True  # Already not excluded
 
 

@@ -80,15 +80,23 @@ async def initialize_database() -> bool:
         # This allows for incremental updates without dropping existing data.
 
         # Execute schema creation statements
-        for statement in SCHEMA_SQL.split(";")[:-1]:  # Split by semicolon, ignore last empty string
+        for statement in SCHEMA_SQL.split(";")[
+            :-1
+        ]:  # Split by semicolon, ignore last empty string
             if statement.strip():
                 try:
                     await conn.execute(statement)
-                    log.info(f"Executed schema statement: {statement.strip().splitlines()[0]}...")
+                    log.info(
+                        f"Executed schema statement: {statement.strip().splitlines()[0]}..."
+                    )
                 except asyncpg.exceptions.DuplicateTableError:
-                    log.info(f"Table already exists for statement: {statement.strip().splitlines()[0]}...")
+                    log.info(
+                        f"Table already exists for statement: {statement.strip().splitlines()[0]}..."
+                    )
                 except Exception as e:
-                    log.error(f"Error executing schema statement: {statement.strip().splitlines()[0]}... Error: {e}")
+                    log.error(
+                        f"Error executing schema statement: {statement.strip().splitlines()[0]}... Error: {e}"
+                    )
                     raise
 
         log.info("Database schema initialization complete.")
@@ -98,11 +106,17 @@ async def initialize_database() -> bool:
             if statement.strip():
                 try:
                     await conn.execute(statement)
-                    log.info(f"Executed index statement: {statement.strip().splitlines()[0]}...")
+                    log.info(
+                        f"Executed index statement: {statement.strip().splitlines()[0]}..."
+                    )
                 except asyncpg.exceptions.DuplicateObjectError:
-                    log.info(f"Index already exists for statement: {statement.strip().splitlines()[0]}...")
+                    log.info(
+                        f"Index already exists for statement: {statement.strip().splitlines()[0]}..."
+                    )
                 except Exception as e:
-                    log.error(f"Error executing index statement: {statement.strip().splitlines()[0]}... Error: {e}")
+                    log.error(
+                        f"Error executing index statement: {statement.strip().splitlines()[0]}... Error: {e}"
+                    )
                     raise
 
         log.info("Database indexes initialization complete.")

@@ -66,4 +66,3 @@ async def set_guild_prefix(guild_id: int, prefix: str) -> bool:
 # Logging webhook functions (re-exported from json_db)
 
 # Log event toggle functions (re-exported from json_db)
-

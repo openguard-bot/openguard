@@ -38,7 +38,9 @@ class UpdateCog(commands.Cog):
             )
             return
 
-    async def update_bot_internal(self, ctx: commands.Context, force_restart: bool = False):
+    async def update_bot_internal(
+        self, ctx: commands.Context, force_restart: bool = False
+    ):
         """Internal method to handle the bot update process."""
         if ctx.author.id not in AUTHORIZED_USER_IDS:
             await ctx.send(
@@ -370,9 +372,12 @@ class UpdateCog(commands.Cog):
 
         # Check if user is authorized
         if ctx.author.id not in AUTHORIZED_USER_IDS:
-            response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
+            response_func = (
+                ctx.interaction.response.send_message if ctx.interaction else ctx.send
+            )
             await response_func(
-                "❌ You are not authorized to use this command.", ephemeral=True if ctx.interaction else False
+                "❌ You are not authorized to use this command.",
+                ephemeral=True if ctx.interaction else False,
             )
             return
 
@@ -390,7 +395,9 @@ class UpdateCog(commands.Cog):
                     description="requirements.txt file not found",
                     color=discord.Color.red(),
                 )
-                response_func = ctx.interaction.followup.send if ctx.interaction else ctx.send
+                response_func = (
+                    ctx.interaction.followup.send if ctx.interaction else ctx.send
+                )
                 await response_func(embed=embed)
                 return
 
@@ -460,7 +467,9 @@ class UpdateCog(commands.Cog):
                     inline=False,
                 )
 
-            response_func = ctx.interaction.followup.send if ctx.interaction else ctx.send
+            response_func = (
+                ctx.interaction.followup.send if ctx.interaction else ctx.send
+            )
             await response_func(embed=embed)
 
         except Exception as e:
@@ -469,7 +478,9 @@ class UpdateCog(commands.Cog):
                 description=f"Failed to check dependencies: {str(e)}",
                 color=discord.Color.red(),
             )
-            response_func = ctx.interaction.followup.send if ctx.interaction else ctx.send
+            response_func = (
+                ctx.interaction.followup.send if ctx.interaction else ctx.send
+            )
             await response_func(embed=error_embed)
 
     async def _execute_git_command(self, command):

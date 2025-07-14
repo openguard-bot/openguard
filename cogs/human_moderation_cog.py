@@ -22,6 +22,7 @@ class HumanModerationCog(commands.Cog):
         self.bot = bot
 
         # Create the main command group for this cog
+
     @commands.hybrid_group(
         name="moderate", description="Moderation commands for server management"
     )
@@ -66,7 +67,8 @@ class HumanModerationCog(commands.Cog):
     # --- Command Callbacks ---
 
     @moderate.command(
-        name="ban", description="Ban a user from the server, by member object or user ID"
+        name="ban",
+        description="Ban a user from the server, by member object or user ID",
     )
     @app_commands.describe(
         member="The member to ban (if in the server)",
@@ -111,7 +113,9 @@ class HumanModerationCog(commands.Cog):
                         ephemeral=True,
                     )
                 else:
-                    await ctx.send("❌ Invalid user ID. Please provide a valid user ID.")
+                    await ctx.send(
+                        "❌ Invalid user ID. Please provide a valid user ID."
+                    )
                 return
         else:
             target = member
@@ -147,7 +151,9 @@ class HumanModerationCog(commands.Cog):
 
         if target.id == self.bot.user.id:
             if ctx.interaction:
-                await ctx.interaction.response.send_message("❌ I cannot ban myself.", ephemeral=True)
+                await ctx.interaction.response.send_message(
+                    "❌ I cannot ban myself.", ephemeral=True
+                )
             else:
                 await ctx.send("❌ I cannot ban myself.")
             return
@@ -164,7 +170,9 @@ class HumanModerationCog(commands.Cog):
                         ephemeral=True,
                     )
                 else:
-                    await ctx.send("❌ You cannot ban someone with a higher or equal role.")
+                    await ctx.send(
+                        "❌ You cannot ban someone with a higher or equal role."
+                    )
                 return
             if ctx.guild.me.top_role <= target.top_role:
                 if ctx.interaction:
@@ -173,7 +181,9 @@ class HumanModerationCog(commands.Cog):
                         ephemeral=True,
                     )
                 else:
-                    await ctx.send("❌ I cannot ban someone with a higher or equal role than me.")
+                    await ctx.send(
+                        "❌ I cannot ban someone with a higher or equal role than me."
+                    )
                 return
 
         # --- Fetch Full User Object for DM and Logging ---
@@ -188,7 +198,8 @@ class HumanModerationCog(commands.Cog):
                 await ctx.guild.fetch_ban(target)
                 if ctx.interaction:
                     await ctx.interaction.response.send_message(
-                        f"❌ User with ID `{target.id}` is already banned.", ephemeral=True
+                        f"❌ User with ID `{target.id}` is already banned.",
+                        ephemeral=True,
                     )
                 else:
                     await ctx.send(f"❌ User with ID `{target.id}` is already banned.")
@@ -212,7 +223,9 @@ class HumanModerationCog(commands.Cog):
                         ephemeral=True,
                     )
                 else:
-                    await ctx.send(f"❌ An error occurred while checking the ban list: {e}")
+                    await ctx.send(
+                        f"❌ An error occurred while checking the ban list: {e}"
+                    )
                 return
 
         # Ensure delete_days is within valid range (0-7)
@@ -233,9 +246,7 @@ class HumanModerationCog(commands.Cog):
                 embed.add_field(
                     name="Reason", value=reason or "No reason provided", inline=False
                 )
-                embed.add_field(
-                    name="Moderator", value=ctx.author.name, inline=False
-                )
+                embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
                 embed.set_footer(
                     text=f"Server ID: {ctx.guild.id} • {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC • Use the button or send !banappeal to appeal"
                 )
@@ -253,9 +264,7 @@ class HumanModerationCog(commands.Cog):
         # --- Perform Ban ---
         try:
             # Use the original target (Object or Member) for the ban action
-            await ctx.guild.ban(
-                target, reason=reason, delete_message_days=delete_days
-            )
+            await ctx.guild.ban(target, reason=reason, delete_message_days=delete_days)
 
             # --- Logging ---
             log_target = full_user_object or target  # Use full object if available
@@ -365,7 +374,9 @@ class HumanModerationCog(commands.Cog):
             await send_response("❌ I don't have permission to view the ban list.")
             return
         except discord.HTTPException as e:
-            await send_response(f"❌ An error occurred while checking the ban list: {e}")
+            await send_response(
+                f"❌ An error occurred while checking the ban list: {e}"
+            )
             return
 
         # Perform the unban
@@ -427,12 +438,16 @@ class HumanModerationCog(commands.Cog):
 
         # Check if the user has permission to kick members
         if not ctx.author.guild_permissions.kick_members:
-            await send_response("❌ You don't have permission to kick members.", ephemeral=True)
+            await send_response(
+                "❌ You don't have permission to kick members.", ephemeral=True
+            )
             return
 
         # Check if the bot has permission to kick members
         if not ctx.guild.me.guild_permissions.kick_members:
-            await send_response("❌ I don't have permission to kick members.", ephemeral=True)
+            await send_response(
+                "❌ I don't have permission to kick members.", ephemeral=True
+            )
             return
 
         # Check if the user is trying to kick themselves
@@ -687,7 +702,9 @@ class HumanModerationCog(commands.Cog):
                 f"❌ An error occurred while timing out the member: {e}", ephemeral=True
             )
 
-    @moderate.command(name="removetimeout", description="Remove a timeout from a member")
+    @moderate.command(
+        name="removetimeout", description="Remove a timeout from a member"
+    )
     @app_commands.describe(
         member="The member to remove timeout from",
         reason="The reason for removing the timeout",
@@ -907,7 +924,9 @@ class HumanModerationCog(commands.Cog):
 
         # Check if the user has permission to kick members (using kick permission as a baseline for warning)
         if not ctx.author.guild_permissions.kick_members:
-            await send_response("❌ You don't have permission to warn members.", ephemeral=True)
+            await send_response(
+                "❌ You don't have permission to warn members.", ephemeral=True
+            )
             return
 
         # Check if the user is trying to warn themselves
@@ -1017,7 +1036,9 @@ class HumanModerationCog(commands.Cog):
             await send_response("❌ I don't have permission to view the ban list.")
             return
         except discord.HTTPException as e:
-            await send_response(f"❌ An error occurred while checking the ban list: {e}")
+            await send_response(
+                f"❌ An error occurred while checking the ban list: {e}"
+            )
             return
 
         # Try to send a DM to the banned user
@@ -1055,7 +1076,9 @@ class HumanModerationCog(commands.Cog):
             )
             await send_response(f"❌ An unexpected error occurred: {e}")
 
-    @moderate.command(name="infractions", description="View moderation infractions for a user")
+    @moderate.command(
+        name="infractions", description="View moderation infractions for a user"
+    )
     @app_commands.describe(member="The member whose infractions to view")
     async def moderate_view_infractions_callback(
         self, ctx: commands.Context, member: discord.Member
@@ -1088,7 +1111,9 @@ class HumanModerationCog(commands.Cog):
         )
 
         if not infractions:
-            await send_response(f"No infractions found for {self._user_display(member)}.")
+            await send_response(
+                f"No infractions found for {self._user_display(member)}."
+            )
             return
 
         embed = discord.Embed(
@@ -1123,7 +1148,8 @@ class HumanModerationCog(commands.Cog):
         await send_response(embed=embed)
 
     @moderate.command(
-        name="removeinfraction", description="Remove a specific infraction by its case ID"
+        name="removeinfraction",
+        description="Remove a specific infraction by its case ID",
     )
     @app_commands.describe(
         case_id="The case ID of the infraction to remove",
@@ -1155,10 +1181,7 @@ class HumanModerationCog(commands.Cog):
 
         # Fetch the infraction to ensure it exists and to log details
         infraction_to_remove = await mod_log_db.get_mod_log(self.bot.pg_pool, case_id)
-        if (
-            not infraction_to_remove
-            or infraction_to_remove["guild_id"] != ctx.guild.id
-        ):
+        if not infraction_to_remove or infraction_to_remove["guild_id"] != ctx.guild.id:
             await send_response(
                 f"❌ Infraction with Case ID {case_id} not found in this server."
             )
@@ -1198,7 +1221,8 @@ class HumanModerationCog(commands.Cog):
             )
 
     @moderate.command(
-        name="clearinfractions", description="Clear all moderation infractions for a user"
+        name="clearinfractions",
+        description="Clear all moderation infractions for a user",
     )
     @app_commands.describe(
         member="The member whose infractions to clear",

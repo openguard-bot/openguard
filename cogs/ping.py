@@ -6,7 +6,7 @@ import asyncio
 
 import discord
 from discord.ext import commands
-import humanize # type: ignore
+import humanize  # type: ignore
 import psutil
 
 from lists import jokes

@@ -7,14 +7,14 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt as jose_jwt # type: ignore
+from jose import JWTError, jwt as jose_jwt  # type: ignore
 from typing import List, Optional
 
 from lists import Owners, OwnersTuple
 
 from . import schemas, crud
 from .db import get_db
-from sqlalchemy.orm import Session # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
 from database.cache import get_cache
 from cachetools import TTLCache
 import redis.asyncio as redis
@@ -39,6 +39,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
 # --- Rate Limiting ---
 def handle_rate_limit(func):
     async def wrapper(*args, **kwargs):
@@ -50,21 +51,30 @@ def handle_rate_limit(func):
             except HTTPException as e:
                 if e.status_code == 429:
                     retry_after = int(e.headers.get("Retry-After", delay))
-                    logger.warning(f"Rate limited. Retrying after {retry_after} seconds.")
+                    logger.warning(
+                        f"Rate limited. Retrying after {retry_after} seconds."
+                    )
                     await asyncio.sleep(retry_after)
                     delay *= 2
                 else:
                     raise e
-        raise HTTPException(status_code=429, detail="Exceeded retry limit for rate-limited requests.")
+        raise HTTPException(
+            status_code=429, detail="Exceeded retry limit for rate-limited requests."
+        )
+
     return wrapper
 
+
 # --- Discord API Helpers ---
+
 
 @handle_rate_limit
 async def _fetch_discord_guilds_from_api(access_token: str):
     headers = {"Authorization": f"Bearer {access_token}"}
     async with aiohttp.ClientSession() as session:
-        async with session.get(f"{DISCORD_API_URL}/users/@me/guilds", headers=headers) as resp:
+        async with session.get(
+            f"{DISCORD_API_URL}/users/@me/guilds", headers=headers
+        ) as resp:
             if resp.status != 200:
                 raise HTTPException(
                     status_code=resp.status,
@@ -72,6 +82,7 @@ async def _fetch_discord_guilds_from_api(access_token: str):
                     headers=resp.headers,
                 )
             return await resp.json()
+
 
 async def fetch_user_guilds(access_token: str, user_id: str):
     """
@@ -93,8 +104,9 @@ async def fetch_user_guilds(access_token: str, user_id: str):
     # Also cache each guild individually
     for guild in guilds_data:
         await redis_client.set(f"guild:{guild['id']}", json.dumps(guild), ex=300)
-    
+
     return guilds_data
+
 
 # --- OAuth2 and JWT ---
 
@@ -191,12 +203,14 @@ def is_blog_admin(user: schemas.User) -> bool:
     return user.id in authorized_user_ids
 
 
-async def get_current_blog_admin(current_user: schemas.User = Depends(get_current_user)) -> schemas.User:
+async def get_current_blog_admin(
+    current_user: schemas.User = Depends(get_current_user),
+) -> schemas.User:
     """Dependency to ensure only authorized users can manage blog posts."""
     if not is_blog_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to manage blog posts"
+            detail="Not authorized to manage blog posts",
         )
     return current_user
 
@@ -262,7 +276,13 @@ async def callback(code: str, db: Session = Depends(get_db)):
     response = RedirectResponse(
         url="/dashboard/"
     )  # Redirect to frontend dashboard with trailing slash
-    response.set_cookie(key="access_token", value=f"Bearer {jwt_token}", httponly=True, secure=True, samesite="Strict")
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {jwt_token}",
+        httponly=True,
+        secure=True,
+        samesite="Strict",
+    )
     return response
 
 
@@ -333,7 +353,7 @@ async def refresh_guilds(request: Request):
         guilds_data = json.loads(cached_guilds_list)
         for guild in guilds_data:
             await redis_client.delete(f"guild:{guild['id']}")
-    
+
     await redis_client.delete(user_guilds_cache_key)
     logger.info(f"Cache cleared for user {user_id}")
     return JSONResponse(content={"status": "success"}, status_code=200)
@@ -423,7 +443,7 @@ async def get_command_analytics(
     request: Request,
     days: int = 30,
     guild_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Returns command usage analytics for the specified time period.
@@ -441,7 +461,7 @@ async def get_moderation_analytics(
     request: Request,
     days: int = 30,
     guild_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Returns moderation analytics for the specified time period.
@@ -459,7 +479,7 @@ async def get_user_analytics(
     request: Request,
     days: int = 30,
     guild_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Returns user activity analytics for the specified time period.
@@ -487,7 +507,7 @@ async def get_system_health(request: Request):
 
     cpu_percent = psutil.cpu_percent(interval=1)
     memory = psutil.virtual_memory()
-    disk = psutil.disk_usage('/')
+    disk = psutil.disk_usage("/")
 
     # Get bot-specific metrics (placeholder for now)
     bot_status = "online"  # This would come from bot status check
@@ -499,7 +519,7 @@ async def get_system_health(request: Request):
         disk_usage=disk.percent,
         bot_status=bot_status,
         api_latency=latency,
-        uptime_seconds=int(time.time() - 1640995200)  # Placeholder start time
+        uptime_seconds=int(time.time() - 1640995200),  # Placeholder start time
     )
 
 
@@ -521,24 +541,22 @@ async def get_owners():
 
 # --- Blog Post API Endpoints ---
 
+
 @router.get("/blog/posts", response_model=schemas.BlogPostList)
 async def get_blog_posts(
     page: int = 1,
     per_page: int = 10,
     published_only: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get a list of blog posts."""
     skip = (page - 1) * per_page
-    posts = await crud.get_blog_posts(db, skip=skip, limit=per_page, published_only=published_only)
+    posts = await crud.get_blog_posts(
+        db, skip=skip, limit=per_page, published_only=published_only
+    )
     total = await crud.count_blog_posts(db, published_only=published_only)
 
-    return schemas.BlogPostList(
-        posts=posts,
-        total=total,
-        page=page,
-        per_page=per_page
-    )
+    return schemas.BlogPostList(posts=posts, total=total, page=page, per_page=per_page)
 
 
 @router.get("/blog/posts/{post_id}", response_model=schemas.BlogPost)
@@ -554,13 +572,15 @@ async def get_blog_post(post_id: int, db: Session = Depends(get_db)):
 async def create_blog_post(
     post: schemas.BlogPostCreate,
     db: Session = Depends(get_db),
-    current_user: schemas.User = Depends(get_current_blog_admin)
+    current_user: schemas.User = Depends(get_current_blog_admin),
 ):
     """Create a new blog post."""
     # Check if slug already exists
     existing_post = await crud.get_blog_post_by_slug(db, post.slug)
     if existing_post:
-        raise HTTPException(status_code=400, detail="A post with this slug already exists")
+        raise HTTPException(
+            status_code=400, detail="A post with this slug already exists"
+        )
 
     return await crud.create_blog_post(db, post, int(current_user.id))
 
@@ -570,7 +590,7 @@ async def update_blog_post(
     post_id: int,
     post_update: schemas.BlogPostUpdate,
     db: Session = Depends(get_db),
-    current_user: schemas.User = Depends(get_current_blog_admin)
+    current_user: schemas.User = Depends(get_current_blog_admin),
 ):
     """Update a blog post."""
     # Check if post exists
@@ -582,7 +602,9 @@ async def update_blog_post(
     if post_update.slug and post_update.slug != existing_post.slug:
         slug_conflict = await crud.get_blog_post_by_slug(db, post_update.slug)
         if slug_conflict:
-            raise HTTPException(status_code=400, detail="A post with this slug already exists")
+            raise HTTPException(
+                status_code=400, detail="A post with this slug already exists"
+            )
 
     updated_post = await crud.update_blog_post(db, post_id, post_update)
     if not updated_post:
@@ -595,7 +617,7 @@ async def update_blog_post(
 async def delete_blog_post(
     post_id: int,
     db: Session = Depends(get_db),
-    current_user: schemas.User = Depends(get_current_blog_admin)
+    current_user: schemas.User = Depends(get_current_blog_admin),
 ):
     """Delete a blog post."""
     success = await crud.delete_blog_post(db, post_id)
@@ -636,7 +658,9 @@ async def get_guild_users(
         )
 
 
-@router.get("/guilds/{guild_id}/infractions", response_model=List[schemas.UserInfraction])
+@router.get(
+    "/guilds/{guild_id}/infractions", response_model=List[schemas.UserInfraction]
+)
 async def get_guild_infractions(
     guild_id: int,
     page: int = 1,
@@ -651,8 +675,12 @@ async def get_guild_infractions(
     """
     if has_admin:
         return await crud.get_guild_infractions(
-            db=db, guild_id=guild_id, page=page, limit=limit,
-            user_id=user_id, action_type=action_type
+            db=db,
+            guild_id=guild_id,
+            page=page,
+            limit=limit,
+            user_id=user_id,
+            action_type=action_type,
         )
 
 
@@ -711,12 +739,18 @@ async def create_moderation_action(
     Create a new moderation action.
     """
     if has_admin:
-        return await crud.create_moderation_action(db=db, guild_id=guild_id, action=action)
+        return await crud.create_moderation_action(
+            db=db, guild_id=guild_id, action=action
+        )
 
 
 # Enhanced Configuration Endpoints
 
-@router.get("/guilds/{guild_id}/config/comprehensive", response_model=schemas.ComprehensiveGuildConfig)
+
+@router.get(
+    "/guilds/{guild_id}/config/comprehensive",
+    response_model=schemas.ComprehensiveGuildConfig,
+)
 async def get_comprehensive_guild_config(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -729,7 +763,10 @@ async def get_comprehensive_guild_config(
         return await crud.get_comprehensive_guild_config(db=db, guild_id=guild_id)
 
 
-@router.get("/guilds/{guild_id}/config/bot-detection", response_model=schemas.BotDetectionSettings)
+@router.get(
+    "/guilds/{guild_id}/config/bot-detection",
+    response_model=schemas.BotDetectionSettings,
+)
 async def get_bot_detection_config(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -742,7 +779,10 @@ async def get_bot_detection_config(
         return await crud.get_bot_detection_config(db=db, guild_id=guild_id)
 
 
-@router.put("/guilds/{guild_id}/config/bot-detection", response_model=schemas.BotDetectionSettings)
+@router.put(
+    "/guilds/{guild_id}/config/bot-detection",
+    response_model=schemas.BotDetectionSettings,
+)
 async def update_bot_detection_config(
     guild_id: int,
     settings: schemas.BotDetectionSettingsUpdate,
@@ -753,10 +793,14 @@ async def update_bot_detection_config(
     Update bot detection configuration for a guild.
     """
     if has_admin:
-        return await crud.update_bot_detection_config(db=db, guild_id=guild_id, settings=settings)
+        return await crud.update_bot_detection_config(
+            db=db, guild_id=guild_id, settings=settings
+        )
 
 
-@router.get("/guilds/{guild_id}/config/message-rate", response_model=schemas.MessageRateSettings)
+@router.get(
+    "/guilds/{guild_id}/config/message-rate", response_model=schemas.MessageRateSettings
+)
 async def get_message_rate_config(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -769,7 +813,9 @@ async def get_message_rate_config(
         return await crud.get_message_rate_config(db=db, guild_id=guild_id)
 
 
-@router.put("/guilds/{guild_id}/config/message-rate", response_model=schemas.MessageRateSettings)
+@router.put(
+    "/guilds/{guild_id}/config/message-rate", response_model=schemas.MessageRateSettings
+)
 async def update_message_rate_config(
     guild_id: int,
     settings: schemas.MessageRateSettingsUpdate,
@@ -780,10 +826,14 @@ async def update_message_rate_config(
     Update message rate limiting configuration for a guild.
     """
     if has_admin:
-        return await crud.update_message_rate_config(db=db, guild_id=guild_id, settings=settings)
+        return await crud.update_message_rate_config(
+            db=db, guild_id=guild_id, settings=settings
+        )
 
 
-@router.get("/guilds/{guild_id}/config/raid-defense", response_model=schemas.RaidDefenseSettings)
+@router.get(
+    "/guilds/{guild_id}/config/raid-defense", response_model=schemas.RaidDefenseSettings
+)
 async def get_raid_defense_config(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -796,7 +846,9 @@ async def get_raid_defense_config(
         return await crud.get_raid_defense_config(db=db, guild_id=guild_id)
 
 
-@router.put("/guilds/{guild_id}/config/raid-defense", response_model=schemas.RaidDefenseSettings)
+@router.put(
+    "/guilds/{guild_id}/config/raid-defense", response_model=schemas.RaidDefenseSettings
+)
 async def update_raid_defense_config(
     guild_id: int,
     settings: schemas.RaidDefenseSettingsUpdate,
@@ -807,12 +859,15 @@ async def update_raid_defense_config(
     Update raid defense configuration for a guild.
     """
     if has_admin:
-        return await crud.update_raid_defense_config(db=db, guild_id=guild_id, settings=settings)
+        return await crud.update_raid_defense_config(
+            db=db, guild_id=guild_id, settings=settings
+        )
 
 
-
-
-@router.get("/guilds/{guild_id}/config/advanced-logging", response_model=schemas.AdvancedLoggingSettings)
+@router.get(
+    "/guilds/{guild_id}/config/advanced-logging",
+    response_model=schemas.AdvancedLoggingSettings,
+)
 async def get_advanced_logging_config(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -825,7 +880,10 @@ async def get_advanced_logging_config(
         return await crud.get_advanced_logging_config(db=db, guild_id=guild_id)
 
 
-@router.put("/guilds/{guild_id}/config/advanced-logging", response_model=schemas.AdvancedLoggingSettings)
+@router.put(
+    "/guilds/{guild_id}/config/advanced-logging",
+    response_model=schemas.AdvancedLoggingSettings,
+)
 async def update_advanced_logging_config(
     guild_id: int,
     settings: schemas.AdvancedLoggingSettingsUpdate,
@@ -836,7 +894,9 @@ async def update_advanced_logging_config(
     Update advanced logging configuration for a guild.
     """
     if has_admin:
-        return await crud.update_advanced_logging_config(db=db, guild_id=guild_id, settings=settings)
+        return await crud.update_advanced_logging_config(
+            db=db, guild_id=guild_id, settings=settings
+        )
 
 
 @router.post("/guilds/{guild_id}/config", response_model=schemas.GuildConfig)
@@ -952,33 +1012,35 @@ async def update_logging_config(
 
 @router.post("/guilds/{guild_id}/api_key", response_model=schemas.GuildAPIKey)
 async def set_guild_api_key_endpoint(
-   guild_id: int,
-   key_data: schemas.GuildAPIKeyUpdate,
-   db: Session = Depends(get_db),
-   has_admin: bool = Depends(has_admin_permissions),
+    guild_id: int,
+    key_data: schemas.GuildAPIKeyUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
 ):
-   """
-   Set or update the API key for a specific guild.
-   """
-   if has_admin:
-       return await crud.set_guild_api_key(
-           db=db, guild_id=guild_id, key_data=key_data
-       )
+    """
+    Set or update the API key for a specific guild.
+    """
+    if has_admin:
+        return await crud.set_guild_api_key(db=db, guild_id=guild_id, key_data=key_data)
+
 
 @router.delete("/guilds/{guild_id}/api_key")
 async def remove_guild_api_key_endpoint(
-   guild_id: int,
-   db: Session = Depends(get_db),
-   has_admin: bool = Depends(has_admin_permissions),
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
 ):
-   """
-   Delete the API key for a specific guild.
-   """
-   if has_admin:
-       return await crud.remove_guild_api_key(db=db, guild_id=guild_id)
+    """
+    Delete the API key for a specific guild.
+    """
+    if has_admin:
+        return await crud.remove_guild_api_key(db=db, guild_id=guild_id)
 
 
-@router.get("/guilds/{guild_id}/config/channel-exclusions", response_model=schemas.ChannelExclusionSettings)
+@router.get(
+    "/guilds/{guild_id}/config/channel-exclusions",
+    response_model=schemas.ChannelExclusionSettings,
+)
 async def get_channel_exclusions(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -991,7 +1053,10 @@ async def get_channel_exclusions(
         return await crud.get_channel_exclusions(db=db, guild_id=guild_id)
 
 
-@router.post("/guilds/{guild_id}/config/channel-exclusions", response_model=schemas.ChannelExclusionSettings)
+@router.post(
+    "/guilds/{guild_id}/config/channel-exclusions",
+    response_model=schemas.ChannelExclusionSettings,
+)
 async def update_channel_exclusions(
     guild_id: int,
     settings: schemas.ChannelExclusionSettings,
@@ -1002,10 +1067,14 @@ async def update_channel_exclusions(
     Update channel exclusions for AI moderation.
     """
     if has_admin:
-        return await crud.update_channel_exclusions(db=db, guild_id=guild_id, settings=settings)
+        return await crud.update_channel_exclusions(
+            db=db, guild_id=guild_id, settings=settings
+        )
 
 
-@router.get("/guilds/{guild_id}/config/channel-rules", response_model=schemas.ChannelRulesUpdate)
+@router.get(
+    "/guilds/{guild_id}/config/channel-rules", response_model=schemas.ChannelRulesUpdate
+)
 async def get_channel_rules(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -1018,7 +1087,9 @@ async def get_channel_rules(
         return await crud.get_channel_rules(db=db, guild_id=guild_id)
 
 
-@router.post("/guilds/{guild_id}/config/channel-rules", response_model=schemas.ChannelRulesUpdate)
+@router.post(
+    "/guilds/{guild_id}/config/channel-rules", response_model=schemas.ChannelRulesUpdate
+)
 async def update_channel_rules(
     guild_id: int,
     settings: schemas.ChannelRulesUpdate,
@@ -1029,7 +1100,9 @@ async def update_channel_rules(
     Update channel-specific AI moderation rules.
     """
     if has_admin:
-        return await crud.update_channel_rules(db=db, guild_id=guild_id, settings=settings)
+        return await crud.update_channel_rules(
+            db=db, guild_id=guild_id, settings=settings
+        )
 
 
 @router.delete("/guilds/{guild_id}/config/channel-rules/{channel_id}")
@@ -1043,4 +1116,6 @@ async def delete_channel_rules(
     Delete custom rules for a specific channel.
     """
     if has_admin:
-        return await crud.delete_channel_rules(db=db, guild_id=guild_id, channel_id=channel_id)
+        return await crud.delete_channel_rules(
+            db=db, guild_id=guild_id, channel_id=channel_id
+        )

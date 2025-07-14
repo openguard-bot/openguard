@@ -270,7 +270,9 @@ class LoggingCog(commands.Cog):
 
         webhook_url = await settings_manager.get_logging_webhook(guild.id)
 
-        log.info(f"For guild {guild.id}, retrieved webhook_url: {webhook_url} (type: {type(webhook_url)})")
+        log.info(
+            f"For guild {guild.id}, retrieved webhook_url: {webhook_url} (type: {type(webhook_url)})"
+        )
         if not webhook_url:
             # log.debug(f"Logging webhook not configured for guild {guild.id}. Skipping log.") # Can be noisy
             return
