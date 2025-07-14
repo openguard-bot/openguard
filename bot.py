@@ -18,7 +18,7 @@ from database.connection import initialize_database, get_pool, close_pool
 from database.cache import close_redis, set_cache, get_redis_client
 import shutil
 from cachetools import TTLCache
-from lists import Owners
+from lists import config
 
 prefix_cache = TTLCache(maxsize=1000, ttl=3600)
 
@@ -80,7 +80,7 @@ intents = discord.Intents.all()
 class MyBot(commands.AutoShardedBot):
     async def is_owner(self, user: Union[discord.User, discord.Member]) -> bool:
         if user is not None and getattr(user, "id", None) is not None:
-            return user.id in Owners.__dict__.values()
+            return user.id in config.Owners.__dict__.values()
         raise ValueError("User/User ID was None, or user object had no ID property")
 
 
@@ -142,7 +142,7 @@ async def prefix_update_listener():
 bot = MyBot(command_prefix=get_prefix, intents=intents, help_command=None)
 bot.launch_time = discord.utils.utcnow()
 
-ERROR_NOTIFICATION_USER_ID = Owners.ILIKEPANCAKES
+ERROR_NOTIFICATION_USER_ID = config.Owners.ILIKEPANCAKES
 
 
 def catch_exceptions(func):
