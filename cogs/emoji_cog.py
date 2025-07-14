@@ -13,7 +13,7 @@ class EmojiCog(commands.Cog):
     async def emojis(self, ctx: commands.Context):
         """Sends all custom emojis in one message."""
         emojis = [
-            str(emoji.value) for emoji in CustomEmoji
+            str(emoji) for emoji in CustomEmoji.__dict__.values()
         ]
         if emojis:
             await ctx.send(" ".join(emojis))
