@@ -249,16 +249,20 @@ async def get_command_analytics(
     db: Session, days: int = 30, guild_id: Optional[int] = None
 ) -> schemas.CommandAnalytics:
     """Get command usage analytics."""
-    guild_filter = "AND guild_id = :guild_id" if guild_id else ""
+    params = {"days": days}
+    guild_filter = ""
+    if guild_id:
+        guild_filter = "AND guild_id = :guild_id"
+        params["guild_id"] = guild_id
 
     # Get total commands
     total_result = await db.execute(
         text(f"""
             SELECT COUNT(*) as total_commands
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
     total_commands = total_result.fetchone()[0] or 0
 
@@ -267,9 +271,9 @@ async def get_command_analytics(
         text(f"""
             SELECT COUNT(DISTINCT command_name) as unique_commands
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
     unique_commands = unique_result.fetchone()[0] or 0
 
@@ -278,12 +282,12 @@ async def get_command_analytics(
         text(f"""
             SELECT command_name, COUNT(*) as usage_count, MAX(timestamp) as last_used
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
             GROUP BY command_name
             ORDER BY usage_count DESC
             LIMIT 10
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
 
     top_commands = [
@@ -300,11 +304,11 @@ async def get_command_analytics(
         text(f"""
             SELECT DATE(timestamp) as date, COUNT(*) as count
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
 
     daily_usage = [
@@ -324,16 +328,20 @@ async def get_moderation_analytics(
     db: Session, days: int = 30, guild_id: Optional[int] = None
 ) -> schemas.ModerationAnalytics:
     """Get moderation analytics."""
-    guild_filter = "AND guild_id = :guild_id" if guild_id else ""
+    params = {"days": days}
+    guild_filter = ""
+    if guild_id:
+        guild_filter = "AND guild_id = :guild_id"
+        params["guild_id"] = guild_id
 
     # Get total actions
     total_result = await db.execute(
         text(f"""
             SELECT COUNT(*) as total_actions
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
     total_actions = total_result.fetchone()[0] or 0
 
@@ -343,11 +351,11 @@ async def get_moderation_analytics(
             SELECT action_type, COUNT(*) as count,
                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
             GROUP BY action_type
             ORDER BY count DESC
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
 
     actions_by_type = [
@@ -364,11 +372,11 @@ async def get_moderation_analytics(
         text(f"""
             SELECT DATE(timestamp) as date, COUNT(*) as count
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
 
     daily_actions = [
@@ -381,12 +389,12 @@ async def get_moderation_analytics(
         text(f"""
             SELECT moderator_id, COUNT(*) as action_count
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
             GROUP BY moderator_id
             ORDER BY action_count DESC
             LIMIT 10
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
 
     top_moderators = [
@@ -406,16 +414,20 @@ async def get_user_analytics(
     db: Session, days: int = 30, guild_id: Optional[int] = None
 ) -> schemas.UserAnalytics:
     """Get user activity analytics."""
-    guild_filter = "AND guild_id = :guild_id" if guild_id else ""
+    params = {"days": days}
+    guild_filter = ""
+    if guild_id:
+        guild_filter = "AND guild_id = :guild_id"
+        params["guild_id"] = guild_id
 
     # Get total active users (users who ran commands)
     active_users_result = await db.execute(
         text(f"""
             SELECT COUNT(DISTINCT user_id) as active_users
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
     total_active_users = active_users_result.fetchone()[0] or 0
 
@@ -431,11 +443,11 @@ async def get_user_analytics(
                 0 as new_users,  -- Placeholder
                 COUNT(*) as commands_used
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
         """),
-        {"guild_id": guild_id} if guild_id else {}
+        params
     )
 
     activity_timeline = [
