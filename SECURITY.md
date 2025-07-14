@@ -18,8 +18,6 @@ Only the latest stable release of openguard is supported for security updates.
 - **Bot Tokens:** Never share your bot token or commit it to version control.
 - **Updates:** Keep dependencies and the openguard codebase up-to-date to avoid known vulnerabilities.
 - **Permissions:** Run the bot with the minimum Discord permissions necessary.
-- **Configuration:** Ensure your `config.yaml` is stored securely and never posted publicly.
-- **Auditing:** Regularly review moderation logs for suspicious activity.
 
 ## Dependencies
 
