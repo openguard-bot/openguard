@@ -17,23 +17,42 @@ const StatCard = ({ title, value, icon: Icon }) => (
 
 const DashboardPage = () => {
   const [stats, setStats] = useState(null);
+  const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get('/api/stats');
-        setStats(response.data);
+        const [statsRes, healthRes] = await Promise.all([
+          axios.get("/api/stats"),
+          axios.get("/api/system/health"),
+        ]);
+        setStats(statsRes.data);
+        setHealth(healthRes.data);
       } catch (err) {
-        setError('Failed to fetch stats.');
+        setError("Failed to fetch dashboard data.");
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchData();
   }, []);
+
+  const formatUptime = (seconds) => {
+    if (seconds === 0) return "N/A";
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+
+    const dDisplay = d > 0 ? d + (d === 1 ? " day, " : " days, ") : "";
+    const hDisplay = h > 0 ? h + (h === 1 ? " hour, " : " hours, ") : "";
+    const mDisplay = m > 0 ? m + (m === 1 ? " minute" : " minutes") : "";
+
+    return (dDisplay + hDisplay + mDisplay).replace(/, $/, "");
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -50,20 +69,24 @@ const DashboardPage = () => {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Guilds"
-            value={stats.total_guilds}
+            value={stats?.total_guilds ?? "N/A"}
             icon={Server}
           />
           <StatCard
             title="Total Users"
-            value={stats.total_users}
+            value={stats?.total_users ?? "N/A"}
             icon={Users}
           />
           <StatCard
             title="Commands Ran"
-            value={stats.commands_ran}
+            value={stats?.commands_ran ?? "N/A"}
             icon={Bot}
           />
-          <StatCard title="Uptime" value={`${stats.uptime}%`} icon={Timer} />
+          <StatCard
+            title="Uptime"
+            value={health ? formatUptime(health.uptime_seconds) : "N/A"}
+            icon={Timer}
+          />
         </div>
       </div>
       <div className="text-center text-muted-foreground">

@@ -451,6 +451,7 @@ async def on_ready():
         f"Global error handling is active - errors will be sent to user ID: {ERROR_NOTIFICATION_USER_ID}"
     )
     await update_bot_guilds_cache()
+    await update_launch_time_cache()
     bot.loop.create_task(prefix_update_listener())
 
 
@@ -459,6 +460,12 @@ async def update_bot_guilds_cache():
     guild_ids = [guild.id for guild in bot.guilds]
     await set_cache("bot_guilds", guild_ids)
     print("Updated bot guilds cache.")
+
+
+async def update_launch_time_cache():
+    """Updates the Redis cache with the bot's launch time."""
+    await set_cache("bot_launch_time", bot.launch_time.timestamp())
+    print("Updated bot launch time cache.")
 
 
 @bot.event

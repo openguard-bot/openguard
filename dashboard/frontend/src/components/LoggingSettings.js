@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import axios from "axios";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 import {
   Card,
   CardContent,
@@ -13,191 +7,203 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "./ui/form";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
+import { Separator } from "./ui/separator";
+import { FileText, Save, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { FormDescription } from "./ui/form";
 
-const loggingSettingsSchema = z.object({
-  log_channel_id: z.string().optional(),
-  message_delete_logging: z.boolean().default(false),
-  message_edit_logging: z.boolean().default(false),
-  member_join_logging: z.boolean().default(false),
-  member_leave_logging: z.boolean().default(false),
-});
+const ALL_EVENT_KEYS = [
+  "member_join",
+  "member_remove",
+  "member_ban_event",
+  "member_unban",
+  "member_update",
+  "role_create_event",
+  "role_delete_event",
+  "role_update_event",
+  "channel_create_event",
+  "channel_delete_event",
+  "channel_update_event",
+  "message_edit",
+  "message_delete",
+  "reaction_add",
+  "reaction_remove",
+  "reaction_clear",
+  "reaction_clear_emoji",
+  "voice_state_update",
+  "guild_update_event",
+  "emoji_update_event",
+  "invite_create_event",
+  "invite_delete_event",
+  "command_error",
+  "thread_create",
+  "thread_delete",
+  "thread_update",
+  "thread_member_join",
+  "thread_member_remove",
+  "webhook_update",
+  "audit_kick",
+  "audit_prune",
+  "audit_ban",
+  "audit_unban",
+  "audit_member_role_update",
+  "audit_member_update_timeout",
+  "audit_message_delete",
+  "audit_message_bulk_delete",
+  "audit_role_create",
+  "audit_role_delete",
+  "audit_role_update",
+  "audit_channel_create",
+  "audit_channel_delete",
+  "audit_channel_update",
+  "audit_emoji_create",
+  "audit_emoji_delete",
+  "audit_emoji_update",
+  "audit_invite_create",
+  "audit_invite_delete",
+  "audit_guild_update",
+];
 
 const LoggingSettings = ({ guildId }) => {
-  const form = useForm({
-    resolver: zodResolver(loggingSettingsSchema),
-    defaultValues: {
-      log_channel_id: "",
-      message_delete_logging: false,
-      message_edit_logging: false,
-      member_join_logging: false,
-      member_leave_logging: false,
-    },
-  });
+  const [config, setConfig] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await axios.get(
-          `/api/guilds/${guildId}/config/logging`
-        );
-        form.reset(response.data);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch logging settings.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    fetchSettings();
-  }, [guildId, form]);
-
-  const onSubmit = async (data) => {
+  const fetchConfig = async () => {
     try {
-      await axios.post(`/api/guilds/${guildId}/config/logging`, data);
-      toast({
-        title: "Success",
-        description: "Logging settings updated successfully.",
-      });
+      setLoading(true);
+      const response = await axios.get(
+        `/api/guilds/${guildId}/config/logging`
+      );
+      setConfig(response.data);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update logging settings.",
-        variant: "destructive",
-      });
+      toast.error("Failed to load logging settings");
+      console.error("Error fetching logging config:", error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (guildId) {
+      fetchConfig();
+    }
+  }, [guildId]);
+
+  const handleInputChange = (field, value) => {
+    setConfig((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleEventToggle = (eventKey, enabled) => {
+    setConfig((prev) => ({
+      ...prev,
+      enabled_events: {
+        ...prev.enabled_events,
+        [eventKey]: enabled,
+      },
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await axios.put(`/api/guilds/${guildId}/config/logging`, config);
+      toast.success("Logging settings saved successfully");
+    } catch (error) {
+      toast.error("Failed to save logging settings");
+      console.error("Error saving logging config:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const formatEventKey = (key) => {
+    return key
+      .replace(/_/g, " ")
+      .replace("event", "")
+      .trim()
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <AlertTriangle className="h-8 w-8 text-red-500" />
+      </div>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Logging Settings</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Event Logging
+        </CardTitle>
         <CardDescription>
-          Configure logging features for your guild.
+          Configure detailed event logging using webhooks.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="log_channel_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Log Channel ID</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter channel ID" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    The channel where various bot activities will be logged.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="message_delete_logging"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Log Message Deletions
-                    </FormLabel>
-                    <FormDescription>
-                      Enable logging of deleted messages.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="message_edit_logging"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Log Message Edits
-                    </FormLabel>
-                    <FormDescription>
-                      Enable logging of edited messages.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="member_join_logging"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Log Member Joins
-                    </FormLabel>
-                    <FormDescription>
-                      Enable logging when a new member joins the guild.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="member_leave_logging"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Log Member Leaves
-                    </FormLabel>
-                    <FormDescription>
-                      Enable logging when a member leaves the guild.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <Button type="submit">Save Changes</Button>
-          </form>
-        </Form>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="webhook_url">Logging Webhook URL</Label>
+          <Input
+            id="webhook_url"
+            value={config.webhook_url || ""}
+            onChange={(e) => handleInputChange("webhook_url", e.target.value)}
+            placeholder="https://discord.com/api/webhooks/..."
+            type="url"
+          />
+          <FormDescription>
+            The webhook where all enabled log events will be sent.
+          </FormDescription>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Event Toggles</h3>
+          <FormDescription>
+            Select which events you want to log.
+          </FormDescription>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {ALL_EVENT_KEYS.map((key) => (
+              <div key={key} className="flex items-center space-x-2">
+                <Switch
+                  id={key}
+                  checked={config.enabled_events?.[key] ?? false}
+                  onCheckedChange={(checked) => handleEventToggle(key, checked)}
+                />
+                <Label htmlFor={key} className="text-sm">
+                  {formatEventKey(key)}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={fetchConfig} disabled={loading}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

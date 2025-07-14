@@ -318,7 +318,7 @@ class BotDetectionSettingsUpdate(BaseModel):
     whitelist_users: Optional[List[str]] = None
 
 
-class MessageRateSettings(BaseModel):
+class RateLimitingSettings(BaseModel):
     enabled: bool
     high_rate_threshold: int
     low_rate_threshold: int
@@ -330,7 +330,7 @@ class MessageRateSettings(BaseModel):
     notification_channel: Optional[str]
 
 
-class MessageRateSettingsUpdate(BaseModel):
+class RateLimitingSettingsUpdate(BaseModel):
     enabled: Optional[bool] = None
     high_rate_threshold: Optional[int] = None
     low_rate_threshold: Optional[int] = None
@@ -340,6 +340,52 @@ class MessageRateSettingsUpdate(BaseModel):
     analysis_window: Optional[int] = None
     notifications_enabled: Optional[bool] = None
     notification_channel: Optional[str] = None
+
+
+class SecuritySettings(BaseModel):
+    bot_detection: BotDetectionSettings
+
+    class Config:
+        from_attributes = True
+
+
+class SecuritySettingsUpdate(BaseModel):
+    bot_detection: Optional[BotDetectionSettingsUpdate] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AISettings(BaseModel):
+    channel_exclusions: ChannelExclusionSettings
+    channel_rules: ChannelRulesUpdate
+
+    class Config:
+        from_attributes = True
+
+
+class AISettingsUpdate(BaseModel):
+    channel_exclusions: Optional[ChannelExclusionSettings] = None
+    channel_rules: Optional[ChannelRulesUpdate] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ChannelsSettings(BaseModel):
+    exclusions: List[str]
+    rules: Dict[str, str]
+
+    class Config:
+        from_attributes = True
+
+
+class ChannelsSettingsUpdate(BaseModel):
+    exclusions: Optional[List[str]] = None
+    rules: Optional[Dict[str, str]] = None
+
+    class Config:
+        from_attributes = True
 
 
 class RaidDefenseSettings(BaseModel):
@@ -375,16 +421,6 @@ class AdvancedLoggingSettingsUpdate(BaseModel):
     mod_log_enabled: Optional[bool] = None
     mod_log_channel_id: Optional[str] = None
     event_toggles: Optional[List[LogEventToggle]] = None
-
-
-class ComprehensiveGuildConfig(BaseModel):
-    general: GeneralSettings
-    moderation: ModerationSettings
-    logging: LoggingSettings
-    advanced_logging: AdvancedLoggingSettings
-    bot_detection: BotDetectionSettings
-    raid_defense: RaidDefenseSettings
-    message_rate: MessageRateSettings
 
 
 class SystemHealth(BaseModel):
@@ -434,3 +470,17 @@ class BlogPostList(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+class DiscordRole(BaseModel):
+    id: str
+    name: str
+    color: int
+    position: int
+
+
+class DiscordChannel(BaseModel):
+    id: str
+    name: str
+    type: int
+    position: int
