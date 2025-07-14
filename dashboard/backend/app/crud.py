@@ -328,26 +328,26 @@ async def get_moderation_analytics(
 
     # Get total actions
     total_result = await db.execute(
-        text(f"""
+        text("""
             SELECT COUNT(*) as total_actions
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
-        """),
-        {"guild_id": guild_id} if guild_id else {}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
+        """.format(guild_filter=guild_filter)),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
     total_actions = total_result.fetchone()[0] or 0
 
     # Get actions by type
     actions_by_type_result = await db.execute(
-        text(f"""
+        text("""
             SELECT action_type, COUNT(*) as count,
                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY action_type
             ORDER BY count DESC
-        """),
-        {"guild_id": guild_id} if guild_id else {}
+        """.format(guild_filter=guild_filter)),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
 
     actions_by_type = [
