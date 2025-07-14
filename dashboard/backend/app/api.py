@@ -1,5 +1,4 @@
 import os
-import jwt
 import aiohttp
 import logging
 import asyncio
@@ -8,12 +7,14 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt as jose_jwt
+from jose import JWTError, jwt as jose_jwt # type: ignore
 from typing import List, Optional
+
+from lists import Owners
 
 from . import schemas, crud
 from .db import get_db
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore
 from database.cache import get_cache
 from cachetools import TTLCache
 import redis.asyncio as redis
@@ -186,7 +187,7 @@ async def has_admin_permissions(guild_id: int, request: Request):
 
 def is_blog_admin(user: schemas.User) -> bool:
     """Check if the user is authorized to manage blog posts."""
-    authorized_user_ids = ["1141746562922459136", "452666956353503252"]
+    authorized_user_ids = tuple(member.value for member in Owners)
     return user.id in authorized_user_ids
 
 
@@ -508,6 +509,14 @@ async def read_users_me(current_user: schemas.User = Depends(get_current_user)):
     Get the current authenticated user.
     """
     return current_user
+
+
+@router.get("/owners", response_model=List[int])
+async def get_owners():
+    """
+    Returns a list of owner user IDs.
+    """
+    return [owner.value for owner in Owners]
 
 
 # --- Blog Post API Endpoints ---

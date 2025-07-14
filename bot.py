@@ -1,5 +1,6 @@
 import datetime
 import os
+from typing import Union
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -17,6 +18,7 @@ from database.connection import initialize_database, get_pool, close_pool
 from database.cache import close_redis, set_cache, get_redis_client
 import shutil
 from cachetools import TTLCache
+from lists import Owners
 
 prefix_cache = TTLCache(maxsize=1000, ttl=3600)
 
@@ -70,11 +72,10 @@ if not discord_token:
 
 intents = discord.Intents.all()
 
-
 class MyBot(commands.AutoShardedBot):
-    async def is_owner(self, user: discord.User | discord.Member):
+    async def is_owner(self, user: Union[discord.User, discord.Member]) -> bool:
         if user is not None and getattr(user, "id", None) is not None:
-            return user.id in (1141746562922459136, 452666956353503252)
+            return user.id in (user.value for user in Owners)
         raise ValueError("User/User ID was None, or user object had no ID property")
 
 
@@ -133,7 +134,7 @@ async def prefix_update_listener():
 bot = MyBot(command_prefix=get_prefix, intents=intents, help_command=None)
 bot.launch_time = discord.utils.utcnow()
 
-ERROR_NOTIFICATION_USER_ID = 1141746562922459136
+ERROR_NOTIFICATION_USER_ID = Owners.ILIKEPANCAKES.value
 
 
 def catch_exceptions(func):
