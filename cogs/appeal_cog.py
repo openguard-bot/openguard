@@ -9,7 +9,8 @@ from .aimod_helpers.config_manager import (
     GLOBAL_BANS,
     USER_INFRACTIONS,
     APPEALS,
-    save_appeals, 
+    save_appeals,
+    save_global_bans, 
 )
 from .aimod_helpers.ui import AppealActions
 
