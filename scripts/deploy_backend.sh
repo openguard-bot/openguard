@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd /srv/http/openguard
+cd /home/discordbot/openguard
 
 echo "Activating virtual environment..."
 source .venv/bin/activate
