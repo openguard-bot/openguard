@@ -361,14 +361,14 @@ async def get_moderation_analytics(
 
     # Get daily actions
     daily_actions_result = await db.execute(
-        text(f"""
+        text("""
             SELECT DATE(timestamp) as date, COUNT(*) as count
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
-        """),
-        {"guild_id": guild_id} if guild_id else {}
+        """.format(guild_filter=guild_filter)),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
 
     daily_actions = [
@@ -378,15 +378,15 @@ async def get_moderation_analytics(
 
     # Get top moderators
     top_moderators_result = await db.execute(
-        text(f"""
+        text("""
             SELECT moderator_id, COUNT(*) as action_count
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL '{days} days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY moderator_id
             ORDER BY action_count DESC
             LIMIT 10
-        """),
-        {"guild_id": guild_id} if guild_id else {}
+        """.format(guild_filter=guild_filter)),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
 
     top_moderators = [
