@@ -10,9 +10,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 from cryptography.fernet import Fernet
 from os import getenv
- 
+
 from .cache import delete_cache, get_cache, set_cache
- 
+
 from .connection import (
     execute_query,
     get_connection,
@@ -40,17 +40,18 @@ log = logging.getLogger(__name__)
 # Encryption setup
 ENCRYPTION_KEY = getenv("ENCRYPTION_KEY")
 if not ENCRYPTION_KEY:
-   raise ValueError("ENCRYPTION_KEY environment variable not set.")
+    raise ValueError("ENCRYPTION_KEY environment variable not set.")
 fernet = Fernet(ENCRYPTION_KEY.encode())
 
 
 def encrypt_data(data: str) -> str:
-   """Encrypts a string."""
-   return fernet.encrypt(data.encode()).decode()
+    """Encrypts a string."""
+    return fernet.encrypt(data.encode()).decode()
+
 
 def decrypt_data(encrypted_data: str) -> str:
-   """Decrypts a string."""
-   return fernet.decrypt(encrypted_data.encode()).decode()
+    """Decrypts a string."""
+    return fernet.decrypt(encrypted_data.encode()).decode()
 
 
 # Guild Configuration Operations
@@ -680,7 +681,10 @@ async def set_guild_api_key(
             def datetime_converter(o):
                 if isinstance(o, datetime):
                     return o.isoformat()
-            encrypted_string = encrypt_data(json.dumps(key_data, default=datetime_converter))
+
+            encrypted_string = encrypt_data(
+                json.dumps(key_data, default=datetime_converter)
+            )
             encrypted_github_auth = json.dumps({"data": encrypted_string})
         elif isinstance(key_data, str):
             encrypted_key = encrypt_data(key_data)
@@ -726,15 +730,17 @@ async def get_guild_api_key(guild_id: int) -> Optional[GuildAPIKey]:
 
         if db_data.get("encrypted_api_key"):
             api_key = decrypt_data(db_data["encrypted_api_key"])
-        
+
         if db_data.get("encrypted_github_auth_info"):
             # The data is stored as a JSON string like '{"data": "..."}'
             auth_data_wrapper = json.loads(db_data["encrypted_github_auth_info"])
             encrypted_string = auth_data_wrapper["data"]
             decrypted_auth_str = decrypt_data(encrypted_string)
             github_auth_info = json.loads(decrypted_auth_str)
-            if 'expires_at' in github_auth_info:
-                github_auth_info['expires_at'] = datetime.fromisoformat(github_auth_info['expires_at'])
+            if "expires_at" in github_auth_info:
+                github_auth_info["expires_at"] = datetime.fromisoformat(
+                    github_auth_info["expires_at"]
+                )
 
         guild_key = GuildAPIKey(
             guild_id=db_data["guild_id"],
@@ -744,7 +750,7 @@ async def get_guild_api_key(guild_id: int) -> Optional[GuildAPIKey]:
             created_at=db_data["created_at"],
             updated_at=db_data["updated_at"],
         )
-        
+
         await set_cache(cache_key, guild_key.__dict__)
         return guild_key
     except Exception as e:

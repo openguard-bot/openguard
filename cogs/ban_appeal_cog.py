@@ -96,7 +96,9 @@ class BanAppealModal(discord.ui.Modal):
                 )
 
         except Exception as e:
-            log.exception(f"An error occurred during the ban appeal submission process for guild {guild.id}: {e}")
+            log.exception(
+                f"An error occurred during the ban appeal submission process for guild {guild.id}: {e}"
+            )
 
         await interaction.response.send_message(
             "Your appeal has been submitted.", ephemeral=True
@@ -167,9 +169,7 @@ class BanAppealCog(commands.Cog):
                 banned_guilds.append(guild)
 
         if not banned_guilds:
-            await wait_msg.edit(
-                content="You are not banned in any servers I'm in."
-            )
+            await wait_msg.edit(content="You are not banned in any servers I'm in.")
             return
 
         banned_guilds = banned_guilds[:25]

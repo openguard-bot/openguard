@@ -24,7 +24,8 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
         self.bot = bot
 
     @commands.hybrid_group(
-        name="aichannel", description="Manage AI moderation settings for specific channels"
+        name="aichannel",
+        description="Manage AI moderation settings for specific channels",
     )
     async def aichannel(self, ctx: commands.Context):
         """AI channel configuration commands"""
@@ -64,7 +65,8 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
             await ctx.send(response)
 
     @aichannel.command(
-        name="include", description="Include a channel in AI moderation (remove exclusion)"
+        name="include",
+        description="Include a channel in AI moderation (remove exclusion)",
     )
     @app_commands.describe(
         channel="The channel to include in AI moderation (defaults to current channel)"
@@ -115,7 +117,10 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
                 else:
                     channel_mentions.append(f"<#{channel_id}> (deleted)")
 
-            response = f"**Excluded Channels ({len(excluded_channels)}):**\n" + "\n".join(channel_mentions)
+            response = (
+                f"**Excluded Channels ({len(excluded_channels)}):**\n"
+                + "\n".join(channel_mentions)
+            )
 
         if ctx.interaction:
             await ctx.interaction.response.send_message(response)
@@ -123,19 +128,20 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
             await ctx.send(response)
 
     @aichannel.command(
-        name="setrules", description="Set custom AI moderation rules for a specific channel"
+        name="setrules",
+        description="Set custom AI moderation rules for a specific channel",
     )
     @app_commands.describe(
         channel="The channel to set custom rules for (defaults to current channel)",
-        rules="The custom rules for this channel (use 'default' to remove custom rules)"
+        rules="The custom rules for this channel (use 'default' to remove custom rules)",
     )
     @app_commands.checks.has_permissions(administrator=True)
     async def set_channel_rules(
-        self, 
-        ctx: commands.Context, 
+        self,
+        ctx: commands.Context,
         channel: Optional[discord.TextChannel] = None,
-        *, 
-        rules: str
+        *,
+        rules: str,
     ):
         """Set custom AI moderation rules for a specific channel."""
         if channel is None:
@@ -165,7 +171,8 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
             await ctx.send(response)
 
     @aichannel.command(
-        name="viewrules", description="View custom AI moderation rules for a specific channel"
+        name="viewrules",
+        description="View custom AI moderation rules for a specific channel",
     )
     @app_commands.describe(
         channel="The channel to view custom rules for (defaults to current channel)"
@@ -189,7 +196,7 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
             embed = discord.Embed(
                 title=f"Custom Rules for {channel.name}",
                 description=custom_rules,
-                color=discord.Color.blue()
+                color=discord.Color.blue(),
             )
             embed.set_footer(text=f"Channel ID: {channel_id}")
 
@@ -205,7 +212,8 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
             await ctx.send(response)
 
     @aichannel.command(
-        name="listallrules", description="List all channels with custom AI moderation rules"
+        name="listallrules",
+        description="List all channels with custom AI moderation rules",
     )
     @app_commands.checks.has_permissions(administrator=True)
     async def list_all_rules(self, ctx: commands.Context):
@@ -217,22 +225,19 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
             response = "No channels have custom AI moderation rules set."
         else:
             embed = discord.Embed(
-                title="Channels with Custom Rules",
-                color=discord.Color.blue()
+                title="Channels with Custom Rules", color=discord.Color.blue()
             )
 
             for channel_id_str, rules in all_channel_rules.items():
                 channel_id = int(channel_id_str)
                 channel = ctx.guild.get_channel(channel_id)
-                channel_name = channel.name if channel else f"Deleted Channel ({channel_id})"
-                
+                channel_name = (
+                    channel.name if channel else f"Deleted Channel ({channel_id})"
+                )
+
                 # Truncate rules if too long
                 truncated_rules = rules[:100] + "..." if len(rules) > 100 else rules
-                embed.add_field(
-                    name=channel_name,
-                    value=truncated_rules,
-                    inline=False
-                )
+                embed.add_field(name=channel_name, value=truncated_rules, inline=False)
 
             if ctx.interaction:
                 await ctx.interaction.response.send_message(embed=embed)
@@ -267,27 +272,27 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
 
         embed = discord.Embed(
             title=f"AI Moderation Status for {channel.name}",
-            color=discord.Color.red() if is_excluded else discord.Color.green()
+            color=discord.Color.red() if is_excluded else discord.Color.green(),
         )
 
         embed.add_field(
             name="AI Moderation",
             value="❌ Excluded" if is_excluded else "✅ Active",
-            inline=True
+            inline=True,
         )
 
         embed.add_field(
             name="Custom Rules",
             value="✅ Yes" if custom_rules else "❌ No (using server default)",
-            inline=True
+            inline=True,
         )
 
         if custom_rules:
-            truncated_rules = custom_rules[:500] + "..." if len(custom_rules) > 500 else custom_rules
+            truncated_rules = (
+                custom_rules[:500] + "..." if len(custom_rules) > 500 else custom_rules
+            )
             embed.add_field(
-                name="Rules Preview",
-                value=f"```{truncated_rules}```",
-                inline=False
+                name="Rules Preview", value=f"```{truncated_rules}```", inline=False
             )
 
         embed.set_footer(text=f"Channel ID: {channel_id}")

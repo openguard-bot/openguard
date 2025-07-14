@@ -255,9 +255,7 @@ class MessageRateCog(commands.Cog):
 
     # Slash Commands
 
-    @commands.hybrid_group(
-        name="message", description="Message rate limiting commands"
-    )
+    @commands.hybrid_group(name="message", description="Message rate limiting commands")
     async def message(self, ctx: commands.Context):
         """Message rate limiting commands."""
         await ctx.send_help(ctx.command)

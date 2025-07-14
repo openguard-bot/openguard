@@ -23,7 +23,7 @@ class UserInfoCog(commands.Cog):
     def _truncate_field_value(self, text: str, max_length: int = 1020) -> str:
         """Truncate text to fit Discord embed field limits."""
         if len(text) > max_length:
-            return text[:max_length-3] + "..."
+            return text[: max_length - 3] + "..."
         return text
 
     def _format_time_difference(self, past_time: datetime) -> str:
@@ -317,11 +317,10 @@ class UserInfoCog(commands.Cog):
             ephemeral=True,
         )
 
-    @usernote.command(
-        name="remove", description="Remove a note from a user."
-    )
+    @usernote.command(name="remove", description="Remove a note from a user.")
     @app_commands.describe(
-        user="The user to remove a note from.", key="The title/key of the note to remove."
+        user="The user to remove a note from.",
+        key="The title/key of the note to remove.",
     )
     async def remove_custom_value(
         self, ctx: commands.Context, user: discord.Member, key: str
@@ -335,21 +334,15 @@ class UserInfoCog(commands.Cog):
                 f"❌ No note with key '{key}' found for {user.mention}", ephemeral=True
             )
 
-    @usernote.command(
-        name="list", description="List all notes for a user."
-    )
+    @usernote.command(name="list", description="List all notes for a user.")
     @app_commands.describe(user="The user to list notes for.")
-    async def list_custom_values(
-        self, ctx: commands.Context, user: discord.Member
-    ):
+    async def list_custom_values(self, ctx: commands.Context, user: discord.Member):
         if not await self.is_authorized_admin(ctx):
             return
 
         custom_data = await self.get_custom_user_data(user.id)
         if not custom_data:
-            await ctx.reply(
-                f"❌ No notes found for {user.mention}", ephemeral=True
-            )
+            await ctx.reply(f"❌ No notes found for {user.mention}", ephemeral=True)
             return
 
         content = f"**Notes for {user.display_name}**\n\n"
@@ -359,13 +352,9 @@ class UserInfoCog(commands.Cog):
 
         await ctx.reply(content, ephemeral=True)
 
-    @usernote.command(
-        name="clear", description="Clear all notes for a user."
-    )
+    @usernote.command(name="clear", description="Clear all notes for a user.")
     @app_commands.describe(user="The user to clear all notes for.")
-    async def clear_custom_values(
-        self, ctx: commands.Context, user: discord.Member
-    ):
+    async def clear_custom_values(self, ctx: commands.Context, user: discord.Member):
         if not await self.is_authorized_admin(ctx):
             return
 

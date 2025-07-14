@@ -29,7 +29,9 @@ def copy_copilot_files():
     # Ensure destination directory exists
     os.makedirs(dest_dir, exist_ok=True)
     if not os.path.exists(src_dir):
-        print(f"Source directory '{src_dir}' does not exist. Skipping copilot file copy.")
+        print(
+            f"Source directory '{src_dir}' does not exist. Skipping copilot file copy."
+        )
         return
     for filename in os.listdir(src_dir):
         src_file = os.path.join(src_dir, filename)
@@ -41,7 +43,9 @@ def copy_copilot_files():
             except Exception as e:
                 print(f"Failed to copy {src_file} to {dest_file}: {e}")
 
+
 copy_copilot_files()
+
 
 class DualStream:
     def __init__(self, original_stream, log_file):
@@ -71,6 +75,7 @@ if not discord_token:
     raise ValueError("Missing DISCORD_TOKEN environment variable.")
 
 intents = discord.Intents.all()
+
 
 class MyBot(commands.AutoShardedBot):
     async def is_owner(self, user: Union[discord.User, discord.Member]) -> bool:
@@ -117,7 +122,9 @@ async def prefix_update_listener():
 
     while True:
         try:
-            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            message = await pubsub.get_message(
+                ignore_subscribe_messages=True, timeout=1.0
+            )
             if message and message["type"] == "message":
                 print(f"Received raw prefix update: {message['data']}")
                 data = message["data"].decode("utf-8")
@@ -131,10 +138,12 @@ async def prefix_update_listener():
         except Exception as e:
             print(f"Error in prefix_update_listener: {e}")
 
+
 bot = MyBot(command_prefix=get_prefix, intents=intents, help_command=None)
 bot.launch_time = discord.utils.utcnow()
 
 ERROR_NOTIFICATION_USER_ID = Owners.ILIKEPANCAKES
+
 
 def catch_exceptions(func):
     @functools.wraps(func)

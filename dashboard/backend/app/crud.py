@@ -98,9 +98,7 @@ async def update_general_settings(
             {"guild_id": guild_id, "key": key, "value": db_value},
         )
         if key == "prefix":
-            await redis_client.publish(
-                "prefix_updates", f"{guild_id}:{db_value}"
-            )
+            await redis_client.publish("prefix_updates", f"{guild_id}:{db_value}")
     await db.commit()
     return await get_general_settings(db, guild_id)
 
@@ -242,8 +240,6 @@ async def update_logging_settings(
     return await get_logging_settings(db, guild_id)
 
 
-
-
 # Analytics CRUD Functions
 async def get_command_analytics(
     db: Session, days: int = 30, guild_id: Optional[int] = None
@@ -257,58 +253,64 @@ async def get_command_analytics(
 
     # Get total commands
     total_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT COUNT(*) as total_commands
             FROM command_logs
             WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
-        """),
-        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
+        """
+        ),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days},
     )
     total_commands = total_result.fetchone()[0] or 0
 
     # Get unique commands
     unique_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT COUNT(DISTINCT command_name) as unique_commands
             FROM command_logs
             WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
-        """),
-        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
+        """
+        ),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days},
     )
     unique_commands = unique_result.fetchone()[0] or 0
 
     # Get top commands
     top_commands_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT command_name, COUNT(*) as usage_count, MAX(timestamp) as last_used
             FROM command_logs
             WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
             GROUP BY command_name
             ORDER BY usage_count DESC
             LIMIT 10
-        """),
-        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
+        """
+        ),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days},
     )
 
     top_commands = [
         schemas.CommandUsageData(
-            command_name=row[0],
-            usage_count=row[1],
-            last_used=row[2]
+            command_name=row[0], usage_count=row[1], last_used=row[2]
         )
         for row in top_commands_result.fetchall()
     ]
 
     # Get daily usage
     daily_usage_result = await db.execute(
-        text(f"""
+        text(
+            f"""
             SELECT DATE(timestamp) as date, COUNT(*) as count
             FROM command_logs
             WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
-        """),
-        params
+        """
+        ),
+        params,
     )
 
     daily_usage = [
@@ -320,7 +322,7 @@ async def get_command_analytics(
         total_commands=total_commands,
         unique_commands=unique_commands,
         top_commands=top_commands,
-        daily_usage=daily_usage
+        daily_usage=daily_usage,
     )
 
 
@@ -336,47 +338,57 @@ async def get_moderation_analytics(
 
     # Get total actions
     total_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT COUNT(*) as total_actions
             FROM moderation_logs
             WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
-        """.format(guild_filter=guild_filter)),
-        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
+        """.format(
+                guild_filter=guild_filter
+            )
+        ),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days},
     )
     total_actions = total_result.fetchone()[0] or 0
 
     # Get actions by type
     actions_by_type_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT action_type, COUNT(*) as count,
                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
             FROM moderation_logs
             WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY action_type
             ORDER BY count DESC
-        """.format(guild_filter=guild_filter)),
-        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
+        """.format(
+                guild_filter=guild_filter
+            )
+        ),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days},
     )
 
     actions_by_type = [
         schemas.ModerationActionData(
-            action_type=row[0],
-            count=row[1],
-            percentage=row[2]
+            action_type=row[0], count=row[1], percentage=row[2]
         )
         for row in actions_by_type_result.fetchall()
     ]
 
     # Get daily actions
     daily_actions_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT DATE(timestamp) as date, COUNT(*) as count
             FROM moderation_logs
             WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
-        """.format(guild_filter=guild_filter)),
-        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
+        """.format(
+                guild_filter=guild_filter
+            )
+        ),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days},
     )
 
     daily_actions = [
@@ -386,15 +398,19 @@ async def get_moderation_analytics(
 
     # Get top moderators
     top_moderators_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT moderator_id, COUNT(*) as action_count
             FROM moderation_logs
             WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY moderator_id
             ORDER BY action_count DESC
             LIMIT 10
-        """.format(guild_filter=guild_filter)),
-        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
+        """.format(
+                guild_filter=guild_filter
+            )
+        ),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days},
     )
 
     top_moderators = [
@@ -406,7 +422,7 @@ async def get_moderation_analytics(
         total_actions=total_actions,
         actions_by_type=actions_by_type,
         daily_actions=daily_actions,
-        top_moderators=top_moderators
+        top_moderators=top_moderators,
     )
 
 
@@ -422,12 +438,20 @@ async def get_user_analytics(
 
     # Get total active users (users who ran commands)
     active_users_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT COUNT(DISTINCT user_id) as active_users
             FROM command_logs
             WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
-        """.replace("{guild_filter}", guild_filter)),
-        {"guild_id": guild_id, "days": f"{days} days"} if guild_id else {"days": f"{days} days"}
+        """.replace(
+                "{guild_filter}", guild_filter
+            )
+        ),
+        (
+            {"guild_id": guild_id, "days": f"{days} days"}
+            if guild_id
+            else {"days": f"{days} days"}
+        ),
     )
     total_active_users = active_users_result.fetchone()[0] or 0
 
@@ -436,7 +460,8 @@ async def get_user_analytics(
 
     # Get activity timeline
     activity_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT
                 DATE(timestamp) as date,
                 COUNT(DISTINCT user_id) as active_users,
@@ -446,8 +471,15 @@ async def get_user_analytics(
             WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
-        """.replace("{guild_filter}", guild_filter)),
-        {"guild_id": guild_id, "days": f"{days} days"} if guild_id else {"days": f"{days} days"}
+        """.replace(
+                "{guild_filter}", guild_filter
+            )
+        ),
+        (
+            {"guild_id": guild_id, "days": f"{days} days"}
+            if guild_id
+            else {"days": f"{days} days"}
+        ),
     )
 
     activity_timeline = [
@@ -455,7 +487,7 @@ async def get_user_analytics(
             date=str(row[0]),
             active_users=row[1],
             new_users=row[2],
-            commands_used=row[3]
+            commands_used=row[3],
         )
         for row in activity_result.fetchall()
     ]
@@ -463,12 +495,16 @@ async def get_user_analytics(
     return schemas.UserAnalytics(
         total_active_users=total_active_users,
         new_users_today=new_users_today,
-        activity_timeline=activity_timeline
+        activity_timeline=activity_timeline,
     )
 
 
 async def get_guild_users(
-    db: Session, guild_id: int, page: int = 1, limit: int = 50, search: Optional[str] = None
+    db: Session,
+    guild_id: int,
+    page: int = 1,
+    limit: int = 50,
+    search: Optional[str] = None,
 ) -> list[schemas.GuildUser]:
     """Get users in a guild with pagination and search."""
     offset = (page - 1) * limit
@@ -481,7 +517,8 @@ async def get_guild_users(
 
     # This is a placeholder query - in reality, you'd need to track guild members
     result = await db.execute(
-        text(f"""
+        text(
+            f"""
             SELECT DISTINCT
                 cl.user_id,
                 'Unknown' as username,
@@ -502,8 +539,9 @@ async def get_guild_users(
             GROUP BY cl.user_id, inf_count.count
             ORDER BY last_active DESC
             LIMIT :limit OFFSET :offset
-        """),
-        params
+        """
+        ),
+        params,
     )
 
     return [
@@ -515,7 +553,7 @@ async def get_guild_users(
             joined_at=row[4],
             roles=json.loads(row[5]) if row[5] else [],
             infraction_count=row[6],
-            last_active=row[7]
+            last_active=row[7],
         )
         for row in result.fetchall()
     ]
@@ -527,7 +565,7 @@ async def get_guild_infractions(
     page: int = 1,
     limit: int = 50,
     user_id: Optional[int] = None,
-    action_type: Optional[str] = None
+    action_type: Optional[str] = None,
 ) -> list[schemas.UserInfraction]:
     """Get infractions for a guild with filtering."""
     offset = (page - 1) * limit
@@ -545,7 +583,8 @@ async def get_guild_infractions(
     where_clause = " AND ".join(filters)
 
     result = await db.execute(
-        text(f"""
+        text(
+            f"""
             SELECT id, guild_id, user_id, timestamp, rule_violated,
                    action_taken, reasoning, NULL as moderator_id,
                    'Unknown' as moderator_name
@@ -553,8 +592,9 @@ async def get_guild_infractions(
             WHERE {where_clause}
             ORDER BY timestamp DESC
             LIMIT :limit OFFSET :offset
-        """),
-        params
+        """
+        ),
+        params,
     )
 
     return [
@@ -567,7 +607,7 @@ async def get_guild_infractions(
             action_taken=row[5],
             reasoning=row[6],
             moderator_id=row[7],
-            moderator_name=row[8]
+            moderator_name=row[8],
         )
         for row in result.fetchall()
     ]
@@ -587,14 +627,16 @@ async def get_guild_appeals(
     where_clause = " AND ".join(filters) if filters else "1=1"
 
     result = await db.execute(
-        text(f"""
+        text(
+            f"""
             SELECT appeal_id, user_id, 'Unknown' as username, reason,
                    timestamp, status, original_infraction, created_at
             FROM appeals
             WHERE {where_clause}
             ORDER BY created_at DESC
-        """),
-        params
+        """
+        ),
+        params,
     )
 
     return [
@@ -606,7 +648,7 @@ async def get_guild_appeals(
             timestamp=row[4],
             status=row[5],
             original_infraction=json.loads(row[6]) if row[6] else None,
-            created_at=row[7]
+            created_at=row[7],
         )
         for row in result.fetchall()
     ]
@@ -617,12 +659,14 @@ async def respond_to_appeal(
 ):
     """Respond to an appeal."""
     await db.execute(
-        text("""
+        text(
+            """
             UPDATE appeals
             SET status = :status, updated_at = CURRENT_TIMESTAMP
             WHERE appeal_id = :appeal_id
-        """),
-        {"appeal_id": appeal_id, "status": status}
+        """
+        ),
+        {"appeal_id": appeal_id, "status": status},
     )
     await db.commit()
     return {"success": True, "message": f"Appeal {status}"}
@@ -639,18 +683,21 @@ async def get_user_profile(
 
     # Get total infractions
     infractions_result = await db.execute(
-        text(f"""
+        text(
+            f"""
             SELECT COUNT(*) as total_infractions
             FROM user_infractions
             WHERE user_id = :user_id {guild_filter}
-        """),
-        params
+        """
+        ),
+        params,
     )
     total_infractions = infractions_result.fetchone()[0] or 0
 
     # Get recent infractions
     recent_infractions_result = await db.execute(
-        text(f"""
+        text(
+            f"""
             SELECT id, guild_id, user_id, timestamp, rule_violated,
                    action_taken, reasoning, NULL as moderator_id,
                    'Unknown' as moderator_name
@@ -658,8 +705,9 @@ async def get_user_profile(
             WHERE user_id = :user_id {guild_filter}
             ORDER BY timestamp DESC
             LIMIT 5
-        """),
-        params
+        """
+        ),
+        params,
     )
 
     recent_infractions = [
@@ -672,19 +720,21 @@ async def get_user_profile(
             action_taken=row[5],
             reasoning=row[6],
             moderator_id=row[7],
-            moderator_name=row[8]
+            moderator_name=row[8],
         )
         for row in recent_infractions_result.fetchall()
     ]
 
     # Get command usage count
     command_usage_result = await db.execute(
-        text(f"""
+        text(
+            f"""
             SELECT COUNT(*) as command_count
             FROM command_logs
             WHERE user_id = :user_id {guild_filter}
-        """),
-        params
+        """
+        ),
+        params,
     )
     command_usage_count = command_usage_result.fetchone()[0] or 0
 
@@ -698,7 +748,7 @@ async def get_user_profile(
         guild_join_date=None,  # Would need member tracking
         last_active=None,  # Would need activity tracking
         roles=[],  # Would need role tracking
-        command_usage_count=command_usage_count
+        command_usage_count=command_usage_count,
     )
 
 
@@ -707,19 +757,21 @@ async def create_moderation_action(
 ):
     """Create a new moderation action."""
     await db.execute(
-        text("""
+        text(
+            """
             INSERT INTO moderation_logs
             (guild_id, moderator_id, target_user_id, action_type, reason, duration_seconds)
             VALUES (:guild_id, :moderator_id, :target_user_id, :action_type, :reason, :duration_seconds)
-        """),
+        """
+        ),
         {
             "guild_id": guild_id,
             "moderator_id": 0,  # Would need current user ID
             "target_user_id": action.target_user_id,
             "action_type": action.action_type,
             "reason": action.reason,
-            "duration_seconds": action.duration_seconds
-        }
+            "duration_seconds": action.duration_seconds,
+        },
     )
     await db.commit()
     return {"success": True, "message": "Moderation action created"}
@@ -727,21 +779,26 @@ async def create_moderation_action(
 
 # Blog Post CRUD Functions
 
-async def create_blog_post(db: Session, post: schemas.BlogPostCreate, author_id: int) -> schemas.BlogPost:
+
+async def create_blog_post(
+    db: Session, post: schemas.BlogPostCreate, author_id: int
+) -> schemas.BlogPost:
     """Create a new blog post."""
     result = await db.execute(
-        text("""
+        text(
+            """
             INSERT INTO blog_posts (title, content, author_id, published, slug)
             VALUES (:title, :content, :author_id, :published, :slug)
             RETURNING id, title, content, author_id, published, slug, created_at, updated_at
-        """),
+        """
+        ),
         {
             "title": post.title,
             "content": post.content,
             "author_id": author_id,
             "published": post.published,
-            "slug": post.slug
-        }
+            "slug": post.slug,
+        },
     )
     await db.commit()
     row = result.fetchone()
@@ -751,8 +808,7 @@ async def create_blog_post(db: Session, post: schemas.BlogPostCreate, author_id:
 async def get_blog_post(db: Session, post_id: int) -> Optional[schemas.BlogPost]:
     """Get a blog post by ID."""
     result = await db.execute(
-        text("SELECT * FROM blog_posts WHERE id = :post_id"),
-        {"post_id": post_id}
+        text("SELECT * FROM blog_posts WHERE id = :post_id"), {"post_id": post_id}
     )
     row = result.fetchone()
     if row:
@@ -763,8 +819,7 @@ async def get_blog_post(db: Session, post_id: int) -> Optional[schemas.BlogPost]
 async def get_blog_post_by_slug(db: Session, slug: str) -> Optional[schemas.BlogPost]:
     """Get a blog post by slug."""
     result = await db.execute(
-        text("SELECT * FROM blog_posts WHERE slug = :slug"),
-        {"slug": slug}
+        text("SELECT * FROM blog_posts WHERE slug = :slug"), {"slug": slug}
     )
     row = result.fetchone()
     if row:
@@ -772,7 +827,9 @@ async def get_blog_post_by_slug(db: Session, slug: str) -> Optional[schemas.Blog
     return None
 
 
-async def get_blog_posts(db: Session, skip: int = 0, limit: int = 10, published_only: bool = False) -> list[schemas.BlogPost]:
+async def get_blog_posts(
+    db: Session, skip: int = 0, limit: int = 10, published_only: bool = False
+) -> list[schemas.BlogPost]:
     """Get a list of blog posts."""
     query = "SELECT * FROM blog_posts"
     params = {}
@@ -788,7 +845,9 @@ async def get_blog_posts(db: Session, skip: int = 0, limit: int = 10, published_
     return [schemas.BlogPost(**dict(row)) for row in rows]
 
 
-async def update_blog_post(db: Session, post_id: int, post_update: schemas.BlogPostUpdate) -> Optional[schemas.BlogPost]:
+async def update_blog_post(
+    db: Session, post_id: int, post_update: schemas.BlogPostUpdate
+) -> Optional[schemas.BlogPost]:
     """Update a blog post."""
     # Build dynamic update query
     update_fields = []
@@ -832,8 +891,7 @@ async def update_blog_post(db: Session, post_id: int, post_update: schemas.BlogP
 async def delete_blog_post(db: Session, post_id: int) -> bool:
     """Delete a blog post."""
     result = await db.execute(
-        text("DELETE FROM blog_posts WHERE id = :post_id"),
-        {"post_id": post_id}
+        text("DELETE FROM blog_posts WHERE id = :post_id"), {"post_id": post_id}
     )
     await db.commit()
     return result.rowcount > 0
@@ -850,6 +908,7 @@ async def count_blog_posts(db: Session, published_only: bool = False) -> int:
 
 
 # Enhanced Configuration CRUD Functions
+
 
 async def get_comprehensive_guild_config(
     db: Session, guild_id: int
@@ -880,11 +939,13 @@ async def get_bot_detection_config(
 ) -> schemas.BotDetectionSettings:
     """Get bot detection configuration for a guild."""
     result = await db.execute(
-        text("""
+        text(
+            """
             SELECT key, value FROM botdetect_config
             WHERE guild_id = :guild_id
-        """),
-        {"guild_id": guild_id}
+        """
+        ),
+        {"guild_id": guild_id},
     )
 
     config_data = {row[0]: row[1] for row in result.fetchall()}
@@ -897,7 +958,7 @@ async def get_bot_detection_config(
         "timeout_duration": 300,
         "log_channel": None,
         "whitelist_roles": [],
-        "whitelist_users": []
+        "whitelist_users": [],
     }
 
     for key, default_value in defaults.items():
@@ -914,13 +975,15 @@ async def update_bot_detection_config(
     for key, value in settings.dict(exclude_unset=True).items():
         if value is not None:
             await db.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO botdetect_config (guild_id, key, value)
                     VALUES (:guild_id, :key, :value)
                     ON CONFLICT (guild_id, key)
                     DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-                """),
-                {"guild_id": guild_id, "key": key, "value": json.dumps(value)}
+                """
+                ),
+                {"guild_id": guild_id, "key": key, "value": json.dumps(value)},
             )
 
     await db.commit()
@@ -929,17 +992,24 @@ async def update_bot_detection_config(
 
 # Channel Exclusions and Rules CRUD functions
 
-async def get_channel_exclusions(db: Session, guild_id: int) -> schemas.ChannelExclusionSettings:
+
+async def get_channel_exclusions(
+    db: Session, guild_id: int
+) -> schemas.ChannelExclusionSettings:
     """Get channel exclusions for AI moderation."""
     result = await db.execute(
-        text("SELECT value FROM guild_config WHERE guild_id = :guild_id AND key = 'AI_EXCLUDED_CHANNELS'"),
-        {"guild_id": guild_id}
+        text(
+            "SELECT value FROM guild_config WHERE guild_id = :guild_id AND key = 'AI_EXCLUDED_CHANNELS'"
+        ),
+        {"guild_id": guild_id},
     )
     row = result.fetchone()
     excluded_channels = []
     if row and row[0]:
         try:
-            excluded_channels = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            excluded_channels = (
+                json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            )
             # Convert integers to strings for API consistency
             excluded_channels = [str(ch) for ch in excluded_channels]
         except (json.JSONDecodeError, TypeError):
@@ -956,13 +1026,19 @@ async def update_channel_exclusions(
     excluded_channels = [int(ch) for ch in settings.excluded_channels]
 
     await db.execute(
-        text("""
+        text(
+            """
             INSERT INTO guild_config (guild_id, key, value)
             VALUES (:guild_id, :key, :value)
             ON CONFLICT (guild_id, key)
             DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-        """),
-        {"guild_id": guild_id, "key": "AI_EXCLUDED_CHANNELS", "value": json.dumps(excluded_channels)}
+        """
+        ),
+        {
+            "guild_id": guild_id,
+            "key": "AI_EXCLUDED_CHANNELS",
+            "value": json.dumps(excluded_channels),
+        },
     )
     await db.commit()
     return await get_channel_exclusions(db, guild_id)
@@ -971,8 +1047,10 @@ async def update_channel_exclusions(
 async def get_channel_rules(db: Session, guild_id: int) -> schemas.ChannelRulesUpdate:
     """Get channel-specific AI moderation rules."""
     result = await db.execute(
-        text("SELECT value FROM guild_config WHERE guild_id = :guild_id AND key = 'AI_CHANNEL_RULES'"),
-        {"guild_id": guild_id}
+        text(
+            "SELECT value FROM guild_config WHERE guild_id = :guild_id AND key = 'AI_CHANNEL_RULES'"
+        ),
+        {"guild_id": guild_id},
     )
     row = result.fetchone()
     channel_rules = {}
@@ -990,13 +1068,19 @@ async def update_channel_rules(
 ) -> schemas.ChannelRulesUpdate:
     """Update channel-specific AI moderation rules."""
     await db.execute(
-        text("""
+        text(
+            """
             INSERT INTO guild_config (guild_id, key, value)
             VALUES (:guild_id, :key, :value)
             ON CONFLICT (guild_id, key)
             DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-        """),
-        {"guild_id": guild_id, "key": "AI_CHANNEL_RULES", "value": json.dumps(settings.channel_rules)}
+        """
+        ),
+        {
+            "guild_id": guild_id,
+            "key": "AI_CHANNEL_RULES",
+            "value": json.dumps(settings.channel_rules),
+        },
     )
     await db.commit()
     return await get_channel_rules(db, guild_id)
@@ -1013,13 +1097,19 @@ async def delete_channel_rules(db: Session, guild_id: int, channel_id: str) -> d
 
         # Update the database
         await db.execute(
-            text("""
+            text(
+                """
                 INSERT INTO guild_config (guild_id, key, value)
                 VALUES (:guild_id, :key, :value)
                 ON CONFLICT (guild_id, key)
                 DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-            """),
-            {"guild_id": guild_id, "key": "AI_CHANNEL_RULES", "value": json.dumps(current_rules.channel_rules)}
+            """
+            ),
+            {
+                "guild_id": guild_id,
+                "key": "AI_CHANNEL_RULES",
+                "value": json.dumps(current_rules.channel_rules),
+            },
         )
         await db.commit()
         return {"message": f"Custom rules for channel {channel_id} have been deleted."}
@@ -1032,17 +1122,19 @@ async def get_message_rate_config(
 ) -> schemas.MessageRateSettings:
     """Get message rate limiting configuration for a guild."""
     result = await db.execute(
-        text("""
+        text(
+            """
             SELECT key, value FROM guild_settings
             WHERE guild_id = :guild_id AND key LIKE 'message_rate_%'
-        """),
-        {"guild_id": guild_id}
+        """
+        ),
+        {"guild_id": guild_id},
     )
 
     config_data = {}
     for key, value in result.fetchall():
         # Remove 'message_rate_' prefix
-        clean_key = key.replace('message_rate_', '')
+        clean_key = key.replace("message_rate_", "")
         config_data[clean_key] = value
 
     # Apply defaults
@@ -1055,7 +1147,7 @@ async def get_message_rate_config(
         "check_interval": 30,
         "analysis_window": 60,
         "notifications_enabled": True,
-        "notification_channel": None
+        "notification_channel": None,
     }
 
     for key, default_value in defaults.items():
@@ -1073,13 +1165,15 @@ async def update_message_rate_config(
         if value is not None:
             prefixed_key = f"message_rate_{key}"
             await db.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO guild_settings (guild_id, key, value)
                     VALUES (:guild_id, :key, :value)
                     ON CONFLICT (guild_id, key)
                     DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-                """),
-                {"guild_id": guild_id, "key": prefixed_key, "value": json.dumps(value)}
+                """
+                ),
+                {"guild_id": guild_id, "key": prefixed_key, "value": json.dumps(value)},
             )
 
     await db.commit()
@@ -1091,17 +1185,19 @@ async def get_raid_defense_config(
 ) -> schemas.RaidDefenseSettings:
     """Get raid defense configuration for a guild."""
     result = await db.execute(
-        text("""
+        text(
+            """
             SELECT key, value FROM guild_settings
             WHERE guild_id = :guild_id AND key LIKE 'raid_defense_%'
-        """),
-        {"guild_id": guild_id}
+        """
+        ),
+        {"guild_id": guild_id},
     )
 
     config_data = {}
     for key, value in result.fetchall():
         # Remove 'raid_defense_' prefix
-        clean_key = key.replace('raid_defense_', '')
+        clean_key = key.replace("raid_defense_", "")
         config_data[clean_key] = value
 
     # Apply defaults
@@ -1110,7 +1206,7 @@ async def get_raid_defense_config(
         "threshold": 10,
         "timeframe": 60,
         "alert_channel": None,
-        "auto_action": "none"
+        "auto_action": "none",
     }
 
     for key, default_value in defaults.items():
@@ -1128,19 +1224,19 @@ async def update_raid_defense_config(
         if value is not None:
             prefixed_key = f"raid_defense_{key}"
             await db.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO guild_settings (guild_id, key, value)
                     VALUES (:guild_id, :key, :value)
                     ON CONFLICT (guild_id, key)
                     DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-                """),
-                {"guild_id": guild_id, "key": prefixed_key, "value": json.dumps(value)}
+                """
+                ),
+                {"guild_id": guild_id, "key": prefixed_key, "value": json.dumps(value)},
             )
 
     await db.commit()
     return await get_raid_defense_config(db, guild_id)
-
-
 
 
 async def get_advanced_logging_config(
@@ -1149,32 +1245,38 @@ async def get_advanced_logging_config(
     """Get advanced logging configuration for a guild."""
     # Get webhook URL and mod log settings
     webhook_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT value FROM guild_settings
             WHERE guild_id = :guild_id AND key = 'logging_webhook_url'
-        """),
-        {"guild_id": guild_id}
+        """
+        ),
+        {"guild_id": guild_id},
     )
     webhook_row = webhook_result.fetchone()
     webhook_url = webhook_row[0] if webhook_row else None
 
     mod_log_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT key, value FROM guild_settings
             WHERE guild_id = :guild_id AND key IN ('mod_log_enabled', 'mod_log_channel_id')
-        """),
-        {"guild_id": guild_id}
+        """
+        ),
+        {"guild_id": guild_id},
     )
 
     mod_log_data = {row[0]: row[1] for row in mod_log_result.fetchall()}
 
     # Get event toggles
     toggles_result = await db.execute(
-        text("""
+        text(
+            """
             SELECT event_key, enabled FROM log_event_toggles
             WHERE guild_id = :guild_id
-        """),
-        {"guild_id": guild_id}
+        """
+        ),
+        {"guild_id": guild_id},
     )
 
     event_toggles = [
@@ -1184,9 +1286,9 @@ async def get_advanced_logging_config(
 
     return schemas.AdvancedLoggingSettings(
         webhook_url=webhook_url,
-        mod_log_enabled=mod_log_data.get('mod_log_enabled', False),
-        mod_log_channel_id=mod_log_data.get('mod_log_channel_id'),
-        event_toggles=event_toggles
+        mod_log_enabled=mod_log_data.get("mod_log_enabled", False),
+        mod_log_channel_id=mod_log_data.get("mod_log_channel_id"),
+        event_toggles=event_toggles,
     )
 
 
@@ -1197,41 +1299,59 @@ async def update_advanced_logging_config(
     update_data = settings.dict(exclude_unset=True)
 
     # Update webhook URL
-    if 'webhook_url' in update_data:
+    if "webhook_url" in update_data:
         await db.execute(
-            text("""
+            text(
+                """
                 INSERT INTO guild_settings (guild_id, key, value)
                 VALUES (:guild_id, :key, :value)
                 ON CONFLICT (guild_id, key)
                 DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-            """),
-            {"guild_id": guild_id, "key": "logging_webhook_url", "value": update_data['webhook_url']}
+            """
+            ),
+            {
+                "guild_id": guild_id,
+                "key": "logging_webhook_url",
+                "value": update_data["webhook_url"],
+            },
         )
 
     # Update mod log settings
-    for key in ['mod_log_enabled', 'mod_log_channel_id']:
+    for key in ["mod_log_enabled", "mod_log_channel_id"]:
         if key in update_data:
             await db.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO guild_settings (guild_id, key, value)
                     VALUES (:guild_id, :key, :value)
                     ON CONFLICT (guild_id, key)
                     DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
-                """),
-                {"guild_id": guild_id, "key": key, "value": json.dumps(update_data[key])}
+                """
+                ),
+                {
+                    "guild_id": guild_id,
+                    "key": key,
+                    "value": json.dumps(update_data[key]),
+                },
             )
 
     # Update event toggles
-    if 'event_toggles' in update_data and update_data['event_toggles']:
-        for toggle in update_data['event_toggles']:
+    if "event_toggles" in update_data and update_data["event_toggles"]:
+        for toggle in update_data["event_toggles"]:
             await db.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO log_event_toggles (guild_id, event_key, enabled)
                     VALUES (:guild_id, :event_key, :enabled)
                     ON CONFLICT (guild_id, event_key)
                     DO UPDATE SET enabled = :enabled, updated_at = CURRENT_TIMESTAMP
-                """),
-                {"guild_id": guild_id, "event_key": toggle.event_key, "enabled": toggle.enabled}
+                """
+                ),
+                {
+                    "guild_id": guild_id,
+                    "event_key": toggle.event_key,
+                    "enabled": toggle.enabled,
+                },
             )
 
     await db.commit()

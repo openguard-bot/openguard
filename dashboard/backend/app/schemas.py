@@ -118,11 +118,10 @@ class LoggingSettingsUpdate(BaseModel):
         from_attributes = True
 
 
-
-
 class ChannelExclusionSettings(BaseModel):
     excluded_channels: List[str] = Field(
-        default_factory=list, description="List of channel IDs excluded from AI moderation."
+        default_factory=list,
+        description="List of channel IDs excluded from AI moderation.",
     )
 
     class Config:
@@ -139,7 +138,8 @@ class ChannelRuleSettings(BaseModel):
 
 class ChannelRulesUpdate(BaseModel):
     channel_rules: Dict[str, str] = Field(
-        default_factory=dict, description="Dictionary mapping channel IDs to their custom rules."
+        default_factory=dict,
+        description="Dictionary mapping channel IDs to their custom rules.",
     )
 
     class Config:
@@ -178,20 +178,22 @@ class Stats(BaseModel):
     commands_ran: int
     uptime: float
 
-class GuildAPIKey(BaseModel):
-   guild_id: int
-   api_provider: Optional[str] = None
-   # The 'api_key' and 'github_auth_info' are not included here
-   # because we should not be sending them back to the client.
 
-   class Config:
-       from_attributes = True
+class GuildAPIKey(BaseModel):
+    guild_id: int
+    api_provider: Optional[str] = None
+    # The 'api_key' and 'github_auth_info' are not included here
+    # because we should not be sending them back to the client.
+
+    class Config:
+        from_attributes = True
 
 
 class GuildAPIKeyUpdate(BaseModel):
-   api_provider: str
-   api_key: Optional[str] = None
-   github_auth_info: Optional[Dict[str, Any]] = None
+    api_provider: str
+    api_key: Optional[str] = None
+    github_auth_info: Optional[Dict[str, Any]] = None
+
 
 class CommandUsageData(BaseModel):
     command_name: str
@@ -209,6 +211,7 @@ class CommandAnalytics(BaseModel):
     unique_commands: int
     top_commands: List[CommandUsageData]
     daily_usage: List[DailyUsageData]
+
 
 class ModerationActionData(BaseModel):
     action_type: str
@@ -240,6 +243,7 @@ class UserAnalytics(BaseModel):
     new_users_today: int
     activity_timeline: List[UserActivityData]
 
+
 class GuildUser(BaseModel):
     user_id: int
     username: str
@@ -249,6 +253,7 @@ class GuildUser(BaseModel):
     roles: List[str]
     infraction_count: int
     last_active: Optional[datetime]
+
 
 class UserInfraction(BaseModel):
     id: int
@@ -261,6 +266,7 @@ class UserInfraction(BaseModel):
     moderator_id: Optional[int]
     moderator_name: Optional[str]
 
+
 class Appeal(BaseModel):
     appeal_id: str
     user_id: int
@@ -270,6 +276,7 @@ class Appeal(BaseModel):
     status: str
     original_infraction: Optional[Dict[str, Any]]
     created_at: datetime
+
 
 class UserProfile(BaseModel):
     user_id: int
@@ -283,11 +290,13 @@ class UserProfile(BaseModel):
     roles: List[str]
     command_usage_count: int
 
+
 class ModerationAction(BaseModel):
     target_user_id: int
     action_type: str
     reason: Optional[str]
     duration_seconds: Optional[int]
+
 
 class BotDetectionSettings(BaseModel):
     enabled: bool
@@ -349,8 +358,6 @@ class RaidDefenseSettingsUpdate(BaseModel):
     auto_action: Optional[str] = None
 
 
-
-
 class LogEventToggle(BaseModel):
     event_key: str
     enabled: bool
@@ -379,6 +386,7 @@ class ComprehensiveGuildConfig(BaseModel):
     raid_defense: RaidDefenseSettings
     message_rate: MessageRateSettings
 
+
 class SystemHealth(BaseModel):
     cpu_usage: float
     memory_usage: float
@@ -386,6 +394,7 @@ class SystemHealth(BaseModel):
     bot_status: str
     api_latency: int
     uptime_seconds: int
+
 
 class AppealResponse(BaseModel):
     status: str

@@ -272,12 +272,8 @@ class ModLogCog(commands.Cog):
         description="View moderation logs for a user or the server",
     )
     @app_commands.describe(user="Optional: The user whose logs you want to view")
-    @app_commands.checks.has_permissions(
-        moderate_members=True
-    )
-    async def view(
-        self, interaction: Interaction, user: Optional[discord.User] = None
-    ):
+    @app_commands.checks.has_permissions(moderate_members=True)
+    async def view(self, interaction: Interaction, user: Optional[discord.User] = None):
         """Callback for the /modlog view command."""
         await interaction.response.defer(ephemeral=True)
         guild_id = interaction.guild_id
@@ -339,9 +335,7 @@ class ModLogCog(commands.Cog):
         description="View details for a specific moderation case ID",
     )
     @app_commands.describe(case_id="The ID of the moderation case to view")
-    @app_commands.checks.has_permissions(
-        moderate_members=True
-    )
+    @app_commands.checks.has_permissions(moderate_members=True)
     async def case(self, interaction: Interaction, case_id: int):
         """Callback for the /modlog case command."""
         await interaction.response.defer(ephemeral=True)
@@ -420,12 +414,8 @@ class ModLogCog(commands.Cog):
         case_id="The ID of the moderation case to update",
         new_reason="The new reason for the moderation action",
     )
-    @app_commands.checks.has_permissions(
-        manage_guild=True
-    )
-    async def reason(
-        self, interaction: Interaction, case_id: int, new_reason: str
-    ):
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def reason(self, interaction: Interaction, case_id: int, new_reason: str):
         """Callback for the /modlog reason command."""
         await interaction.response.defer(ephemeral=True)
 

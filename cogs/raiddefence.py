@@ -113,16 +113,12 @@ class RaidDefenceCog(commands.Cog):
         """Security and raid defense commands."""
         await ctx.send_help(ctx.command)
 
-    @security.group(
-        name="raid", description="Raid defense configuration."
-    )
+    @security.group(name="raid", description="Raid defense configuration.")
     async def raid(self, ctx: commands.Context):
         """Raid defense configuration."""
         await ctx.send_help(ctx.command)
 
-    @raid.command(
-        name="config", description="Configure raid defense settings."
-    )
+    @raid.command(name="config", description="Configure raid defense settings.")
     @app_commands.describe(
         enable="Enable or disable raid defense (true/false)",
         threshold="Number of joins in timeframe to trigger alert (default: 10)",

@@ -92,7 +92,7 @@ class HelpView(discord.ui.View):
     def _generate_categories(self):
         """Dynamically generate categories from the mapping and loaded cogs."""
         self.categories = {k: v for k, v in self.CATEGORY_MAPPING.items()}
-        
+
         cog_to_category = {}
         for key, data in self.CATEGORY_MAPPING.items():
             if "cogs" in data:
@@ -102,13 +102,13 @@ class HelpView(discord.ui.View):
         for cog_name, cog in self.bot.cogs.items():
             if cog_name in self.EXCLUDED_COGS or cog_name in cog_to_category:
                 continue
-            
+
             self.categories[cog_name.lower()] = {
                 "name": cog_name.replace("Cog", ""),
                 "description": inspect.getdoc(cog) or "No description available.",
                 "emoji": "🧩",
                 "color": discord.Color.default(),
-                "cogs": [cog_name]
+                "cogs": [cog_name],
             }
 
     async def _discover_commands(self) -> Dict[str, List[Dict[str, Any]]]:
@@ -119,8 +119,8 @@ class HelpView(discord.ui.View):
         self._generate_categories()
 
         categorized_commands = {category: [] for category in self.categories.keys()}
-        processed_qnames = set() # To prevent duplication of hybrid commands/groups
-        
+        processed_qnames = set()  # To prevent duplication of hybrid commands/groups
+
         cog_to_category = {}
         for key, data in self.categories.items():
             if "cogs" in data:
@@ -128,58 +128,73 @@ class HelpView(discord.ui.View):
                     cog_to_category[cog_name] = key
 
         # 1. Process all commands from bot.commands (includes hybrid and pure prefix)
-        for cmd in self.bot.commands: # Renamed 'command' to 'cmd'
+        for cmd in self.bot.commands:  # Renamed 'command' to 'cmd'
             if cmd.qualified_name in self.EXCLUDED_COMMANDS or not cmd.cog:
                 continue
 
             cog_name = cmd.cog.__class__.__name__
             if cog_name in self.EXCLUDED_COGS:
                 continue
-            
+
             category = cog_to_category.get(cog_name, cog_name.lower())
             if category not in categorized_commands:
                 continue
 
             # If it's a hybrid command or group, prefer its slash representation
-            if isinstance(cmd, (commands.HybridCommand, commands.HybridGroup)) and cmd.app_command:
+            if (
+                isinstance(cmd, (commands.HybridCommand, commands.HybridGroup))
+                and cmd.app_command
+            ):
                 app_cmd = cmd.app_command
                 # If it's a hybrid group, we don't list the group itself, but its subcommands will be handled by walk_commands
                 if isinstance(app_cmd, app_commands.Group):
                     # Mark the group's qualified name as processed to avoid listing its prefix form
                     processed_qnames.add(cmd.qualified_name)
-                    continue # Skip adding the group itself as a command
+                    continue  # Skip adding the group itself as a command
 
                 # This is a hybrid command (not a group)
                 signature = f"/{app_cmd.qualified_name}"
-                params = [f"<{p.name}>" if p.required else f"[{p.name}]" for p in app_cmd.parameters]
+                params = [
+                    f"<{p.name}>" if p.required else f"[{p.name}]"
+                    for p in app_cmd.parameters
+                ]
                 if params:
                     signature += " " + " ".join(params)
 
-                categorized_commands[category].append({
-                    "name": signature,
-                    "description": app_cmd.description or "No description available",
-                    "type": "slash",
-                })
-                processed_qnames.add(cmd.qualified_name) # Mark the hybrid command as processed
-            
+                categorized_commands[category].append(
+                    {
+                        "name": signature,
+                        "description": app_cmd.description
+                        or "No description available",
+                        "type": "slash",
+                    }
+                )
+                processed_qnames.add(
+                    cmd.qualified_name
+                )  # Mark the hybrid command as processed
+
             # If it's a pure prefix command (or a hybrid command that somehow doesn't have app_command)
-            elif cmd.qualified_name not in processed_qnames: # Ensure it hasn't been processed as a slash command
+            elif (
+                cmd.qualified_name not in processed_qnames
+            ):  # Ensure it hasn't been processed as a slash command
                 signature = f"o!{cmd.name}"
                 if cmd.signature:
                     signature += f" {cmd.signature}"
 
-                categorized_commands[category].append({
-                    "name": signature,
-                    "description": cmd.help or "No description available",
-                    "type": "prefix",
-                })
-                processed_qnames.add(cmd.qualified_name) # Mark as processed
+                categorized_commands[category].append(
+                    {
+                        "name": signature,
+                        "description": cmd.help or "No description available",
+                        "type": "prefix",
+                    }
+                )
+                processed_qnames.add(cmd.qualified_name)  # Mark as processed
 
         # 2. Discover pure slash commands (those not bound to a commands.Command)
-        for cmd in self.bot.tree.walk_commands(): # Renamed 'command' to 'cmd'
+        for cmd in self.bot.tree.walk_commands():  # Renamed 'command' to 'cmd'
             if cmd.qualified_name in self.EXCLUDED_COMMANDS:
                 continue
-            
+
             # If this slash command's qualified name was already processed (as part of a hybrid command), skip it
             if cmd.qualified_name in processed_qnames:
                 continue
@@ -198,24 +213,32 @@ class HelpView(discord.ui.View):
                 continue
 
             signature = f"/{cmd.qualified_name}"
-            params = [f"<{p.name}>" if p.required else f"[{p.name}]" for p in cmd.parameters]
+            params = [
+                f"<{p.name}>" if p.required else f"[{p.name}]" for p in cmd.parameters
+            ]
             if params:
                 signature += " " + " ".join(params)
 
-            categorized_commands[category].append({
-                "name": signature,
-                "description": cmd.description or "No description available",
-                "type": "slash",
-            })
-            processed_qnames.add(cmd.qualified_name) # Mark as processed
+            categorized_commands[category].append(
+                {
+                    "name": signature,
+                    "description": cmd.description or "No description available",
+                    "type": "slash",
+                }
+            )
+            processed_qnames.add(cmd.qualified_name)  # Mark as processed
 
         final_categorized_commands = {}
         for category, command_list in categorized_commands.items():
             if command_list:
                 command_list.sort(key=lambda x: x["name"])
                 final_categorized_commands[category] = command_list
-        
-        self.categories = {k: v for k, v in self.categories.items() if k in final_categorized_commands or k == "overview"}
+
+        self.categories = {
+            k: v
+            for k, v in self.categories.items()
+            if k in final_categorized_commands or k == "overview"
+        }
 
         self._command_cache = final_categorized_commands
         return final_categorized_commands
@@ -224,7 +247,7 @@ class HelpView(discord.ui.View):
         """Setup the category selection dropdown."""
         sorted_categories = sorted(
             self.categories.items(),
-            key=lambda item: (item[0] != 'overview', item[1]['name'])
+            key=lambda item: (item[0] != "overview", item[1]["name"]),
         )
 
         options = []
@@ -276,7 +299,9 @@ class HelpView(discord.ui.View):
             except (discord.NotFound, discord.Forbidden):
                 pass
 
-    async def create_category_embed(self, category: str, ctx: commands.Context) -> discord.Embed:
+    async def create_category_embed(
+        self, category: str, ctx: commands.Context
+    ) -> discord.Embed:
         """Create an embed for the specified category."""
         if not self.categories:
             await self._discover_commands()
@@ -320,10 +345,14 @@ class HelpView(discord.ui.View):
                     current_field_value = ""
                     field_count += 1
                 current_field_value += command_line
-            
+
             if current_field_value:
                 embed.add_field(
-                    name="Commands" if field_count == 1 else f"Commands (Part {field_count})",
+                    name=(
+                        "Commands"
+                        if field_count == 1
+                        else f"Commands (Part {field_count})"
+                    ),
                     value=current_field_value,
                     inline=False,
                 )
@@ -338,7 +367,7 @@ class HelpView(discord.ui.View):
         if not self.categories:
             await self._discover_commands()
             self.setup_dropdown()
-            
+
         category_info = self.categories["overview"]
         embed = discord.Embed(
             title="🤖 AI Moderation Bot - Help",
@@ -355,7 +384,7 @@ class HelpView(discord.ui.View):
             ),
             inline=False,
         )
-        
+
         commands_data = await self._discover_commands()
         total_commands = sum(len(cmds) for cmds in commands_data.values())
 
@@ -432,7 +461,9 @@ class HelpCog(commands.Cog):
         # Remove the default help command
         self.bot.remove_command("help")
 
-    @commands.hybrid_command(name="help", aliases=["h"], description="Show help information for the bot.")
+    @commands.hybrid_command(
+        name="help", aliases=["h"], description="Show help information for the bot."
+    )
     async def help_command(
         self, ctx: commands.Context, *, command: Optional[str] = None
     ):
@@ -447,7 +478,7 @@ class HelpCog(commands.Cog):
     async def show_main_help(self, ctx: commands.Context):
         """Show the main interactive help menu."""
         view = HelpView(self.bot, ctx.author)
-        
+
         # The embed creation will trigger command discovery and dropdown setup.
         embed = await view.create_category_embed(view.current_category, ctx)
 

@@ -6,6 +6,7 @@ from discord.ext import commands
 # - model_management_cog.py
 # - appeal_cog.py
 
+
 # This setup function is kept to avoid breaking changes if other parts of the bot
 # still try to load this cog. It now does nothing.
 async def setup(bot: commands.Bot):
