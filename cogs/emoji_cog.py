@@ -1,6 +1,5 @@
 # Test custom emojis for the app/bot
 
-import asyncio
 from discord.ext import commands
 from lists import CustomEmoji
 
@@ -11,11 +10,16 @@ class EmojiCog(commands.Cog):
     @commands.command(name="emojis")
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def emojis(self, ctx: commands.Context):
-        """Iterates through all custom emojis and sends them."""
-        for emoji_name, emoji_value in CustomEmoji.__dict__.items():
-            if not emoji_name.startswith('__'):
-                await ctx.send(emoji_value)
-                await asyncio.sleep(1) # To avoid rate limits
+        """Sends all custom emojis in one message."""
+        emojis = [
+            emoji_value
+            for emoji_name, emoji_value in CustomEmoji.__dict__.items()
+            if not emoji_name.startswith('__')
+        ]
+        if emojis:
+            await ctx.send(' '.join(emojis))
+        else:
+            await ctx.send("No custom emojis found.")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(EmojiCog(bot))
