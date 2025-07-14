@@ -3,6 +3,8 @@ from discord.ext import commands
 from discord import app_commands
 import datetime
 import uuid
+
+from lists import Owners
 from .aimod_helpers.config_manager import (
     GLOBAL_BANS,
     USER_INFRACTIONS,
@@ -80,7 +82,7 @@ class AppealCog(commands.Cog, name="Appeals"):
         APPEALS[appeal_id] = appeal_data
         await save_appeals()
 
-        admin_user_id = 1141746562922459136
+        admin_user_id = Owners.ILIKEPANCAKES.value
         admin_user = self.bot.get_user(admin_user_id)
 
         if not admin_user:
@@ -154,7 +156,7 @@ class AppealCog(commands.Cog, name="Appeals"):
         if not custom_id.startswith("appeal_"):
             return
 
-        admin_user_id = 1141746562922459136
+        admin_user_id = Owners.ILIKEPANCAKES.value
         if interaction.user.id != admin_user_id:
             await interaction.response.send_message(
                 "You are not authorized to handle this appeal.", ephemeral=True
