@@ -536,7 +536,7 @@ async def get_owners():
     """
     Returns a list of owner user IDs.
     """
-    return [owner.value for owner in Owners]
+    return list(Owners.__dict__.values())
 
 
 # --- Blog Post API Endpoints ---

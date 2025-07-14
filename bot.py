@@ -80,7 +80,7 @@ intents = discord.Intents.all()
 class MyBot(commands.AutoShardedBot):
     async def is_owner(self, user: Union[discord.User, discord.Member]) -> bool:
         if user is not None and getattr(user, "id", None) is not None:
-            return user.id in (user.value for user in Owners)
+            return user.id in Owners.__dict__.values()
         raise ValueError("User/User ID was None, or user object had no ID property")
 
 

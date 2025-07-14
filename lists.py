@@ -1,3 +1,81 @@
+import logging
+import threading
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Dict, Tuple
+
+import yaml
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
+logger = logging.getLogger(__name__)
+
+class Config:
+    def __init__(self, config_path: Path):
+        self.config_path = config_path
+        self.lock = threading.Lock()
+        self._data = {}
+        self.load_config()
+
+    def load_config(self) -> None:
+        logger.info("Loading configuration from %s", self.config_path)
+        try:
+            with self.config_path.open("r") as f:
+                new_data = yaml.safe_load(f)
+            with self.lock:
+                self._data = new_data
+                self._update_namespaces()
+            logger.info("Configuration loaded successfully.")
+        except (IOError, yaml.YAMLError) as e:
+            logger.error("Failed to load or parse config file: %s", e)
+
+    def _update_namespaces(self) -> None:
+        for key, value in self._data.items():
+            if isinstance(value, dict):
+                setattr(self, key, SimpleNamespace(**value))
+            else:
+                setattr(self, key, value)
+        
+        if "Owners" in self._data:
+            self.OwnersTuple = tuple(self.Owners.__dict__.values())
+
+    def __getattr__(self, name: str) -> Any:
+        with self.lock:
+            if name in self.__dict__:
+                return self.__dict__[name]
+            if name in self._data:
+                value = self._data[name]
+                if isinstance(value, dict):
+                    return SimpleNamespace(**value)
+                return value
+        raise AttributeError(f"'Config' object has no attribute '{name}'")
+
+class ConfigChangeHandler(FileSystemEventHandler):
+    def __init__(self, config: Config):
+        self.config = config
+
+    def on_modified(self, event):
+        if event.src_path == str(self.config.config_path):
+            logger.info("Config file %s has been modified. Reloading.", self.config.config_path)
+            self.config.load_config()
+
+# Path to the configuration file
+CONFIG_FILE = Path(__file__).parent / "configs" / "config.yaml"
+
+# Global config instance
+config = Config(CONFIG_FILE)
+
+# Set up watchdog observer
+observer = Observer()
+observer.schedule(ConfigChangeHandler(config), path=str(CONFIG_FILE.parent), recursive=False)
+observer.daemon = True
+observer.start()
+
+# Make the config namespaces available globally
+CustomEmoji = config.CustomEmoji
+Owners = config.Owners
+OwnersTuple = config.OwnersTuple
+
 jokes = (
     "Complaining about the lack of smoking shelters, the nicotine addicted Python programmers said there ought to be 'spaces for tabs'.",
     "Ubuntu users are apt to get this joke.",
@@ -184,41 +262,4 @@ jokes = (
     "Debugging: The process of removing software bugs, which are not to be confused with hardware bugs, which are actual insects.",
     "My code doesn't have bugs, it has random features.",
     "Why do programmers prefer dark chocolate? Because it's byte-sized.",
-)
-
-from types import SimpleNamespace
-from typing import Tuple
-
-CustomEmoji = SimpleNamespace(
-    STAFF_BLUE="<:8377staffblue:1390036493392810129>",
-    LOGO_PRIDE="<:logo_pride:1390101034864611509>",
-    LOGO="<:logo:1390101007513550989>",
-    STAFF_GREEN="<:2951staffgreen:1390036601068847205>",
-    STAFF_YELLOW="<:2951staffyellow:1390036588062576741>",
-    STAFF_RED="<:2978staffred:1390036576922239017>",
-    STAFF_LIGHTBLUE="<:5172stafflightblue:1390036564159238276>",
-    STAFF_ORANGE="<:7146stafforange:1390036553283403836>",
-    STAFF_BLACK="<:7472staffblack:1390036514590691492>",
-    STAFF_TURQUOISE="<:8934staffturquoise:1390036478758879304>",
-    STAFF_PINK="<:staffpink:1394383655232868404>",
-    CHOCOLA="<:1147chocola:1390036429219823728>",
-    COCONUT="<:1248coconut:1390036412467773561>",
-    MAPLE="<:1914maple:1390036384193974382>",
-    AZUKI="<:4171azuki:1390036371460198521>",
-    VANILLA="<:4171vanilla:1390036360068464660>",
-    CINNAMON="<:6286cinnamon:1390036347435090001>",
-    MILK="<:6677milk:1390036333040242748>",
-    SHIGURE="<:6677shigure:1390036313268420659>",
-)
-
-Owners = SimpleNamespace(
-    ILIKEPANCAKES=1141746562922459136,
-    SLIPSTREAM=452666956353503252,
-    PCHAN=1146391317295935570,
-)
-
-OwnersTuple: Tuple[int, ...] = (
-    Owners.ILIKEPANCAKES,
-    Owners.SLIPSTREAM,
-    Owners.PCHAN,
 )
