@@ -22,12 +22,14 @@ OpenGuard is a modular and extensible Discord moderation bot, designed to automa
 ### Installation
 
 Clone the repository:
+
 ```sh
 git clone https://github.com/discordOpenGuard/OpenGuard.git
 cd OpenGuard
 ```
 
 Install dependencies:
+
 ```sh
 pip install -r requirements.txt
 ```
@@ -35,9 +37,9 @@ pip install -r requirements.txt
 ### Configuration
 
 1. Copy the sample configuration:
-    ```sh
-    cp config.example.yaml config.yaml
-    ```
+   ```sh
+   cp config.example.yaml config.yaml
+   ```
 2. Edit `config.yaml` to add your Discord bot token and server-specific settings.
 
 ### Running the Bot
@@ -48,9 +50,9 @@ python main.py
 
 ## Usage
 
-Once started, OpenGuard will join your Discord server and begin monitoring activity according to your configuration.
+Once started, you will need to invite the bot to your server, then it will begin monitoring activity according to your configuration.
 
-- Use `!help` in Discord to view available commands.
+- Use `o!help` in Discord to view available commands.
 - Moderators can adjust rules and actions via the configuration file or bot commands (if enabled).
 - Audit logs are stored in the `logs/` directory.
 
