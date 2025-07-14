@@ -5,9 +5,7 @@ OpenGuard is a modular and extensible Discord moderation bot, designed to automa
 ## Features
 
 - **Automated Moderation:** Detects spam, abusive language, and unwanted behaviors with configurable triggers.
-- **Customizable Rules:** Define server-specific moderation policies using YAML or JSON configuration.
 - **Logging & Auditing:** Tracks moderation actions and provides audit logs for server administrators.
-- **Role Management:** Manages user roles and permissions in response to infractions or server events.
 - **Extensible Plugins:** Add or remove features via a clean plugin architecture for future-proof customization.
 - **Notifications:** Sends alerts to moderators and users for rule violations, warnings, and bans.
 - **Multi-language Support:** Adapt moderation messages for international communities.
