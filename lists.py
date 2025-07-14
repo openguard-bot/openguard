@@ -51,19 +51,33 @@ class Config:
         raise AttributeError(f"'Config' object has no attribute '{name}'")
 
 class ConfigChangeHandler(FileSystemEventHandler):
+    """A robust handler for config file changes that works with various editors."""
     def __init__(self, config: Config):
         self.config = config
+        self._timer: threading.Timer | None = None
+        self._lock = threading.Lock()
 
-    def on_modified(self, event):
-        if event.src_path == str(self.config.config_path):
-            logger.info("Config file %s has been modified. Reloading.", self.config.config_path)
-            self.config.load_config()
+    def dispatch(self, event):
+        # We only care about events for the config file path.
+        if event.src_path == str(self.config.config_path) or \
+           getattr(event, 'dest_path', None) == str(self.config.config_path):
+            if event.is_directory:
+                return
+
+            with self._lock:
+                if self._timer is not None:
+                    self._timer.cancel()
+                
+                # Use a small delay to debounce in case of multiple events
+                self._timer = threading.Timer(0.5, self.config.load_config)
+                self._timer.start()
 
 # Path to the configuration file
 CONFIG_FILE = Path(__file__).parent / "configs" / "config.yaml"
 
 # Global config instance
 config = Config(CONFIG_FILE)
+print(CONFIG_FILE)
 
 # Set up watchdog observer
 observer = Observer()
@@ -71,10 +85,11 @@ observer.schedule(ConfigChangeHandler(config), path=str(CONFIG_FILE.parent), rec
 observer.daemon = True
 observer.start()
 
-# Make the config namespaces available globally
-CustomEmoji = config.CustomEmoji
-Owners = config.Owners
-OwnersTuple = config.OwnersTuple
+# To ensure that config changes are reflected, other modules should
+# import the 'config' object and access properties from it.
+# For example: `from lists import config` and then use `config.Owners`.
+# The global assignments that were here previously would not be updated
+# on config reload.
 
 jokes = (
     "Complaining about the lack of smoking shelters, the nicotine addicted Python programmers said there ought to be 'spaces for tabs'.",

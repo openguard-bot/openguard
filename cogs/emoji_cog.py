@@ -1,7 +1,7 @@
 # Test custom emojis for the app/bot
 
 from discord.ext import commands
-from lists import CustomEmoji
+from lists import config
 
 
 class EmojiCog(commands.Cog):
@@ -13,7 +13,7 @@ class EmojiCog(commands.Cog):
     async def emojis(self, ctx: commands.Context):
         """Sends all custom emojis in one message."""
         emojis = [
-            str(emoji) for emoji in CustomEmoji.__dict__.values()
+            str(emoji) for emoji in config.CustomEmoji.__dict__.values()
         ]
         if emojis:
             await ctx.send(" ".join(emojis))
