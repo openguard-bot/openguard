@@ -257,37 +257,37 @@ async def get_command_analytics(
 
     # Get total commands
     total_result = await db.execute(
-        text(f"""
+        text("""
             SELECT COUNT(*) as total_commands
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
         """),
-        params
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
     total_commands = total_result.fetchone()[0] or 0
 
     # Get unique commands
     unique_result = await db.execute(
-        text(f"""
+        text("""
             SELECT COUNT(DISTINCT command_name) as unique_commands
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
         """),
-        params
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
     unique_commands = unique_result.fetchone()[0] or 0
 
     # Get top commands
     top_commands_result = await db.execute(
-        text(f"""
+        text("""
             SELECT command_name, COUNT(*) as usage_count, MAX(timestamp) as last_used
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days::INTEGER * INTERVAL '1 day' {guild_filter}
             GROUP BY command_name
             ORDER BY usage_count DESC
             LIMIT 10
         """),
-        params
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
 
     top_commands = [
@@ -336,26 +336,26 @@ async def get_moderation_analytics(
 
     # Get total actions
     total_result = await db.execute(
-        text(f"""
+        text("""
             SELECT COUNT(*) as total_actions
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
-        """),
-        params
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
+        """.format(guild_filter=guild_filter)),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
     total_actions = total_result.fetchone()[0] or 0
 
     # Get actions by type
     actions_by_type_result = await db.execute(
-        text(f"""
+        text("""
             SELECT action_type, COUNT(*) as count,
                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY action_type
             ORDER BY count DESC
-        """),
-        params
+        """.format(guild_filter=guild_filter)),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
 
     actions_by_type = [
@@ -369,14 +369,14 @@ async def get_moderation_analytics(
 
     # Get daily actions
     daily_actions_result = await db.execute(
-        text(f"""
+        text("""
             SELECT DATE(timestamp) as date, COUNT(*) as count
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
-        """),
-        params
+        """.format(guild_filter=guild_filter)),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
 
     daily_actions = [
@@ -386,15 +386,15 @@ async def get_moderation_analytics(
 
     # Get top moderators
     top_moderators_result = await db.execute(
-        text(f"""
+        text("""
             SELECT moderator_id, COUNT(*) as action_count
             FROM moderation_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY moderator_id
             ORDER BY action_count DESC
             LIMIT 10
-        """),
-        params
+        """.format(guild_filter=guild_filter)),
+        {"guild_id": guild_id, "days": days} if guild_id else {"days": days}
     )
 
     top_moderators = [
@@ -422,12 +422,12 @@ async def get_user_analytics(
 
     # Get total active users (users who ran commands)
     active_users_result = await db.execute(
-        text(f"""
+        text("""
             SELECT COUNT(DISTINCT user_id) as active_users
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
-        """),
-        params
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
+        """.replace("{guild_filter}", guild_filter)),
+        {"guild_id": guild_id, "days": f"{days} days"} if guild_id else {"days": f"{days} days"}
     )
     total_active_users = active_users_result.fetchone()[0] or 0
 
@@ -436,18 +436,18 @@ async def get_user_analytics(
 
     # Get activity timeline
     activity_result = await db.execute(
-        text(f"""
+        text("""
             SELECT
                 DATE(timestamp) as date,
                 COUNT(DISTINCT user_id) as active_users,
                 0 as new_users,  -- Placeholder
                 COUNT(*) as commands_used
             FROM command_logs
-            WHERE timestamp >= NOW() - INTERVAL ':days days' {guild_filter}
+            WHERE timestamp >= NOW() - INTERVAL :days {guild_filter}
             GROUP BY DATE(timestamp)
             ORDER BY date
-        """),
-        params
+        """.replace("{guild_filter}", guild_filter)),
+        {"guild_id": guild_id, "days": f"{days} days"} if guild_id else {"days": f"{days} days"}
     )
 
     activity_timeline = [
