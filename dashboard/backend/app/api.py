@@ -10,7 +10,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt as jose_jwt # type: ignore
 from typing import List, Optional
 
-from lists import Owners
+from lists import Owners, OwnersTuple
 
 from . import schemas, crud
 from .db import get_db
@@ -187,7 +187,7 @@ async def has_admin_permissions(guild_id: int, request: Request):
 
 def is_blog_admin(user: schemas.User) -> bool:
     """Check if the user is authorized to manage blog posts."""
-    authorized_user_ids = tuple(member.value for member in Owners)
+    authorized_user_ids = OwnersTuple
     return user.id in authorized_user_ids
 
 

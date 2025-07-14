@@ -8,10 +8,10 @@ import asyncio
 import pkg_resources
 import re
 
-from lists import Owners
+from lists import Owners, OwnersTuple
 
 # The user IDs that can run the update command
-AUTHORIZED_USER_IDS = tuple(member.value for member in Owners)
+AUTHORIZED_USER_IDS = OwnersTuple
 
 
 class UpdateCog(commands.Cog):
