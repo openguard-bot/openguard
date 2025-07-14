@@ -76,6 +76,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /srv/http/openguard
+            cd /home/discordbot/openguard
             git pull origin main
-            sudo /srv/http/openguard/scripts/deploy_backend.sh
+            sudo /home/discordbot/openguard/scripts/deploy_backend.sh
