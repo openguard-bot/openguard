@@ -41,7 +41,7 @@ async def update_general_settings(
     db: Session, guild_id: int, settings_data: schemas.GeneralSettingsUpdate
 ) -> schemas.GeneralSettings:
     """Update general settings for a guild."""
-    for key, value in settings_data.dict(exclude_unset=True).items():
+    for key, value in settings_data.model_dump(exclude_unset=True).items():
         db_value = json.dumps(value)
         await db.execute(
             text(
@@ -134,7 +134,7 @@ async def update_moderation_settings(
     db: Session, guild_id: int, settings_data: schemas.ModerationSettingsUpdate
 ) -> schemas.ModerationSettings:
     """Update moderation settings for a guild."""
-    for key, value in settings_data.dict(exclude_unset=True).items():
+    for key, value in settings_data.model_dump(exclude_unset=True).items():
         # Serialize dicts to JSON strings before storing
         db_value = json.dumps(value) if isinstance(value, dict) else value
         await db.execute(
@@ -181,7 +181,7 @@ async def update_logging_settings(
     db: Session, guild_id: int, settings_data: schemas.LoggingSettingsUpdate
 ) -> schemas.LoggingSettings:
     """Update logging settings for a guild."""
-    for key, value in settings_data.dict(exclude_unset=True).items():
+    for key, value in settings_data.model_dump(exclude_unset=True).items():
         await db.execute(
             text(
                 """
@@ -905,7 +905,7 @@ async def update_bot_detection_config(
     db: Session, guild_id: int, settings: schemas.BotDetectionSettingsUpdate
 ) -> schemas.BotDetectionSettings:
     """Update bot detection configuration for a guild."""
-    for key, value in settings.dict(exclude_unset=True).items():
+    for key, value in settings.model_dump(exclude_unset=True).items():
         if value is not None:
             await db.execute(
                 text(
@@ -1094,7 +1094,7 @@ async def update_rate_limiting_settings(
     db: Session, guild_id: int, settings: schemas.RateLimitingSettingsUpdate
 ) -> schemas.RateLimitingSettings:
     """Update rate limiting configuration for a guild."""
-    for key, value in settings.dict(exclude_unset=True).items():
+    for key, value in settings.model_dump(exclude_unset=True).items():
         if value is not None:
             prefixed_key = f"message_rate_{key}"
             await db.execute(
@@ -1220,7 +1220,7 @@ async def update_raid_defense_config(
     db: Session, guild_id: int, settings: schemas.RaidDefenseSettingsUpdate
 ) -> schemas.RaidDefenseSettings:
     """Update raid defense configuration for a guild."""
-    for key, value in settings.dict(exclude_unset=True).items():
+    for key, value in settings.model_dump(exclude_unset=True).items():
         if value is not None:
             prefixed_key = f"raid_defense_{key}"
             await db.execute(

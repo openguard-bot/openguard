@@ -30,6 +30,7 @@ def clear_prefix_cache():
     yield
     prefix_cache.clear()
 
+
 @pytest.fixture
 def mock_bot():
     intents = discord.Intents.default()
@@ -739,8 +740,7 @@ async def test_on_ready_success(mock_bot):
          patch('builtins.print') as mock_print, \
          patch('bot.send_error_dm', new=AsyncMock()) as mock_send_error_dm, \
          patch('bot.update_bot_guilds_cache', new=AsyncMock()) as mock_update_guilds, \
-         patch('bot.update_launch_time_cache', new=AsyncMock()) as mock_update_launch_time, \
-         patch('bot.bot.loop.create_task') as mock_create_task:
+         patch('bot.update_launch_time_cache', new=AsyncMock()) as mock_update_launch_time:
         
         await on_ready()
         
@@ -749,7 +749,7 @@ async def test_on_ready_success(mock_bot):
         mock_print.assert_any_call(f"Logged in as {mock_bot.user}")
         mock_update_guilds.assert_called_once()
         mock_update_launch_time.assert_called_once()
-        mock_create_task.assert_called_once()
+        # mock_create_task.assert_called_once() # This is now handled by the global fixture
         mock_send_error_dm.assert_not_called()
 
 @pytest.mark.asyncio
@@ -762,8 +762,8 @@ async def test_on_ready_sync_failure(mock_bot):
          patch('builtins.print') as mock_print, \
          patch('bot.send_error_dm', new=AsyncMock()) as mock_send_error_dm, \
          patch('bot.update_bot_guilds_cache', new=AsyncMock()), \
-         patch('bot.update_launch_time_cache', new=AsyncMock()), \
-         patch('bot.bot.loop.create_task') as mock_create_task:
+         patch('bot.update_launch_time_cache', new=AsyncMock()):
+        # patch('bot.bot.loop.create_task') as mock_create_task: # This is now handled by the global fixture
 
         await on_ready()
         
@@ -774,7 +774,7 @@ async def test_on_ready_sync_failure(mock_bot):
         assert sent_kwargs["error_type"] == "Exception"
         assert sent_kwargs["error_message"] == "Sync error"
         assert "Error occurred during command sync in on_ready event" in sent_kwargs["context_info"]
-        mock_create_task.assert_called_once()
+        # mock_create_task.assert_called_once() # This is now handled by the global fixture
 
 # --- update_bot_guilds_cache Tests ---
 @pytest.mark.asyncio
@@ -859,6 +859,7 @@ async def test_test_error_command(mock_context):
 
     # The on_command_error handler uses the global `bot` object, so we must add the command to it
     # and then clean it up afterwards to not interfere with other tests.
+    # with patch('asyncio.create_task'): # Prevent prefix_update_listener from being created - now handled by global fixture
     try:
         mock_context.bot.add_command(test_error)
         
