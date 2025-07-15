@@ -18,16 +18,16 @@ const LoginPage = () => {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome!</CardTitle>
-          <CardDescription>
+      <Card className="w-full max-w-md py-16 px-12 flex flex-col items-center justify-center">
+        <CardHeader className="flex flex-col items-center text-center">
+          <CardTitle className="text-4xl font-bold text-center">Welcome!</CardTitle>
+          <CardDescription className="text-center whitespace-nowrap text-lg">
             Login with Discord to manage your servers.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleLogin} className="w-full" size="lg">
-            <FaDiscord className="mr-2 h-5 w-5" />
+          <Button onClick={handleLogin} className="w-full h-14 text-lg" size="lg">
+            <FaDiscord/>
             Login with Discord
           </Button>
         </CardContent>
