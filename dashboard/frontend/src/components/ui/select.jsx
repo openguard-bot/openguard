@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, forwardRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -25,7 +25,7 @@ export const Select = ({ value, onValueChange, children, ...props }) => {
   );
 };
 
-export const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) => {
+export const SelectTrigger = forwardRef(({ className, children, ...props }, ref) => {
   const context = useContext(SelectContext);
   
   if (!context) {

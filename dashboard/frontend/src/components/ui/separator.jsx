@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
-export const Separator = React.forwardRef(({ className, orientation = 'horizontal', decorative = true, ...props }, ref) => {
+export const Separator = forwardRef(({ className, orientation = 'horizontal', decorative = true, ...props }, ref) => {
   return (
     <div
       ref={ref}
