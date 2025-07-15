@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/dashboard/', // Add this line to set the base path for assets
+  base: '/dashboard/',
   plugins: [react()],
   test: {
     environment: 'jsdom',
@@ -15,12 +15,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('@radix-ui')) {
-              return 'radix';
-            }
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
             if (id.includes('react-router-dom')) {
               return 'react-router';
             }
