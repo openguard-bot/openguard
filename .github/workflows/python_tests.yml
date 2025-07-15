@@ -49,7 +49,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -r requirements.txt dashboard/backend/requirements.txt
+        run: pip install -r requirements.txt -r dashboard/backend/requirements.txt
       - name: Install Pytest
         run: pip install pytest
         working-directory: ./dashboard/backend
