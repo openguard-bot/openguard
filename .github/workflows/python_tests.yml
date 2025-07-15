@@ -1,0 +1,49 @@
+name: Python Tests
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+permissions:
+  contents: read
+
+jobs:
+  bot_tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Install Pytest
+        run: pip install pytest
+      - name: Run Bot Tests
+        run: pytest tests/
+
+  backend_tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r dashboard/backend/requirements.txt
+      - name: Install Pytest
+        run: pip install pytest
+        working-directory: ./dashboard/backend
+      - name: Run Backend Tests
+        run: pytest tests/
+        working-directory: ./dashboard/backend

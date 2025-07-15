@@ -15,3 +15,7 @@ psutil
 cryptography
 PyYAML>=6.0.1,<7
 watchdog>=4.0.1,<5
+sqlalchemy
+pytest_asyncio
+cachetools
+aiosqlite

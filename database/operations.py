@@ -334,7 +334,7 @@ async def get_all_global_bans() -> List[int]:
 # Moderation Logs Operations
 
 
-async def add_mod_log(
+async def add_mod_log_entry(
     guild_id: int,
     moderator_id: int,
     target_user_id: int,
