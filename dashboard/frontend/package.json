@@ -84,6 +84,6 @@
     "tailwindcss": "^4.1.11",
     "tw-animate-css": "^1.3.5",
     "vite": "^7.0.4",
-    "vitest": "^2.0.5"
+    "vitest": "^3.2.4"
   }
 }
