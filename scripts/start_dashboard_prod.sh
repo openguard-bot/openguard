@@ -18,7 +18,7 @@ if ! sudo rm -rf /srv/http/dashboard/*; then
     # exit 1
 fi
 
-if ! sudo cp -r dashboard/frontend/build/* /srv/http/dashboard/; then
+if ! sudo cp -r dashboard/frontend/dist/* /srv/http/dashboard/; then
     echo "Failed to copy files to /srv/http/dashboard. See error above."
     # exit 1
 fi
