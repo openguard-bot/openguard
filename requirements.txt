@@ -18,3 +18,4 @@ watchdog>=4.0.1,<5
 sqlalchemy
 pytest_asyncio
 cachetools
+aiosqlite
