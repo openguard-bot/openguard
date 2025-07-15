@@ -1,23 +1,21 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-export const useAuth = () => useContext(AuthContext);
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const response = await axios.get('/api/users/@me');
         setUser(response.data);
-      } catch (err) {
+      } catch (error) { // Renamed 'err' to 'error'
         // This is expected if the user is not logged in
         setUser(null);
+        console.error("Failed to fetch user:", error); // Log the error for debugging
       } finally {
         setLoading(false);
       }
@@ -31,8 +29,8 @@ export const AuthProvider = ({ children }) => {
       await axios.get('/api/auth/logout');
       setUser(null);
       window.location.href = '/login';
-    } catch (err) {
-      console.error('Failed to logout', err);
+    } catch (error) { // Renamed 'err' to 'error'
+      console.error('Failed to logout', error); // Log the error for debugging
     }
   };
 
@@ -40,7 +38,6 @@ export const AuthProvider = ({ children }) => {
     user,
     isAuthenticated: !loading && user,
     loading,
-    error,
     logout,
   };
 

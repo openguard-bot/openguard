@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -12,29 +12,31 @@ const GuildOverviewPage = () => {
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchGuild = async () => {
+  const fetchGuild = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/guilds/${guildId}`);
       setGuild(response.data);
-    } catch (err) {
+    } catch (error) { // Renamed 'err' to 'error'
       setError("Failed to fetch guild information.");
+      console.error("Failed to fetch guild information:", error); // Log the error for debugging
     } finally {
       setLoading(false);
     }
-  };
+  }, [guildId]);
 
   useEffect(() => {
     fetchGuild();
-  }, [guildId]);
+  }, [guildId, fetchGuild]); // Added fetchGuild to dependency array
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       await axios.post("/api/guilds/refresh");
       await fetchGuild();
-    } catch (err) {
+    } catch (error) { // Renamed 'err' to 'error'
       setError("Failed to refresh guild list.");
+      console.error("Failed to refresh guild list:", error); // Log the error for debugging
     } finally {
       setIsRefreshing(false);
     }

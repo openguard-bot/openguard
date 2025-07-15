@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Users, Server, Bot, Timer } from 'lucide-react';
 
-const StatCard = ({ title, value, icon: Icon }) => (
+const StatCard = ({ title, value, icon: Icon }) => ( // 'Icon' is used as a component
   <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
