@@ -3,3 +3,8 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+// src/setupTests.js
+jest.mock("./components/ui/form", () => ({
+  ...jest.requireActual("./components/ui/form"),
+  FormDescription: ({ children }) => <div>{children}</div>,
+}));

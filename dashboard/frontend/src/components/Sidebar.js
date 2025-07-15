@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import axios from "axios";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";

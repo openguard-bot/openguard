@@ -14,7 +14,7 @@ import {
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Edit, Menu } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 const Navbar = ({ toggleSidebar }) => {
   const { theme = "system", setTheme } = useTheme();
