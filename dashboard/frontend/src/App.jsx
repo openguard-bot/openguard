@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Route,
@@ -6,15 +6,16 @@ import {
   Navigate,
 } from "react-router-dom";
 import LoginPage from "./components/LoginPage";
-import DashboardPage from "./components/DashboardPage";
-import GuildOverviewPage from "./components/GuildOverviewPage";
-import GuildConfigPage from "./components/GuildConfigPage";
-import AnalyticsDashboard from "./components/AnalyticsDashboard";
-import BlogManagement from "./components/BlogManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import { Toaster } from "./components/ui/sonner";
 import "./App.css";
+
+const DashboardPage = lazy(() => import("./components/DashboardPage"));
+const GuildOverviewPage = lazy(() => import("./components/GuildOverviewPage"));
+const GuildConfigPage = lazy(() => import("./components/GuildConfigPage"));
+const AnalyticsDashboard = lazy(() => import("./components/AnalyticsDashboard"));
+const BlogManagement = lazy(() => import("./components/BlogManagement"));
 
 function App() {
   return (
@@ -29,7 +30,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <DashboardPage />
+                  <Suspense fallback={<div>Loading Dashboard...</div>}>
+                    <DashboardPage />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -39,7 +42,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <GuildOverviewPage />
+                  <Suspense fallback={<div>Loading Guild Overview...</div>}>
+                    <GuildOverviewPage />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -49,7 +54,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <GuildConfigPage />
+                  <Suspense fallback={<div>Loading Guild Config...</div>}>
+                    <GuildConfigPage />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -59,7 +66,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <AnalyticsDashboard />
+                  <Suspense fallback={<div>Loading Analytics...</div>}>
+                    <AnalyticsDashboard />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -69,7 +78,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <BlogManagement />
+                  <Suspense fallback={<div>Loading Blog Management...</div>}>
+                    <BlogManagement />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
