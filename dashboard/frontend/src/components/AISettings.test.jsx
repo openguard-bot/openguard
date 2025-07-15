@@ -5,8 +5,8 @@ import axios from 'axios';
 import AISettings from './AISettings';
 import { toast } from 'sonner';
 
-jest.mock('axios');
-jest.mock('sonner');
+vi.mock('axios');
+vi.mock('sonner');
 
 const mockConfig = {
   ai_enabled: true,
@@ -23,7 +23,7 @@ describe('AISettings', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders loading state initially', async () => {
@@ -91,7 +91,7 @@ describe('AISettings', () => {
   });
 
   it('handles sync error and shows error toast', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     axios.post.mockRejectedValue(new Error('Sync failed'));
     render(<AISettings guildId="123" />);
     await waitFor(() => screen.getByText(/Sync Rules from #rules Channel/i));

@@ -4,7 +4,7 @@ import {
   Route,
   Routes,
   Navigate,
-} from "react-router";
+} from "react-router-dom";
 import LoginPage from "./components/LoginPage";
 import DashboardPage from "./components/DashboardPage";
 import GuildOverviewPage from "./components/GuildOverviewPage";

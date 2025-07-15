@@ -18,7 +18,7 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "types": ["node"]
+    "types": ["jsdom"]
   },
-  "include": ["src"]
+  "include": ["src", "vite.config.js"]
 }
