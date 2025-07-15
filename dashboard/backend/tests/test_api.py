@@ -205,7 +205,7 @@ def test_update_moderation_settings(async_client: TestClient, monkeypatch):
     Test for updating moderation settings.
     """
     async def mock_update_moderation_settings(db, guild_id, settings_data):
-        return settings_data.dict(exclude_unset=True)
+        return settings_data.model_dump(exclude_unset=True)
 
     monkeypatch.setattr(
         "dashboard.backend.app.crud.update_moderation_settings",
@@ -255,7 +255,7 @@ def test_update_logging_settings(async_client: TestClient, monkeypatch):
     Test for updating logging settings.
     """
     async def mock_update_logging_settings(db, guild_id, settings_data):
-        return settings_data.dict(exclude_unset=True)
+        return settings_data.model_dump(exclude_unset=True)
 
     monkeypatch.setattr(
         "dashboard.backend.app.crud.update_logging_settings",
@@ -434,7 +434,7 @@ def test_update_rate_limiting_settings(async_client: TestClient, monkeypatch):
             "notifications_enabled": True,
             "notification_channel": "123",
         }
-        update_dict = settings.dict(exclude_unset=True)
+        update_dict = settings.model_dump(exclude_unset=True)
         full_settings.update(update_dict)
         return full_settings
     monkeypatch.setattr("dashboard.backend.app.crud.update_rate_limiting_settings", mock_update_rate_limiting_settings)
@@ -459,7 +459,7 @@ def test_update_raid_defense_settings(async_client: TestClient, monkeypatch):
             "alert_channel": "123",
             "auto_action": "kick",
         }
-        update_dict = settings.dict(exclude_unset=True)
+        update_dict = settings.model_dump(exclude_unset=True)
         full_settings.update(update_dict)
         return full_settings
     monkeypatch.setattr("dashboard.backend.app.crud.update_raid_defense_config", mock_update_raid_defense_config)

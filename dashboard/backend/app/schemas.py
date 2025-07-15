@@ -1,5 +1,5 @@
 from typing import List, Optional, Any, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 
@@ -17,8 +17,7 @@ class User(BaseModel):
     discriminator: str
     avatar: Optional[str]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(orm_mode=True)
 
 
 class CommandLog(BaseModel):
@@ -28,8 +27,7 @@ class CommandLog(BaseModel):
     command_name: str
     timestamp: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ModerationSettings(BaseModel):
@@ -50,8 +48,7 @@ class ModerationSettings(BaseModel):
         None, description="The role ID to ping for manual confirmations."
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ModerationSettingsUpdate(BaseModel):
@@ -72,8 +69,7 @@ class ModerationSettingsUpdate(BaseModel):
         None, description="The role ID to ping for manual confirmations."
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoggingSettings(BaseModel):
@@ -93,8 +89,7 @@ class LoggingSettings(BaseModel):
         False, description="Enable logging when a member leaves."
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoggingSettingsUpdate(BaseModel):
@@ -114,8 +109,7 @@ class LoggingSettingsUpdate(BaseModel):
         None, description="Enable logging when a member leaves."
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelExclusionSettings(BaseModel):
@@ -124,16 +118,14 @@ class ChannelExclusionSettings(BaseModel):
         description="List of channel IDs excluded from AI moderation.",
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelRuleSettings(BaseModel):
     channel_id: str = Field(description="The channel ID for the custom rules.")
     rules: str = Field(description="Custom AI moderation rules for this channel.")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelRulesUpdate(BaseModel):
@@ -142,34 +134,29 @@ class ChannelRulesUpdate(BaseModel):
         description="Dictionary mapping channel IDs to their custom rules.",
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GuildConfig(BaseModel):
     # This schema is dynamic, so we allow extra fields
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class GuildConfigUpdate(BaseModel):
     # This schema is dynamic, so we allow extra fields
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class GeneralSettings(BaseModel):
     prefix: str = Field(..., description="The command prefix for the bot.")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GeneralSettingsUpdate(BaseModel):
     prefix: Optional[str] = Field(None, description="The command prefix for the bot.")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Stats(BaseModel):
@@ -185,8 +172,7 @@ class GuildAPIKey(BaseModel):
     # The 'api_key' and 'github_auth_info' are not included here
     # because we should not be sending them back to the client.
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GuildAPIKeyUpdate(BaseModel):
@@ -345,47 +331,41 @@ class RateLimitingSettingsUpdate(BaseModel):
 class SecuritySettings(BaseModel):
     bot_detection: BotDetectionSettings
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SecuritySettingsUpdate(BaseModel):
     bot_detection: Optional[BotDetectionSettingsUpdate] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AISettings(BaseModel):
     channel_exclusions: ChannelExclusionSettings
     channel_rules: ChannelRulesUpdate
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AISettingsUpdate(BaseModel):
     channel_exclusions: Optional[ChannelExclusionSettings] = None
     channel_rules: Optional[ChannelRulesUpdate] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelsSettings(BaseModel):
     exclusions: List[str]
     rules: Dict[str, str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelsSettingsUpdate(BaseModel):
     exclusions: Optional[List[str]] = None
     rules: Optional[Dict[str, str]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RaidDefenseSettings(BaseModel):
@@ -447,8 +427,7 @@ class BlogPost(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BlogPostCreate(BaseModel):
