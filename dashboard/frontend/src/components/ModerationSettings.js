@@ -136,7 +136,7 @@ const ModerationSettings = ({ guildId }) => {
                 onValueChange={(value) =>
                   handleInputChange("suicidal_content_ping_role_id", value)
                 }
-                placeholder="Select a role..."
+                placeholder="Select a role for suicidal content pings..."
               />
             </div>
             <div className="space-y-2">
@@ -148,7 +148,7 @@ const ModerationSettings = ({ guildId }) => {
                 onValueChange={(value) =>
                   handleInputChange("confirmation_ping_role_id", value)
                 }
-                placeholder="Select a role..."
+                placeholder="Select a role for confirmation pings..."
               />
             </div>
           </div>

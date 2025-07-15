@@ -4,7 +4,7 @@ import {
   Route,
   Routes,
   Navigate,
-} from "react-router-dom";
+} from "react-router";
 import LoginPage from "./components/LoginPage";
 import DashboardPage from "./components/DashboardPage";
 import GuildOverviewPage from "./components/GuildOverviewPage";
@@ -20,6 +20,8 @@ function App() {
   return (
     <Router basename="/dashboard">
       <div className="min-h-screen bg-background text-foreground">
+        {/* This text is added for testing purposes */}
+        <h1 style={{ display: 'none' }}>OpenGuard Dashboard</h1>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route

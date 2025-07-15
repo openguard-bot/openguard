@@ -35,6 +35,7 @@
         "@testing-library/react": "^16.3.0",
         "@testing-library/user-event": "^13.5.0",
         "axios": "^1.10.0",
+        "babel-jest": "^30.0.4",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
         "date-fns": "^4.1.0",
@@ -48,6 +49,7 @@
         "react-hook-form": "^7.59.0",
         "react-icons": "^5.5.0",
         "react-resizable-panels": "^3.0.3",
+        "react-router": "^7.6.3",
         "react-router-dom": "^7.6.3",
         "react-scripts": "5.0.1",
         "recharts": "^3.0.2",
@@ -62,7 +64,7 @@
         "start": "react-scripts start",
         "build": "react-scripts build",
         "build:prod": "react-scripts build",
-        "test": "react-scripts test",
+        "test": "react-app-rewired test",
         "eject": "react-scripts eject"
     },
     "homepage": "https://openguard.lol/dashboard",
@@ -85,11 +87,21 @@
             "last 1 safari version"
         ]
     },
+    "jest": {
+        "transformIgnorePatterns": [
+            "/node_modules/(?!axios|react-router-dom|react-router)/"
+        ]
+    },
     "devDependencies": {
+        "@babel/preset-env": "^7.28.0",
+        "@babel/preset-react": "^7.27.1",
+        "@types/node": "^24.0.13",
         "@types/react": "^19.1.8",
         "autoprefixer": "^10.4.21",
         "class-variance-authority": "^0.7.1",
+        "customize-cra": "^1.0.0",
         "postcss": "^8.5.6",
+        "react-app-rewired": "^2.2.1",
         "shadcn-ui": "^0.9.5",
         "tailwind-merge": "^3.3.1",
         "tailwindcss": "^3.4.17"

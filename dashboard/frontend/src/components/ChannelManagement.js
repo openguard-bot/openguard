@@ -91,6 +91,7 @@ const ChannelManagement = ({ guildId }) => {
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading...</span>
       </div>
     );
   }
@@ -127,7 +128,7 @@ const ChannelManagement = ({ guildId }) => {
               onChange={(e) => setNewNsfwChannel(e.target.value)}
               placeholder="Enter Channel ID"
             />
-            <Button onClick={handleAddNsfwChannel} size="icon">
+            <Button onClick={handleAddNsfwChannel} size="icon" aria-label="Add NSFW Channel">
               <PlusCircle className="h-4 w-4" />
             </Button>
           </div>
@@ -138,6 +139,7 @@ const ChannelManagement = ({ guildId }) => {
                 <button
                   onClick={() => handleRemoveNsfwChannel(channelId)}
                   className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  aria-label={`Remove channel ${channelId}`}
                 >
                   <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                 </button>
