@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 import axios from 'axios';
 import DashboardPage from './DashboardPage';
 
-jest.mock('axios');
+vi.mock('axios');
 
 const mockStats = {
   total_guilds: 10,
@@ -67,7 +67,7 @@ describe('DashboardPage', () => {
   });
 
   it('renders error message on fetch failure', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     axios.get.mockRejectedValue(new Error('API Error'));
     render(<DashboardPage />);
 

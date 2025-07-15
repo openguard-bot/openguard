@@ -5,18 +5,21 @@ import axios from 'axios';
 import ModerationSettings from './ModerationSettings';
 import { toast } from 'sonner';
 
-jest.mock('axios');
-jest.mock('sonner');
-jest.mock('./DiscordSelector', () => (props) => (
-  <select
-    data-testid={props.placeholder}
-    value={props.value}
-    onChange={(e) => props.onValueChange(e.target.value)}
-  >
-    <option value="1">Role 1</option>
-    <option value="2">Role 2</option>
-  </select>
-));
+vi.mock('axios');
+vi.mock('sonner');
+vi.mock('./DiscordSelector', () => ({
+  default: (props) => (
+    <select
+      data-testid={props.placeholder}
+      value={props.value}
+      onChange={(e) => props.onValueChange(e.target.value)}
+    >
+      <option value="">{props.placeholder}</option>
+      <option value="1">Role 1</option>
+      <option value="2">Role 2</option>
+    </select>
+  ),
+}));
 
 const mockConfig = {
   action_confirmations: {
@@ -36,7 +39,7 @@ describe('ModerationSettings', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders loading state initially', async () => {
@@ -89,7 +92,7 @@ describe('ModerationSettings', () => {
   });
 
   it('shows an error message if fetching config fails', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     axios.get.mockRejectedValue(new Error('Fetch failed'));
     render(<ModerationSettings guildId="123" />);
 

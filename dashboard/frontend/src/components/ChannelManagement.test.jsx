@@ -1,22 +1,25 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, waitForElementToBeRemoved } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import ChannelManagement from './ChannelManagement';
 import { toast } from 'sonner';
 
-jest.mock('axios');
-jest.mock('sonner');
-jest.mock('./DiscordSelector', () => (props) => (
-  <select
-    data-testid={props.type}
-    value={props.value}
-    onChange={(e) => props.onValueChange(e.target.value)}
-  >
-    <option value="1">Channel 1</option>
-    <option value="2">Channel 2</option>
-  </select>
-));
+vi.mock('axios');
+vi.mock('sonner');
+vi.mock('./DiscordSelector', () => ({
+  default: (props) => (
+    <select
+      data-testid={props.type}
+      value={props.value}
+      onChange={(e) => props.onValueChange(e.target.value)}
+    >
+      <option value="">{props.placeholder}</option>
+      <option value="1">Channel 1</option>
+      <option value="2">Channel 2</option>
+    </select>
+  ),
+}));
 
 const mockConfig = {
   nsfw_channels: ['12345'],
@@ -30,19 +33,18 @@ describe('ChannelManagement', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders loading state initially', async () => {
     render(<ChannelManagement guildId="123" />);
-    // Wait for the loading state to disappear
-    await waitFor(() => expect(screen.queryByText(/Loading.../i)).not.toBeInTheDocument());
-    // Then assert that the form elements are present
-    expect(screen.getByText('12345')).toBeInTheDocument();
+    expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
+    await waitForElementToBeRemoved(() => screen.getByText(/Loading.../i));
   });
 
   it('renders settings form after loading', async () => {
     render(<ChannelManagement guildId="123" />);
+    await waitForElementToBeRemoved(() => screen.getByText(/Loading.../i));
     await waitFor(() => {
       expect(screen.getByText('12345')).toBeInTheDocument();
       expect(screen.getByTestId('channels')).toHaveValue(mockConfig.suggestions_channel);

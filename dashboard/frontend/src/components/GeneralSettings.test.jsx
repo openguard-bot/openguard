@@ -1,12 +1,12 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, waitForElementToBeRemoved } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import GeneralSettings from './GeneralSettings';
 import { toast } from 'sonner';
 
-jest.mock('axios');
-jest.mock('sonner');
+vi.mock('axios');
+vi.mock('sonner');
 
 const mockConfig = {
   prefix: '!',
@@ -22,12 +22,13 @@ describe('GeneralSettings', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  it('renders loading state initially', () => {
+  it('renders loading state initially', async () => {
     render(<GeneralSettings guildId="123" />);
     expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
+    await waitForElementToBeRemoved(() => screen.getByText(/Loading.../i));
   });
 
   test('renders settings form after loading', async () => { // 1. Make the test function async
@@ -74,7 +75,7 @@ describe('GeneralSettings', () => {
   });
 
   it('handles save error and shows error toast', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     axios.put.mockRejectedValue(new Error('Save failed'));
     render(<GeneralSettings guildId="123" />);
     await waitFor(() => screen.getByText(/Save Changes/i));
@@ -110,7 +111,7 @@ describe('GeneralSettings', () => {
   });
 
   it('shows an error message if fetching config fails', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     axios.get.mockRejectedValue(new Error('Fetch failed'));
     render(<GeneralSettings guildId="123" />);
 

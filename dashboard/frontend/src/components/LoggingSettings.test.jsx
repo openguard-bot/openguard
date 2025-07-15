@@ -1,12 +1,12 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, waitForElementToBeRemoved } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import LoggingSettings from './LoggingSettings';
 import { toast } from 'sonner';
 
-jest.mock('axios');
-jest.mock('sonner');
+vi.mock('axios');
+vi.mock('sonner');
 
 const mockConfig = {
   webhook_url: 'https://discord.com/api/webhooks/123/abc',
@@ -23,12 +23,13 @@ describe('LoggingSettings', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  it('renders loading state initially', () => {
+  it('renders loading state initially', async () => {
     render(<LoggingSettings guildId="123" />);
     expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
+    await waitForElementToBeRemoved(() => screen.getByText(/Loading.../i));
   });
 
   test('renders settings form after loading', async () => { // 1. Make the test function async
@@ -36,7 +37,7 @@ describe('LoggingSettings', () => {
 
     // 2. Use an async "findBy" query to wait for an element
     //    that appears after your data fetch is complete.
-    expect(await screen.findByText(/Event Logging/i)).toBeInTheDocument();
+    expect(await screen.findByText('Event Logging', { selector: '[data-slot="card-title"]' })).toBeInTheDocument();
 
     // 3. Now that you've waited, the rest of your assertions are safe
     //    and will not cause "act" warnings.

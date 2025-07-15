@@ -4,7 +4,9 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 // src/setupTests.js
-jest.mock("./components/ui/form", () => ({
-  ...jest.requireActual("./components/ui/form"),
+import { vi } from 'vitest';
+
+vi.mock("./components/ui/form", () => ({
+  ...vi.importActual("./components/ui/form"),
   FormDescription: ({ children }) => <div>{children}</div>,
 }));
