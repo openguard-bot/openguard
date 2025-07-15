@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, timezone
 
 from database.operations import (
-    add_mod_log as db_add_mod_log,
+    add_mod_log_entry as db_add_mod_log,
     get_mod_log as db_get_mod_log,
     get_user_mod_logs as db_get_user_mod_logs,
     get_guild_mod_logs as db_get_guild_mod_logs,

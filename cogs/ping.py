@@ -27,15 +27,22 @@ class Ping(commands.Cog):
             pass
 
     async def _sample_pg(self, samples: int = 3) -> float:
+        connection = await get_connection()
+        if not connection:
+            return float('inf')
+        
         latencies = []
-        for _ in range(samples):
-            async with get_connection() as conn:
+        async with connection as conn:
+            for _ in range(samples):
                 start = time.perf_counter()
                 await conn.fetchval("SELECT 1")
                 latencies.append((time.perf_counter() - start) * 1000)
         return sum(latencies) / len(latencies)
 
     async def _sample_redis(self, samples: int = 3) -> float:
+        if not self.redis:
+            return float('inf')
+            
         latencies = []
         for _ in range(samples):
             start = time.perf_counter()
@@ -60,18 +67,18 @@ class Ping(commands.Cog):
         rtt = (end - start) * 1000  # ms
 
         # 3) Postgres average over a few SELECT 1 calls
-        try:
-            pg_avg = await self._sample_pg()
-            pg_line = f"Postgres latency (avg): {pg_avg:.2f}ms"
-        except Exception:
+        pg_avg = await self._sample_pg()
+        if pg_avg == float('inf'):
             pg_line = "Postgres: Unreachable"
+        else:
+            pg_line = f"Postgres latency (avg): {pg_avg:.2f}ms"
 
         # 4) Redis average over a few PINGs
-        try:
-            redis_avg = await self._sample_redis()
-            redis_line = f"Redis latency (avg): {redis_avg:.2f}ms"
-        except Exception:
+        redis_avg = await self._sample_redis()
+        if redis_avg == float('inf'):
             redis_line = "Redis: Unreachable"
+        else:
+            redis_line = f"Redis latency (avg): {redis_avg:.2f}ms"
 
         # 5) Shard info
         shard = ctx.guild.shard_id if ctx.guild else None
