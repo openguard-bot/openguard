@@ -84,6 +84,23 @@ async def _fetch_discord_guilds_from_api(access_token: str):
             return await resp.json()
 
 
+@handle_rate_limit
+async def _fetch_from_discord_api(endpoint: str):
+    headers = {"Authorization": f"Bot {os.getenv('DISCORD_TOKEN')}"}
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{DISCORD_API_URL}{endpoint}", headers=headers) as resp:
+            if resp.status != 200:
+                logger.error(
+                    f"Discord API error on {endpoint}: {resp.status} {await resp.text()}"
+                )
+                raise HTTPException(
+                    status_code=resp.status,
+                    detail=f"Failed to fetch {endpoint} from Discord",
+                    headers=resp.headers,
+                )
+            return await resp.json()
+
+
 async def fetch_user_guilds(access_token: str, user_id: str):
     """
     Fetches user guilds, using cache if available.
@@ -413,6 +430,30 @@ async def get_guild(
     return guild
 
 
+@router.get(
+    "/guilds/{guild_id}/roles",
+    response_model=List[schemas.DiscordRole],
+    dependencies=[Depends(has_admin_permissions)],
+)
+async def get_guild_roles(guild_id: int):
+    """Returns a list of all roles in a guild."""
+    roles_data = await _fetch_from_discord_api(f"/guilds/{guild_id}/roles")
+    # Sort roles by position, descending
+    return sorted(roles_data, key=lambda r: r["position"], reverse=True)
+
+
+@router.get(
+    "/guilds/{guild_id}/channels",
+    response_model=List[schemas.DiscordChannel],
+    dependencies=[Depends(has_admin_permissions)],
+)
+async def get_guild_channels(guild_id: int):
+    """Returns a list of all channels in a guild."""
+    channels_data = await _fetch_from_discord_api(f"/guilds/{guild_id}/channels")
+    # Sort channels by type and position
+    return sorted(channels_data, key=lambda c: (c["type"], c["position"]))
+
+
 @router.get("/stats", response_model=schemas.Stats)
 async def get_stats(request: Request, db: Session = Depends(get_db)):
     """
@@ -509,9 +550,16 @@ async def get_system_health(request: Request):
     memory = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
 
-    # Get bot-specific metrics (placeholder for now)
-    bot_status = "online"  # This would come from bot status check
-    latency = 50  # This would come from Discord API latency
+    # Get bot-specific metrics
+    bot_status = "online"  # This would come from a more robust bot status check
+    latency = 50  # This would come from Discord API latency check
+
+    launch_time_timestamp = await get_cache("bot_launch_time")
+    uptime_seconds = (
+        int(time.time() - float(launch_time_timestamp))
+        if launch_time_timestamp
+        else 0
+    )
 
     return schemas.SystemHealth(
         cpu_usage=cpu_percent,
@@ -519,7 +567,7 @@ async def get_system_health(request: Request):
         disk_usage=disk.percent,
         bot_status=bot_status,
         api_latency=latency,
-        uptime_seconds=int(time.time() - 1640995200),  # Placeholder start time
+        uptime_seconds=uptime_seconds,
     )
 
 
@@ -627,17 +675,6 @@ async def delete_blog_post(
     return {"message": "Blog post deleted successfully"}
 
 
-@router.get("/guilds/{guild_id}/config", response_model=schemas.GuildConfig)
-async def get_guild_configuration(
-    guild_id: int,
-    db: Session = Depends(get_db),
-    has_admin: bool = Depends(has_admin_permissions),
-):
-    """
-    Get the configuration for a specific guild.
-    """
-    if has_admin:
-        return await crud.get_guild_config(db=db, guild_id=guild_id)
 
 
 @router.get("/guilds/{guild_id}/users", response_model=List[schemas.GuildUser])
@@ -747,171 +784,184 @@ async def create_moderation_action(
 # Enhanced Configuration Endpoints
 
 
+
+
+
+
+
+
 @router.get(
-    "/guilds/{guild_id}/config/comprehensive",
-    response_model=schemas.ComprehensiveGuildConfig,
+    "/guilds/{guild_id}/config/security",
+    response_model=schemas.SecuritySettings,
 )
-async def get_comprehensive_guild_config(
+async def get_security_settings(
     guild_id: int,
     db: Session = Depends(get_db),
     has_admin: bool = Depends(has_admin_permissions),
 ):
     """
-    Get all configuration settings for a guild in one comprehensive response.
+    Get security settings for a guild.
     """
     if has_admin:
-        return await crud.get_comprehensive_guild_config(db=db, guild_id=guild_id)
-
-
-@router.get(
-    "/guilds/{guild_id}/config/bot-detection",
-    response_model=schemas.BotDetectionSettings,
-)
-async def get_bot_detection_config(
-    guild_id: int,
-    db: Session = Depends(get_db),
-    has_admin: bool = Depends(has_admin_permissions),
-):
-    """
-    Get bot detection configuration for a guild.
-    """
-    if has_admin:
-        return await crud.get_bot_detection_config(db=db, guild_id=guild_id)
+        return await crud.get_security_settings(db=db, guild_id=guild_id)
 
 
 @router.put(
-    "/guilds/{guild_id}/config/bot-detection",
-    response_model=schemas.BotDetectionSettings,
+    "/guilds/{guild_id}/config/security",
+    response_model=schemas.SecuritySettings,
 )
-async def update_bot_detection_config(
+async def update_security_settings(
     guild_id: int,
-    settings: schemas.BotDetectionSettingsUpdate,
+    settings: schemas.SecuritySettingsUpdate,
     db: Session = Depends(get_db),
     has_admin: bool = Depends(has_admin_permissions),
 ):
     """
-    Update bot detection configuration for a guild.
+    Update security settings for a guild.
     """
     if has_admin:
-        return await crud.update_bot_detection_config(
+        return await crud.update_security_settings(
             db=db, guild_id=guild_id, settings=settings
         )
 
 
 @router.get(
-    "/guilds/{guild_id}/config/message-rate", response_model=schemas.MessageRateSettings
+    "/guilds/{guild_id}/config/ai",
+    response_model=schemas.AISettings,
 )
-async def get_message_rate_config(
+async def get_ai_settings(
     guild_id: int,
     db: Session = Depends(get_db),
     has_admin: bool = Depends(has_admin_permissions),
 ):
     """
-    Get message rate limiting configuration for a guild.
+    Get AI settings for a guild.
     """
     if has_admin:
-        return await crud.get_message_rate_config(db=db, guild_id=guild_id)
+        return await crud.get_ai_settings(db=db, guild_id=guild_id)
 
 
 @router.put(
-    "/guilds/{guild_id}/config/message-rate", response_model=schemas.MessageRateSettings
+    "/guilds/{guild_id}/config/ai",
+    response_model=schemas.AISettings,
 )
-async def update_message_rate_config(
+async def update_ai_settings(
     guild_id: int,
-    settings: schemas.MessageRateSettingsUpdate,
+    settings: schemas.AISettingsUpdate,
     db: Session = Depends(get_db),
     has_admin: bool = Depends(has_admin_permissions),
 ):
     """
-    Update message rate limiting configuration for a guild.
+    Update AI settings for a guild.
     """
     if has_admin:
-        return await crud.update_message_rate_config(
+        return await crud.update_ai_settings(
             db=db, guild_id=guild_id, settings=settings
         )
 
 
 @router.get(
-    "/guilds/{guild_id}/config/raid-defense", response_model=schemas.RaidDefenseSettings
+    "/guilds/{guild_id}/config/channels",
+    response_model=schemas.ChannelsSettings,
 )
-async def get_raid_defense_config(
+async def get_channels_settings(
     guild_id: int,
     db: Session = Depends(get_db),
     has_admin: bool = Depends(has_admin_permissions),
 ):
     """
-    Get raid defense configuration for a guild.
+    Get channels settings for a guild.
+    """
+    if has_admin:
+        return await crud.get_channels_settings(db=db, guild_id=guild_id)
+
+
+@router.put(
+    "/guilds/{guild_id}/config/channels",
+    response_model=schemas.ChannelsSettings,
+)
+async def update_channels_settings(
+    guild_id: int,
+    settings: schemas.ChannelsSettingsUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """
+    Update channels settings for a guild.
+    """
+    if has_admin:
+        return await crud.update_channels_settings(
+            db=db, guild_id=guild_id, settings=settings
+        )
+
+
+@router.get(
+    "/guilds/{guild_id}/config/rate-limiting",
+    response_model=schemas.RateLimitingSettings,
+)
+async def get_rate_limiting_settings(
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """
+    Get rate limiting settings for a guild.
+    """
+    if has_admin:
+        return await crud.get_rate_limiting_settings(db=db, guild_id=guild_id)
+
+
+@router.put(
+    "/guilds/{guild_id}/config/rate-limiting",
+    response_model=schemas.RateLimitingSettings,
+)
+async def update_rate_limiting_settings(
+    guild_id: int,
+    settings: schemas.RateLimitingSettingsUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """
+    Update rate limiting settings for a guild.
+    """
+    if has_admin:
+        return await crud.update_rate_limiting_settings(
+            db=db, guild_id=guild_id, settings=settings
+        )
+
+
+@router.get(
+    "/guilds/{guild_id}/config/raid-defense",
+    response_model=schemas.RaidDefenseSettings,
+)
+async def get_raid_defense_settings(
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """
+    Get raid defense settings for a guild.
     """
     if has_admin:
         return await crud.get_raid_defense_config(db=db, guild_id=guild_id)
 
 
 @router.put(
-    "/guilds/{guild_id}/config/raid-defense", response_model=schemas.RaidDefenseSettings
+    "/guilds/{guild_id}/config/raid-defense",
+    response_model=schemas.RaidDefenseSettings,
 )
-async def update_raid_defense_config(
+async def update_raid_defense_settings(
     guild_id: int,
     settings: schemas.RaidDefenseSettingsUpdate,
     db: Session = Depends(get_db),
     has_admin: bool = Depends(has_admin_permissions),
 ):
     """
-    Update raid defense configuration for a guild.
+    Update raid defense settings for a guild.
     """
     if has_admin:
         return await crud.update_raid_defense_config(
             db=db, guild_id=guild_id, settings=settings
-        )
-
-
-@router.get(
-    "/guilds/{guild_id}/config/advanced-logging",
-    response_model=schemas.AdvancedLoggingSettings,
-)
-async def get_advanced_logging_config(
-    guild_id: int,
-    db: Session = Depends(get_db),
-    has_admin: bool = Depends(has_admin_permissions),
-):
-    """
-    Get advanced logging configuration for a guild.
-    """
-    if has_admin:
-        return await crud.get_advanced_logging_config(db=db, guild_id=guild_id)
-
-
-@router.put(
-    "/guilds/{guild_id}/config/advanced-logging",
-    response_model=schemas.AdvancedLoggingSettings,
-)
-async def update_advanced_logging_config(
-    guild_id: int,
-    settings: schemas.AdvancedLoggingSettingsUpdate,
-    db: Session = Depends(get_db),
-    has_admin: bool = Depends(has_admin_permissions),
-):
-    """
-    Update advanced logging configuration for a guild.
-    """
-    if has_admin:
-        return await crud.update_advanced_logging_config(
-            db=db, guild_id=guild_id, settings=settings
-        )
-
-
-@router.post("/guilds/{guild_id}/config", response_model=schemas.GuildConfig)
-async def update_guild_configuration(
-    guild_id: int,
-    config_data: schemas.GuildConfigUpdate,
-    db: Session = Depends(get_db),
-    has_admin: bool = Depends(has_admin_permissions),
-):
-    """
-    Update the configuration for a specific guild.
-    """
-    if has_admin:
-        return await crud.update_guild_config(
-            db=db, guild_id=guild_id, config_data=config_data
         )
 
 
@@ -928,10 +978,10 @@ async def get_general_config(
         return await crud.get_general_settings(db=db, guild_id=guild_id)
 
 
-@router.post(
+@router.put(
     "/guilds/{guild_id}/config/general", response_model=schemas.GeneralSettings
 )
-async def update_general_config(
+async def update_general_settings(
     guild_id: int,
     settings_data: schemas.GeneralSettingsUpdate,
     db: Session = Depends(get_db),
@@ -961,10 +1011,10 @@ async def get_moderation_config(
         return await crud.get_moderation_settings(db=db, guild_id=guild_id)
 
 
-@router.post(
+@router.put(
     "/guilds/{guild_id}/config/moderation", response_model=schemas.ModerationSettings
 )
-async def update_moderation_config(
+async def update_moderation_settings(
     guild_id: int,
     settings_data: schemas.ModerationSettingsUpdate,
     db: Session = Depends(get_db),
@@ -992,10 +1042,10 @@ async def get_logging_config(
         return await crud.get_logging_settings(db=db, guild_id=guild_id)
 
 
-@router.post(
+@router.put(
     "/guilds/{guild_id}/config/logging", response_model=schemas.LoggingSettings
 )
-async def update_logging_config(
+async def update_logging_settings(
     guild_id: int,
     settings_data: schemas.LoggingSettingsUpdate,
     db: Session = Depends(get_db),

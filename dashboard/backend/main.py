@@ -5,12 +5,20 @@ import os
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, project_root)
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app import api
+from .app import api
 from database.connection import initialize_database
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize the database schema on startup."""
+    await initialize_database()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 # CORS configuration
 origins = [
@@ -33,7 +41,3 @@ async def root():
     return {"message": "Welcome to the backend!"}
 
 
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Initialize the database schema on startup."""
-    await initialize_database()

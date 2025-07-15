@@ -23,28 +23,6 @@ from lists import config
 prefix_cache = TTLCache(maxsize=1000, ttl=3600)
 
 
-def copy_copilot_files():
-    src_dir = os.path.expanduser("copilot")
-    dest_dir = os.path.expanduser("~/.config/litellm/github_copilot/")
-    # Ensure destination directory exists
-    os.makedirs(dest_dir, exist_ok=True)
-    if not os.path.exists(src_dir):
-        print(
-            f"Source directory '{src_dir}' does not exist. Skipping copilot file copy."
-        )
-        return
-    for filename in os.listdir(src_dir):
-        src_file = os.path.join(src_dir, filename)
-        dest_file = os.path.join(dest_dir, filename)
-        if os.path.isfile(src_file):
-            try:
-                shutil.copy2(src_file, dest_file)
-                print(f"Copied {src_file} to {dest_file}")
-            except Exception as e:
-                print(f"Failed to copy {src_file} to {dest_file}: {e}")
-
-
-copy_copilot_files()
 
 
 class DualStream:
@@ -67,12 +45,6 @@ sys.stdout = DualStream(sys.stdout, log_file)
 sys.stderr = DualStream(sys.stderr, log_file)
 
 print("Logging started.")
-
-load_dotenv(".env")
-discord_token = os.getenv("DISCORD_TOKEN")
-
-if not discord_token:
-    raise ValueError("Missing DISCORD_TOKEN environment variable.")
 
 intents = discord.Intents.all()
 
@@ -151,7 +123,7 @@ def catch_exceptions(func):
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__)).strip()
 
             print(f"Uncaught exception in {func.__name__}:")
             print(tb_string)
@@ -165,6 +137,8 @@ def catch_exceptions(func):
                 bot_instance = args[0].bot
             elif args and isinstance(args[0], commands.Bot):
                 bot_instance = args[0]
+            else:
+                bot_instance = bot
 
             if bot_instance:
                 user = await bot_instance.fetch_user(ERROR_NOTIFICATION_USER_ID)
@@ -176,7 +150,7 @@ def catch_exceptions(func):
                     if tb_string:
                         if len(tb_string) > 1500:
                             tb_string = tb_string[:1500] + "...(truncated)"
-                        error_content += f"**Traceback:**\n```\n{tb_string}\n```"
+                        error_content += f"**Traceback:**\n```\n{tb_string.strip()}\n```"
 
                     await user.send(error_content)
 
@@ -234,7 +208,7 @@ async def send_error_dm(
         if error_traceback:
             if len(error_traceback) > 1500:
                 error_traceback = error_traceback[:1500] + "...(truncated)"
-            error_content += f"**Traceback:**\n```\n{error_traceback}\n```"
+            error_content += f"**Traceback:**\n```\n{error_traceback.strip()}\n```"
 
         await user.send(error_content)
     except Exception as e:
@@ -280,7 +254,7 @@ async def on_command_error(ctx, error):
         user_message = f"❌ Missing required argument: `{error.param.name}`. Use `{ctx.prefix}help {ctx.command}` for usage information."
         should_notify_owner = False
     elif isinstance(error, commands.BadArgument):
-        user_message = f"❌ Invalid argument provided. Use `{ctx.prefix}help {ctx.command}` for usage information."
+        user_message = f"❌ Invalid argument provided. Use `{ctx.prefix}help {ctx.command}` for usage_information."
         should_notify_owner = False
     elif isinstance(error, commands.TooManyArguments):
         user_message = f"❌ Too many arguments provided. Use `{ctx.prefix}help {ctx.command}` for usage information."
@@ -331,10 +305,10 @@ async def on_command_error(ctx, error):
             traceback.format_exception(type(error), error, error.__traceback__)
         )
 
-        print(f"Command error in {ctx.command}:")
+        print(f"Command error in {ctx.command.name}:")
         print(tb_string)
 
-        context = f"Command: {ctx.command}, Author: {ctx.author} ({ctx.author.id}), Guild: {ctx.guild.name if ctx.guild else 'DM'} ({ctx.guild.id if ctx.guild else 'N/A'}), Channel: {ctx.channel}"
+        context = f"Command: {ctx.command.name}, Author: {ctx.author} ({ctx.author.id}), Guild: {ctx.guild.name if ctx.guild else 'DM'} ({ctx.guild.id if ctx.guild else 'N/A'}), Channel: {ctx.channel}"
 
         await send_error_dm(
             error_type=type(error).__name__,
@@ -355,11 +329,11 @@ async def on_app_command_error(
     should_notify_owner = True
 
     if isinstance(error, app_commands.CommandNotFound):
-        user_message = "❌ Command not found."
+        user_message = f"❌ Command `{error.name}` not found."
         should_notify_owner = False
     elif isinstance(error, app_commands.MissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
-        user_message = f"❌ You don't have permission to use this command. Required permissions: {missing_perms}"
+        user_message = f"❌ You are missing the following required permissions: {missing_perms}"
         should_notify_owner = False
     elif isinstance(error, app_commands.BotMissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
@@ -370,7 +344,7 @@ async def on_app_command_error(
         should_notify_owner = False
     elif isinstance(error, app_commands.CommandOnCooldown):
         user_message = (
-            f"❌ Command is on cooldown. Try again in {error.retry_after:.2f} seconds."
+            f"❌ This command is on cooldown. Try again in {error.retry_after:.2f} seconds."
         )
         should_notify_owner = False
     elif isinstance(error, app_commands.CheckFailure):
@@ -414,7 +388,7 @@ async def on_app_command_error(
     if should_notify_owner:
         tb_string = "".join(
             traceback.format_exception(type(error), error, error.__traceback__)
-        )
+        ).strip()
 
         command_name = interaction.command.name if interaction.command else "Unknown"
         print(f"App command error in {command_name}:")
@@ -451,6 +425,7 @@ async def on_ready():
         f"Global error handling is active - errors will be sent to user ID: {ERROR_NOTIFICATION_USER_ID}"
     )
     await update_bot_guilds_cache()
+    await update_launch_time_cache()
     bot.loop.create_task(prefix_update_listener())
 
 
@@ -459,6 +434,12 @@ async def update_bot_guilds_cache():
     guild_ids = [guild.id for guild in bot.guilds]
     await set_cache("bot_guilds", guild_ids)
     print("Updated bot guilds cache.")
+
+
+async def update_launch_time_cache():
+    """Updates the Redis cache with the bot's launch time."""
+    await set_cache("bot_launch_time", bot.launch_time.timestamp())
+    print("Updated bot launch time cache.")
 
 
 @bot.event
@@ -498,6 +479,12 @@ async def test_error_slash(interaction: discord.Interaction):
 
 async def main():
     try:
+        load_dotenv(".env")
+        discord_token = os.getenv("DISCORD_TOKEN")
+
+        if not discord_token:
+            raise ValueError("Missing DISCORD_TOKEN environment variable.")
+
         # Initialize database before loading cogs
         print("Initializing database connection...")
         db_success = await initialize_database()
