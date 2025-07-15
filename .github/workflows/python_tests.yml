@@ -34,6 +34,8 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Install Pytest
+        run: pip install pytest
       - name: Run Bot Tests
         run: pytest tests/
 
@@ -48,6 +50,9 @@ jobs:
           python-version: '3.11'
       - name: Install backend dependencies
         run: pip install -r requirements.txt
+        working-directory: ./dashboard/backend
+      - name: Install Pytest
+        run: pip install pytest
         working-directory: ./dashboard/backend
       - name: Run Backend Tests
         run: pytest tests/
