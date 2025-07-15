@@ -10,6 +10,9 @@ on:
     paths:
       - 'dashboard/frontend/**'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
