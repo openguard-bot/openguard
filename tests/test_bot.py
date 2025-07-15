@@ -481,7 +481,7 @@ async def test_catch_exceptions_with_bot_instance_as_arg(mock_bot):
     sent_content = mock_user_obj.send.call_args[0][0]
     assert "**Error Type:** IndexError" in sent_content
     assert "**Error Message:** List out of bounds" in sent_content
-    assert "**Context:** Function: my_function, Module: test_bot" in sent_content
+    assert "**Context:** Function: my_function, Module: tests.test_bot" in sent_content
 
 # --- load_cogs Tests ---
 @pytest.mark.asyncio
@@ -645,11 +645,11 @@ async def test_on_command_error_original_error(mock_bot, mock_context):
 @pytest.mark.parametrize("error_type, user_message_part, should_notify", [
     (app_commands.CommandNotFound("test", parents=[]), "Command `test` not found.", False),
     (app_commands.MissingPermissions(["kick_members"]), "You are missing the following required permissions: kick_members", False),
-    (app_commands.BotMissingPermissions(["send_messages"]), "I am missing the following required permissions: send_messages", False),
+    (app_commands.BotMissingPermissions(["send_messages"]), "I don't have the required permissions to execute this command. Missing permissions: send_messages", False),
     (app_commands.NoPrivateMessage(), "This command cannot be used in private messages.", False),
     (app_commands.CommandOnCooldown(MagicMock(), 10.0), "This command is on cooldown. Try again in 10.00 seconds.", False),
     (app_commands.CheckFailure("check failed"), "You don't have permission to use this command.", False),
-    (app_commands.TransformerError(MagicMock(), MagicMock(), MagicMock(type=discord.AppCommandOptionType.string)), "Failed to convert parameter.", False),
+    (app_commands.TransformerError(MagicMock(), MagicMock(), MagicMock(type=discord.AppCommandOptionType.string)), "Invalid input provided:", False),
     (commands.MissingRequiredArgument(param=namedtuple('Param', 'name displayed_name')('arg', 'arg')), "Missing required argument: `arg`.", False),
     (commands.BadArgument("bad arg"), "Invalid argument provided.", False),
     (commands.NotOwner("Not owner"), "This command can only be used by the bot owner.", False),
@@ -686,7 +686,7 @@ async def test_on_app_command_error_already_responded(mock_bot, mock_interaction
          patch('builtins.print') as mock_print:
         
         with patch('bot.bot', new=mock_bot):
-            await on_app_command_error(mock_interaction, commands.CheckFailure("check failed"))
+            await on_app_command_error(mock_interaction, app_commands.CheckFailure("check failed"))
         
         mock_interaction.response.send_message.assert_not_called()
         mock_interaction.followup.send.assert_called_once()
