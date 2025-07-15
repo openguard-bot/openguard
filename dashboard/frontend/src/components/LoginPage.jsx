@@ -17,7 +17,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 dark:bg-gray-900">
+    <div className="flex min-h-screen flex-col items-center justify-center">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Welcome!</CardTitle>
