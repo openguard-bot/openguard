@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -24,11 +24,7 @@ const AnalyticsDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [guildId]);
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       const [commandsRes, moderationRes, usersRes, healthRes] = await Promise.all([
@@ -37,7 +33,7 @@ const AnalyticsDashboard = () => {
         axios.get(`/api/analytics/users?guild_id=${guildId}`),
         axios.get(`/api/system/health`)
       ]);
-
+      
       setAnalytics({
         commands: commandsRes.data,
         moderation: moderationRes.data,
@@ -49,7 +45,12 @@ const AnalyticsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [guildId]); // Added guildId to dependency array of useCallback
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [guildId, fetchAnalytics]); // Added fetchAnalytics to dependency array
+
 
   if (loading) {
     return (

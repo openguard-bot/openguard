@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act, waitForElementToBeRemoved } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, waitForElementToBeRemoved } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import ChannelManagement from './ChannelManagement';

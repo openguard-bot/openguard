@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import {
   Card,
@@ -21,24 +21,24 @@ const AISettings = ({ guildId }) => {
   const [saving, setSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const fetchConfig = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`/api/guilds/${guildId}/config/ai`);
-      setConfig(response.data);
-    } catch (error) {
-      toast.error("Failed to load AI settings");
-      console.error("Error fetching AI config:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (guildId) {
-      fetchConfig();
-    }
-  }, [guildId]);
+    const fetchConfig = useCallback(async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`/api/guilds/${guildId}/config/ai`);
+        setConfig(response.data);
+      } catch (error) {
+        toast.error("Failed to load AI settings");
+        console.error("Error fetching AI config:", error);
+      } finally {
+        setLoading(false);
+      }
+    }, [guildId]); // Added guildId to dependency array of useCallback
+  
+    useEffect(() => {
+      if (guildId) {
+        fetchConfig();
+      }
+    }, [guildId, fetchConfig]); // Added fetchConfig to dependency array
 
   const handleInputChange = (field, value) => {
     setConfig((prev) => ({

@@ -15,7 +15,10 @@ export default defineConfig([
     ],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        process: true, // Allow 'process' global for environment variables
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
@@ -24,6 +27,15 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+
+  {
+    files: ['config-overrides.js'], // Specific configuration for config-overrides.js
+    languageOptions: {
+      globals: {
+        ...globals.node, // Node.js environment
+      },
     },
   },
 

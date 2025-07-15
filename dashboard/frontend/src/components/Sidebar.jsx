@@ -1,51 +1,53 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router";
 import axios from "axios";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { RefreshCw } from "lucide-react";
 
-const Sidebar = ({ isOpen, toggleSidebar }) => {
+const Sidebar = ({ isOpen }) => { // Removed unused 'toggleSidebar'
   const [guilds, setGuilds] = useState([]);
   const [error, setError] = useState(null);
   const { guildId } = useParams();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchGuilds = async () => {
+
+  const fetchGuilds = useCallback(async () => {
     try {
       const response = await axios.get("/api/guilds");
       setGuilds(response.data);
       setError(null);
-    } catch (err) {
+    } catch (error) {
       setError(() => {
-        if (err.response) {
+        if (error.response) {
           const data =
-            typeof err.response.data === "string"
-              ? err.response.data
-              : JSON.stringify(err.response.data);
+            typeof error.response.data === "string"
+              ? error.response.data
+              : JSON.stringify(error.response.data);
           return `Failed to fetch guilds. Error: ${data}`;
         } else {
-          return `Failed to fetch guilds. Error: ${err.message}`;
+          return `Failed to fetch guilds. Error: ${error.message}`;
         }
       });
-      if (err.response && err.response.status === 401) {
+      if (error.response && error.response.status === 401) {
         // Redirect to login if not authorized
         window.location.href = "/login";
       }
     }
-  };
+  }, []); // No external dependencies, so empty array is fine for useCallback
 
   useEffect(() => {
     fetchGuilds();
-  }, []);
+  }, [fetchGuilds]); // Added fetchGuilds to dependency array
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       await axios.post("/api/guilds/refresh");
       await fetchGuilds();
-    } catch (err) {
+    } catch (error) { // Renamed 'err' to 'error'
       setError("Failed to refresh guilds.");
+      console.error("Failed to refresh guilds:", error); // Log the error for debugging
     } finally {
       setIsRefreshing(false);
     }
