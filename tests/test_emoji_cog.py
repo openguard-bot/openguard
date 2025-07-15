@@ -47,48 +47,53 @@ async def test_emojis_command(mock_bot, mock_ctx):
 
     mock_bot.get_emoji.side_effect = [mock_emoji1, mock_emoji2]
 
-    # Mock config.CustomEmojis to return a dictionary of emoji names and IDs
-    with patch('cogs.emoji_cog.config.CustomEmojis') as mock_custom_emojis:
-        mock_custom_emojis.TEST_EMOJI = 111
-        mock_custom_emojis.ANIMATED_EMOJI = 222
-        
+    mock_config_data = {
+        'CustomEmoji': {
+            'TEST_EMOJI': '<:testemoji1:111>',
+            'ANIMATED_EMOJI': '<a:animatedemoji:222>'
+        }
+    }
+    with patch('cogs.emoji_cog.yaml.safe_load', return_value=mock_config_data), \
+         patch('builtins.open', MagicMock()):
+        cog = EmojiCog(mock_bot)
         await cog.emojis(mock_ctx)
-        
+
         mock_ctx.send.assert_called_once()
         sent_message = mock_ctx.send.call_args[0][0]
-        
+
         assert "Available Custom Emojis" in sent_message
         assert "TEST_EMOJI: <:testemoji1:111>" in sent_message
         assert "ANIMATED_EMOJI: <a:animatedemoji:222>" in sent_message
 
 @pytest.mark.asyncio
 async def test_emojis_command_no_emojis(mock_bot, mock_ctx):
-    cog = EmojiCog(mock_bot)
-    
-    # Mock config.CustomEmojis to return an empty dictionary
-    with patch('cogs.emoji_cog.config.CustomEmojis') as mock_custom_emojis:
-        mock_custom_emojis.__dict__ = {} # Simulate no custom emojis defined
-        
+    mock_config_data = {
+        'CustomEmoji': {}
+    }
+    with patch('cogs.emoji_cog.yaml.safe_load', return_value=mock_config_data), \
+         patch('builtins.open', MagicMock()):
+        cog = EmojiCog(mock_bot)
         await cog.emojis(mock_ctx)
-        
+
         mock_ctx.send.assert_called_once()
         sent_message = mock_ctx.send.call_args[0][0]
-        
+
         assert "No custom emojis configured." in sent_message
 
 @pytest.mark.asyncio
 async def test_emojis_command_emoji_not_found(mock_bot, mock_ctx):
-    cog = EmojiCog(mock_bot)
-    
-    # Simulate get_emoji returning None
     mock_bot.get_emoji.return_value = None
-
-    with patch('cogs.emoji_cog.config.CustomEmojis') as mock_custom_emojis:
-        mock_custom_emojis.UNKNOWN_EMOJI = 999 # Emoji ID that won't be found
-        
+    mock_config_data = {
+        'CustomEmoji': {
+            'UNKNOWN_EMOJI': 999
+        }
+    }
+    with patch('cogs.emoji_cog.yaml.safe_load', return_value=mock_config_data), \
+         patch('builtins.open', MagicMock()):
+        cog = EmojiCog(mock_bot)
         await cog.emojis(mock_ctx)
-        
+
         mock_ctx.send.assert_called_once()
         sent_message = mock_ctx.send.call_args[0][0]
-        
+
         assert "UNKNOWN_EMOJI: Emoji not found" in sent_message

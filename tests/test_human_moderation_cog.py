@@ -1,16 +1,33 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 import discord
 from discord.ext import commands
 from cogs.human_moderation_cog import HumanModerationCog
 import datetime
 from datetime import timedelta
 
+from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+
 @pytest.fixture
 def mock_bot():
     intents = discord.Intents.default()
     bot = commands.Bot(command_prefix="!", intents=intents)
+    
+    # Mock the 'user' property correctly
+    mock_user = MagicMock(spec=discord.ClientUser)
+    mock_user.id = 987654321
+    type(bot).user = PropertyMock(return_value=mock_user)
+    
     return bot
+
+def create_mock_role(position: int) -> MagicMock:
+    """Creates a mock role that is comparable based on its position."""
+    role = MagicMock(spec=discord.Role)
+    role.position = position
+    role.__le__ = lambda other: role.position <= other.position
+    role.__lt__ = lambda other: role.position < other.position
+    role.__ge__ = lambda other: role.position >= other.position
+    role.__gt__ = lambda other: role.position > other.position
+    return role
 
 @pytest.fixture
 def mock_ctx():
@@ -18,13 +35,16 @@ def mock_ctx():
     ctx.send = AsyncMock()
     ctx.author = MagicMock(spec=discord.Member)
     ctx.author.id = 123
+    ctx.author.top_role = create_mock_role(15)
     ctx.guild = MagicMock(spec=discord.Guild)
     ctx.guild.id = 456
     ctx.channel = MagicMock(spec=discord.TextChannel)
-    ctx.me = MagicMock(spec=discord.Member) # Mock the bot's member in the guild
-    ctx.me.guild_permissions = MagicMock(spec=discord.Permissions)
-    ctx.me.guild_permissions.ban_members = True
-    ctx.me.guild_permissions.kick_members = True
+    ctx.guild.me = MagicMock(spec=discord.Member) # Mock the bot's member in the guild
+    ctx.guild.me.guild_permissions = MagicMock(spec=discord.Permissions)
+    ctx.guild.me.guild_permissions.ban_members = True
+    ctx.guild.me.guild_permissions.kick_members = True
+    ctx.guild.me.top_role = create_mock_role(20)
+    ctx.interaction = None # Simulate a prefix command context by default
     return ctx
 
 @pytest.fixture
@@ -35,8 +55,7 @@ def mock_member():
     member.mention = "<@789>"
     member.guild = MagicMock(spec=discord.Guild)
     member.guild.id = 456
-    member.top_role = MagicMock(spec=discord.Role)
-    member.top_role.position = 10
+    member.top_role = create_mock_role(10)
     return member
 
 @pytest.fixture
@@ -75,32 +94,36 @@ def test_parse_duration(duration_str, expected_timedelta):
 async def test_moderate_ban_callback_success(mock_bot, mock_ctx, mock_member):
     cog = HumanModerationCog(mock_bot)
     mock_ctx.guild.ban = AsyncMock()
-    mock_ctx.me.top_role.position = 20 # Bot has higher role than member
     
-    with patch('database.operations.add_mod_log_entry', new_callable=AsyncMock) as mock_add_log:
-        await cog.moderate_ban_callback(cog, mock_ctx, mock_member, "Test ban reason", 7, False)
+    with patch('cogs.human_moderation_cog.ModLogCog') as mock_mod_log_cog:
+        mock_log_instance = mock_mod_log_cog.return_value
+        mock_log_instance.log_action = AsyncMock()
+        mock_bot.get_cog = MagicMock(return_value=mock_log_instance)
+
+        await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason", delete_days=7, send_dm=False)
         
         mock_ctx.guild.ban.assert_called_once_with(mock_member, reason="Test ban reason", delete_message_days=7)
-        mock_add_log.assert_called_once()
+        mock_log_instance.log_action.assert_called_once()
         mock_ctx.send.assert_called_once()
-        assert "Successfully banned" in mock_ctx.send.call_args[0][0]
+        assert "Banned" in mock_ctx.send.call_args[0][0]
 
 @pytest.mark.asyncio
 async def test_moderate_ban_callback_member_not_found(mock_bot, mock_ctx):
     cog = HumanModerationCog(mock_bot)
-    mock_ctx.guild.get_member.return_value = None # Simulate member not found
-    
-    await cog.moderate_ban_callback(cog, mock_ctx, None, "Test ban reason", 0, False, user_id=12345)
-    
+    mock_bot.fetch_user = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Unknown User"))
+    mock_ctx.guild.ban.side_effect = discord.NotFound(MagicMock(), "Unknown User")
+
+    await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, user_id="12345", reason="Test ban reason")
+
     mock_ctx.send.assert_called_once()
-    assert "Could not find that member or user." in mock_ctx.send.call_args[0][0]
+    assert "Could not find a user with the ID" in mock_ctx.send.call_args[0][0]
 
 @pytest.mark.asyncio
 async def test_moderate_ban_callback_bot_has_no_permissions(mock_bot, mock_ctx, mock_member):
     cog = HumanModerationCog(mock_bot)
-    mock_ctx.me.guild_permissions.ban_members = False # Bot has no ban permission
+    mock_ctx.guild.me.guild_permissions.ban_members = False
     
-    await cog.moderate_ban_callback(cog, mock_ctx, mock_member, "Test ban reason", 0, False)
+    await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason")
     
     mock_ctx.send.assert_called_once()
     assert "I don't have permission to ban members." in mock_ctx.send.call_args[0][0]
@@ -108,81 +131,87 @@ async def test_moderate_ban_callback_bot_has_no_permissions(mock_bot, mock_ctx, 
 @pytest.mark.asyncio
 async def test_moderate_ban_callback_cannot_ban_higher_role(mock_bot, mock_ctx, mock_member):
     cog = HumanModerationCog(mock_bot)
-    mock_ctx.me.top_role.position = 5 # Bot's role is lower
-    mock_member.top_role.position = 10 # Member's role is higher
-    
-    await cog.moderate_ban_callback(cog, mock_ctx, mock_member, "Test ban reason", 0, False)
-    
+    mock_ctx.guild.me.top_role = create_mock_role(5)
+    mock_member.top_role = create_mock_role(10)
+
+    await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason")
+
     mock_ctx.send.assert_called_once()
-    assert "I cannot ban this user as their highest role is higher than or equal to my highest role." in mock_ctx.send.call_args[0][0]
+    assert "I cannot ban someone with a higher or equal role than me." in mock_ctx.send.call_args[0][0]
 
 @pytest.mark.asyncio
 async def test_moderate_ban_callback_dm_user(mock_bot, mock_ctx, mock_member):
     cog = HumanModerationCog(mock_bot)
     mock_ctx.guild.ban = AsyncMock()
     mock_member.send = AsyncMock()
-    mock_ctx.me.top_role.position = 20
 
-    with patch('database.operations.add_mod_log_entry', new_callable=AsyncMock):
-        await cog.moderate_ban_callback(cog, mock_ctx, mock_member, "Test ban reason", 0, True)
+    with patch('cogs.human_moderation_cog.ModLogCog'):
+        await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason", send_dm=True)
         mock_member.send.assert_called_once()
-        assert "You have been banned from" in mock_member.send.call_args[0][0]
+        embed = mock_member.send.call_args.kwargs['embed']
+        assert "You have been banned from" in embed.description
 
 @pytest.mark.asyncio
 async def test_moderate_ban_callback_dm_fail(mock_bot, mock_ctx, mock_member):
     cog = HumanModerationCog(mock_bot)
     mock_ctx.guild.ban = AsyncMock()
-    mock_member.send.side_effect = discord.Forbidden # Simulate DM failure
-    mock_ctx.me.top_role.position = 20
+    mock_member.send.side_effect = discord.Forbidden
 
-    with patch('database.operations.add_mod_log_entry', new_callable=AsyncMock):
-        await cog.moderate_ban_callback(cog, mock_ctx, mock_member, "Test ban reason", 0, True)
-        mock_member.send.assert_called_once() # Still attempts to send
+    with patch('cogs.human_moderation_cog.ModLogCog'):
+        await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason", send_dm=True)
+        mock_member.send.assert_called_once()
         mock_ctx.send.assert_called_once()
-        assert "Successfully banned" in mock_ctx.send.call_args[0][0]
-        assert "However, I could not DM the user." in mock_ctx.send.call_args[0][0]
+        assert "Banned" in mock_ctx.send.call_args[0][0]
+        assert "Could not send DM notification" in mock_ctx.send.call_args[0][0]
 
 # --- moderate_unban_callback Tests ---
 @pytest.mark.asyncio
 async def test_moderate_unban_callback_success(mock_bot, mock_ctx, mock_user):
     cog = HumanModerationCog(mock_bot)
     mock_ctx.guild.unban = AsyncMock()
-    mock_ctx.guild.fetch_ban.return_value = MagicMock(user=mock_user) # Simulate ban exists
+    mock_ctx.guild.fetch_ban.return_value = MagicMock(user=mock_user)
     
-    with patch('database.operations.add_mod_log_entry', new_callable=AsyncMock) as mock_add_log:
-        await cog.moderate_unban_callback(cog, mock_ctx, mock_user.id, "Test unban reason")
+    with patch('cogs.human_moderation_cog.ModLogCog') as mock_mod_log_cog:
+        mock_log_instance = mock_mod_log_cog.return_value
+        mock_log_instance.log_action = AsyncMock()
+        mock_bot.get_cog = MagicMock(return_value=mock_log_instance)
+
+        await cog.moderate_unban_callback.callback(cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason")
         
         mock_ctx.guild.unban.assert_called_once_with(mock_user, reason="Test unban reason")
-        mock_add_log.assert_called_once()
+        mock_log_instance.log_action.assert_called_once()
         mock_ctx.send.assert_called_once()
-        assert "Successfully unbanned" in mock_ctx.send.call_args[0][0]
+        assert "Unbanned" in mock_ctx.send.call_args[0][0]
 
 @pytest.mark.asyncio
 async def test_moderate_unban_callback_user_not_banned(mock_bot, mock_ctx, mock_user):
     cog = HumanModerationCog(mock_bot)
-    mock_ctx.guild.fetch_ban.side_effect = discord.NotFound # Simulate user not banned
-    
-    await cog.moderate_unban_callback(cog, mock_ctx, mock_user.id, "Test unban reason")
+    mock_ctx.guild.fetch_ban.side_effect = discord.NotFound(MagicMock(), "User not found")
+
+    await cog.moderate_unban_callback.callback(cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason")
     
     mock_ctx.send.assert_called_once()
-    assert "That user is not banned from this server." in mock_ctx.send.call_args[0][0]
+    assert "This user is not banned." in mock_ctx.send.call_args[0][0]
 
 @pytest.mark.asyncio
 async def test_moderate_unban_callback_bot_has_no_permissions(mock_bot, mock_ctx, mock_user):
     cog = HumanModerationCog(mock_bot)
-    mock_ctx.me.guild_permissions.ban_members = False # Bot has no unban permission (same as ban)
+    mock_ctx.guild.me.guild_permissions.ban_members = False
     
-    await cog.moderate_unban_callback(cog, mock_ctx, mock_user.id, "Test unban reason")
+    await cog.moderate_unban_callback.callback(cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason")
     
     mock_ctx.send.assert_called_once()
-    assert "I don't have permission to unban members." in mock_ctx.send.call_args[0][0]
+    assert "I don't have permission to unban users." in mock_ctx.send.call_args[0][0]
 
 @pytest.mark.asyncio
 async def test_moderate_unban_callback_fetch_ban_error(mock_bot, mock_ctx, mock_user):
     cog = HumanModerationCog(mock_bot)
-    mock_ctx.guild.fetch_ban.side_effect = Exception("Fetch ban error")
-    
-    await cog.moderate_unban_callback(cog, mock_ctx, mock_user.id, "Test unban reason")
+    # Correctly instantiate the HTTPException
+    mock_response = MagicMock()
+    mock_response.status = 500
+    mock_ctx.guild.fetch_ban.side_effect = discord.HTTPException(mock_response, "Fetch ban error")
+
+    await cog.moderate_unban_callback.callback(cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason")
     
     mock_ctx.send.assert_called_once()
-    assert "An unexpected error occurred while fetching ban information." in mock_ctx.send.call_args[0][0]
+    assert "An error occurred while checking the ban list" in mock_ctx.send.call_args[0][0]

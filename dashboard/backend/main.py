@@ -7,7 +7,7 @@ sys.path.insert(0, project_root)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app import api
+from .app import api
 from database.connection import initialize_database
 
 app = FastAPI()

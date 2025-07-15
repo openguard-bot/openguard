@@ -42,27 +42,36 @@ class HumanModerationCog(commands.Cog):
 
     # Helper method for parsing duration strings
     def _parse_duration(self, duration_str: str) -> Optional[datetime.timedelta]:
-        """Parse a duration string like '1d', '2h', '30m' into a timedelta."""
+        """
+        Parse a duration string like '1w2d3h4m' into a timedelta.
+        Supports: w (weeks), d (days), h (hours), m (minutes), s (seconds).
+        """
         if not duration_str:
             return None
 
-        try:
-            # Extract the number and unit
-            amount = int("".join(filter(str.isdigit, duration_str)))
-            unit = "".join(filter(str.isalpha, duration_str)).lower()
-
-            if unit == "d" or unit == "day" or unit == "days":
-                return datetime.timedelta(days=amount)
-            elif unit == "h" or unit == "hour" or unit == "hours":
-                return datetime.timedelta(hours=amount)
-            elif unit == "m" or unit == "min" or unit == "minute" or unit == "minutes":
-                return datetime.timedelta(minutes=amount)
-            elif unit == "s" or unit == "sec" or unit == "second" or unit == "seconds":
-                return datetime.timedelta(seconds=amount)
-            else:
-                return None
-        except (ValueError, TypeError):
+        import re
+        
+        regex = re.compile(r'(\d+)([wdhms])')
+        matches = regex.findall(duration_str.lower())
+        
+        if not matches:
             return None
+
+        total_seconds = 0
+        for amount, unit in matches:
+            amount = int(amount)
+            if unit == 'w':
+                total_seconds += amount * 604800
+            elif unit == 'd':
+                total_seconds += amount * 86400
+            elif unit == 'h':
+                total_seconds += amount * 3600
+            elif unit == 'm':
+                total_seconds += amount * 60
+            elif unit == 's':
+                total_seconds += amount
+        
+        return datetime.timedelta(seconds=total_seconds)
 
     # --- Command Callbacks ---
 
@@ -161,7 +170,7 @@ class HumanModerationCog(commands.Cog):
         # If the target is a member in the server, perform role hierarchy checks
         if isinstance(target, discord.Member):
             if (
-                ctx.author.top_role <= target.top_role
+                ctx.author.top_role.position <= target.top_role.position
                 and ctx.author.id != ctx.guild.owner_id
             ):
                 if ctx.interaction:
@@ -174,7 +183,7 @@ class HumanModerationCog(commands.Cog):
                         "❌ You cannot ban someone with a higher or equal role."
                     )
                 return
-            if ctx.guild.me.top_role <= target.top_role:
+            if ctx.guild.me.top_role.position <= target.top_role.position:
                 if ctx.interaction:
                     await ctx.interaction.response.send_message(
                         "❌ I cannot ban someone with a higher or equal role than me.",
@@ -186,83 +195,54 @@ class HumanModerationCog(commands.Cog):
                     )
                 return
 
-        # --- Fetch Full User Object for DM and Logging ---
-        # We need the full user object to send a DM and for better logging.
-        # If we only have an ID, we must fetch it.
-        full_user_object: Optional[Union[discord.User, discord.Member]] = None
-        if isinstance(target, discord.Member):
-            full_user_object = target
-        else:  # It's a discord.Object
-            try:
-                # Check if already banned before fetching, to give a clearer error
-                await ctx.guild.fetch_ban(target)
-                if ctx.interaction:
-                    await ctx.interaction.response.send_message(
-                        f"❌ User with ID `{target.id}` is already banned.",
-                        ephemeral=True,
-                    )
-                else:
-                    await ctx.send(f"❌ User with ID `{target.id}` is already banned.")
-                return
-            except discord.NotFound:
-                # Good, not banned yet. Now fetch the user.
-                try:
-                    full_user_object = await self.bot.fetch_user(target.id)
-                except discord.NotFound:
-                    if ctx.interaction:
-                        await ctx.interaction.response.send_message(
-                            f"❌ User with ID `{target.id}` not found.", ephemeral=True
-                        )
-                    else:
-                        await ctx.send(f"❌ User with ID `{target.id}` not found.")
-                    return
-            except discord.HTTPException as e:
-                if ctx.interaction:
-                    await ctx.interaction.response.send_message(
-                        f"❌ An error occurred while checking the ban list: {e}",
-                        ephemeral=True,
-                    )
-                else:
-                    await ctx.send(
-                        f"❌ An error occurred while checking the ban list: {e}"
-                    )
-                return
-
-        # Ensure delete_days is within valid range (0-7)
-        delete_days = max(0, min(7, delete_days))
-
         if ctx.interaction:
             await ctx.interaction.response.defer(thinking=False)
 
-        # --- Send DM ---
-        dm_sent = False
-        if send_dm and full_user_object:
-            try:
-                embed = discord.Embed(
-                    title="Ban Notice",
-                    description=f"You have been banned from **{ctx.guild.name}**",
-                    color=discord.Color.red(),
-                )
-                embed.add_field(
-                    name="Reason", value=reason or "No reason provided", inline=False
-                )
-                embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
-                embed.set_footer(
-                    text=f"Server ID: {ctx.guild.id} • {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC • Use the button or send !banappeal to appeal"
-                )
-                await full_user_object.send(
-                    embed=embed, view=BanAppealView(ctx.guild.id)
-                )
-                dm_sent = True
-            except discord.Forbidden:
-                pass  # User has DMs closed
-            except Exception as e:
-                logger.error(
-                    f"Error sending ban DM to {full_user_object} (ID: {full_user_object.id}): {e}"
-                )
-
         # --- Perform Ban ---
         try:
+            # Ensure delete_days is within valid range (0-7)
+            delete_days = max(0, min(7, delete_days))
+
+            # Fetch the user object for logging and DMing.
+            # This is now done *before* the ban to ensure we have the object.
+            full_user_object: Optional[Union[discord.User, discord.Member]] = None
+            if isinstance(target, discord.Member):
+                full_user_object = target
+            else:
+                try:
+                    full_user_object = await self.bot.fetch_user(target.id)
+                except discord.NotFound:
+                    # This is a special case. The user doesn't exist on Discord.
+                    # We can still ban the ID, but we can't DM or get their name.
+                    pass
+
+            # --- Send DM ---
+            dm_sent = False
+            if send_dm and full_user_object:
+                try:
+                    embed = discord.Embed(
+                        title="Ban Notice",
+                        description=f"You have been banned from **{ctx.guild.name}**",
+                        color=discord.Color.red(),
+                    )
+                    embed.add_field(
+                        name="Reason", value=reason or "No reason provided", inline=False
+                    )
+                    embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
+                    embed.set_footer(
+                        text=f"Server ID: {ctx.guild.id} • {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC • Use the button or send !banappeal to appeal"
+                    )
+                    await full_user_object.send(
+                        embed=embed, view=BanAppealView(ctx.guild.id)
+                    )
+                    dm_sent = True
+                except discord.Forbidden:
+                    pass  # User has DMs closed or is not fetchable
+                except Exception as e:
+                    logger.error(
+                        f"Error sending ban DM to {full_user_object} (ID: {full_user_object.id}): {e}"
+                    )
+
             # Use the original target (Object or Member) for the ban action
             await ctx.guild.ban(target, reason=reason, delete_message_days=delete_days)
 
@@ -284,7 +264,7 @@ class HumanModerationCog(commands.Cog):
                 )
 
             # --- Confirmation Message ---
-            target_text = self._user_display(log_target)
+            target_text = self._user_display(log_target) if full_user_object else f"User ID `{target.id}`"
             dm_status = ""
             if send_dm:
                 dm_status = (
@@ -302,10 +282,18 @@ class HumanModerationCog(commands.Cog):
             if ctx.interaction:
                 await ctx.interaction.followup.send(
                     response_message, ephemeral=False
-                )  # Send public confirmation
+                )
             else:
                 await ctx.send(response_message)
 
+        except discord.NotFound:
+            # This is raised by guild.ban if the user_id is invalid
+            if ctx.interaction:
+                await ctx.interaction.followup.send(
+                    f"❌ Could not find a user with the ID `{target.id}`.", ephemeral=True
+                )
+            else:
+                await ctx.send(f"❌ Could not find a user with the ID `{target.id}`.")
         except discord.Forbidden:
             if ctx.interaction:
                 await ctx.interaction.followup.send(
@@ -317,7 +305,15 @@ class HumanModerationCog(commands.Cog):
                     "❌ I don't have permission to ban this user. My role might be too low or I lack the 'Ban Members' permission."
                 )
         except discord.HTTPException as e:
-            if ctx.interaction:
+            # Check for "already banned" error string, as there's no specific exception
+            if 'already banned' in str(e).lower():
+                 if ctx.interaction:
+                    await ctx.interaction.followup.send(
+                        f"❌ User with ID `{target.id}` is already banned.", ephemeral=True
+                    )
+                 else:
+                    await ctx.send(f"❌ User with ID `{target.id}` is already banned.")
+            elif ctx.interaction:
                 await ctx.interaction.followup.send(
                     f"❌ An error occurred while banning the user: {e}", ephemeral=True
                 )
@@ -462,7 +458,7 @@ class HumanModerationCog(commands.Cog):
 
         # Check if the user is trying to kick someone with a higher role
         if (
-            ctx.author.top_role <= member.top_role
+            ctx.author.top_role.position <= member.top_role.position
             and ctx.author.id != ctx.guild.owner_id
         ):
             await send_response(
@@ -472,7 +468,7 @@ class HumanModerationCog(commands.Cog):
             return
 
         # Check if the bot can kick the member (role hierarchy)
-        if ctx.guild.me.top_role <= member.top_role:
+        if ctx.guild.me.top_role.position <= member.top_role.position:
             await send_response(
                 "❌ I cannot kick someone with a higher or equal role than me.",
                 ephemeral=True,
@@ -596,7 +592,7 @@ class HumanModerationCog(commands.Cog):
 
         # Check if the user is trying to timeout someone with a higher role
         if (
-            ctx.author.top_role <= member.top_role
+            ctx.author.top_role.position <= member.top_role.position
             and ctx.author.id != ctx.guild.owner_id
         ):
             await send_response(
@@ -606,7 +602,7 @@ class HumanModerationCog(commands.Cog):
             return
 
         # Check if the bot can timeout the member (role hierarchy)
-        if ctx.guild.me.top_role <= member.top_role:
+        if ctx.guild.me.top_role.position <= member.top_role.position:
             await send_response(
                 "❌ I cannot timeout someone with a higher or equal role than me.",
                 ephemeral=True,
@@ -941,7 +937,7 @@ class HumanModerationCog(commands.Cog):
 
         # Check if the user is trying to warn someone with a higher role
         if (
-            ctx.author.top_role <= member.top_role
+            ctx.author.top_role.position <= member.top_role.position
             and ctx.author.id != ctx.guild.owner_id
         ):
             await send_response(
@@ -1552,14 +1548,14 @@ async def ban_user_context_menu(
         )
         return
     if (
-        interaction.user.top_role <= member.top_role
+        interaction.user.top_role.position <= member.top_role.position
         and interaction.user.id != interaction.guild.owner_id
     ):
         await interaction.response.send_message(
             "❌ You cannot ban someone with a higher or equal role.", ephemeral=True
         )
         return
-    if interaction.guild.me.top_role <= member.top_role:
+    if interaction.guild.me.top_role.position <= member.top_role.position:
         await interaction.response.send_message(
             "❌ I cannot ban someone with a higher or equal role than me.",
             ephemeral=True,
@@ -1602,14 +1598,14 @@ async def kick_user_context_menu(
         )
         return
     if (
-        interaction.user.top_role <= member.top_role
+        interaction.user.top_role.position <= member.top_role.position
         and interaction.user.id != interaction.guild.owner_id
     ):
         await interaction.response.send_message(
             "❌ You cannot kick someone with a higher or equal role.", ephemeral=True
         )
         return
-    if interaction.guild.me.top_role <= member.top_role:
+    if interaction.guild.me.top_role.position <= member.top_role.position:
         await interaction.response.send_message(
             "❌ I cannot kick someone with a higher or equal role than me.",
             ephemeral=True,
@@ -1647,14 +1643,14 @@ async def timeout_user_context_menu(
         )
         return
     if (
-        interaction.user.top_role <= member.top_role
+        interaction.user.top_role.position <= member.top_role.position
         and interaction.user.id != interaction.guild.owner_id
     ):
         await interaction.response.send_message(
             "❌ You cannot timeout someone with a higher or equal role.", ephemeral=True
         )
         return
-    if interaction.guild.me.top_role <= member.top_role:
+    if interaction.guild.me.top_role.position <= member.top_role.position:
         await interaction.response.send_message(
             "❌ I cannot timeout someone with a higher or equal role than me.",
             ephemeral=True,

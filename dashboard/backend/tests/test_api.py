@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -8,7 +9,7 @@ from typing import AsyncGenerator
 
 from dashboard.backend.main import app
 from dashboard.backend.app.db import get_db
-from dashboard.backend.app.api import get_current_user, has_admin_permissions
+from dashboard.backend.app.api import get_current_user, has_admin_permissions, get_current_blog_admin
 from dashboard.backend.app.schemas import User
 
 # Use an in-memory SQLite database for testing
@@ -52,7 +53,7 @@ app.dependency_overrides[get_current_user] = override_get_current_user
 app.dependency_overrides[has_admin_permissions] = override_has_admin_permissions
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 def event_loop():
     """
     Creates an asyncio event loop for the test session.
@@ -63,12 +64,12 @@ def event_loop():
 
 
 @pytest.fixture(scope="module")
-async def async_client() -> AsyncGenerator[AsyncClient, None]:
+def async_client() -> TestClient:
     """
-    Provides an async test client for making API requests.
+    Provides a synchronous test client for making API requests.
     """
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
+    client = TestClient(app)
+    return client
 
 
 # Keep the original test for the root endpoint
@@ -81,27 +82,25 @@ def test_read_main():
     assert response.json() == {"message": "Welcome to the backend!"}
 
 
-@pytest.mark.asyncio
-async def test_read_users_me(async_client: AsyncClient):
+def test_read_users_me(async_client: TestClient):
     """
     Test for fetching the current user's profile.
     """
-    response = await async_client.get("/api/users/@me")
+    response = async_client.get("/api/users/@me")
     assert response.status_code == 200
     user_data = response.json()
     assert user_data["username"] == "testuser"
     assert user_data["id"] == "12345"
 
 
-@pytest.mark.asyncio
-async def test_get_guild_roles(async_client: AsyncClient, monkeypatch):
+def test_get_guild_roles(async_client: TestClient, monkeypatch):
     """
     Test for fetching guild roles.
     """
     async def mock_fetch_from_discord_api(endpoint: str):
         return [
-            {"id": "1", "name": "Admin", "position": 2},
-            {"id": "2", "name": "Moderator", "position": 1},
+            {"id": "1", "name": "Admin", "position": 2, "color": 0},
+            {"id": "2", "name": "Moderator", "position": 1, "color": 0},
         ]
 
     monkeypatch.setattr(
@@ -109,15 +108,14 @@ async def test_get_guild_roles(async_client: AsyncClient, monkeypatch):
         mock_fetch_from_discord_api,
     )
 
-    response = await async_client.get("/api/guilds/123/roles")
+    response = async_client.get("/api/guilds/123/roles")
     assert response.status_code == 200
     roles = response.json()
     assert len(roles) == 2
     assert roles[0]["name"] == "Admin"
 
 
-@pytest.mark.asyncio
-async def test_get_guild_channels(async_client: AsyncClient, monkeypatch):
+def test_get_guild_channels(async_client: TestClient, monkeypatch):
     """
     Test for fetching guild channels.
     """
@@ -132,15 +130,14 @@ async def test_get_guild_channels(async_client: AsyncClient, monkeypatch):
         mock_fetch_from_discord_api,
     )
 
-    response = await async_client.get("/api/guilds/123/channels")
+    response = async_client.get("/api/guilds/123/channels")
     assert response.status_code == 200
     channels = response.json()
     assert len(channels) == 2
     assert channels[0]["name"] == "general"
 
 
-@pytest.mark.asyncio
-async def test_get_general_settings(async_client: AsyncClient, monkeypatch):
+def test_get_general_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching general settings.
     """
@@ -152,14 +149,13 @@ async def test_get_general_settings(async_client: AsyncClient, monkeypatch):
         mock_get_general_settings,
     )
 
-    response = await async_client.get("/api/guilds/123/config/general")
+    response = async_client.get("/api/guilds/123/config/general")
     assert response.status_code == 200
     settings = response.json()
     assert settings["prefix"] == "!"
 
 
-@pytest.mark.asyncio
-async def test_update_general_settings(async_client: AsyncClient, monkeypatch):
+def test_update_general_settings(async_client: TestClient, monkeypatch):
     """
     Test for updating general settings.
     """
@@ -171,7 +167,7 @@ async def test_update_general_settings(async_client: AsyncClient, monkeypatch):
         mock_update_general_settings,
     )
 
-    response = await async_client.put(
+    response = async_client.put(
         "/api/guilds/123/config/general", json={"prefix": "$"}
     )
     assert response.status_code == 200
@@ -179,8 +175,7 @@ async def test_update_general_settings(async_client: AsyncClient, monkeypatch):
     assert settings["prefix"] == "$"
 
 
-@pytest.mark.asyncio
-async def test_get_moderation_settings(async_client: AsyncClient, monkeypatch):
+def test_get_moderation_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching moderation settings.
     """
@@ -198,15 +193,14 @@ async def test_get_moderation_settings(async_client: AsyncClient, monkeypatch):
         mock_get_moderation_settings,
     )
 
-    response = await async_client.get("/api/guilds/123/config/moderation")
+    response = async_client.get("/api/guilds/123/config/moderation")
     assert response.status_code == 200
     settings = response.json()
     assert settings["mod_log_channel_id"] == "12345"
     assert settings["moderator_role_id"] == "67890"
 
 
-@pytest.mark.asyncio
-async def test_update_moderation_settings(async_client: AsyncClient, monkeypatch):
+def test_update_moderation_settings(async_client: TestClient, monkeypatch):
     """
     Test for updating moderation settings.
     """
@@ -222,7 +216,7 @@ async def test_update_moderation_settings(async_client: AsyncClient, monkeypatch
         "mod_log_channel_id": "54321",
         "moderator_role_id": "98765",
     }
-    response = await async_client.put(
+    response = async_client.put(
         "/api/guilds/123/config/moderation", json=update_data
     )
     assert response.status_code == 200
@@ -231,8 +225,7 @@ async def test_update_moderation_settings(async_client: AsyncClient, monkeypatch
     assert settings["moderator_role_id"] == "98765"
 
 
-@pytest.mark.asyncio
-async def test_get_logging_settings(async_client: AsyncClient, monkeypatch):
+def test_get_logging_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching logging settings.
     """
@@ -250,15 +243,14 @@ async def test_get_logging_settings(async_client: AsyncClient, monkeypatch):
         mock_get_logging_settings,
     )
 
-    response = await async_client.get("/api/guilds/123/config/logging")
+    response = async_client.get("/api/guilds/123/config/logging")
     assert response.status_code == 200
     settings = response.json()
     assert settings["log_channel_id"] == "11111"
     assert settings["message_delete_logging"] is True
 
 
-@pytest.mark.asyncio
-async def test_update_logging_settings(async_client: AsyncClient, monkeypatch):
+def test_update_logging_settings(async_client: TestClient, monkeypatch):
     """
     Test for updating logging settings.
     """
@@ -274,7 +266,7 @@ async def test_update_logging_settings(async_client: AsyncClient, monkeypatch):
         "log_channel_id": "22222",
         "message_delete_logging": False,
     }
-    response = await async_client.put(
+    response = async_client.put(
         "/api/guilds/123/config/logging", json=update_data
     )
     assert response.status_code == 200
@@ -283,8 +275,7 @@ async def test_update_logging_settings(async_client: AsyncClient, monkeypatch):
     assert settings["message_delete_logging"] is False
 
 
-@pytest.mark.asyncio
-async def test_get_security_settings(async_client: AsyncClient, monkeypatch):
+def test_get_security_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching security settings.
     """
@@ -302,14 +293,13 @@ async def test_get_security_settings(async_client: AsyncClient, monkeypatch):
         mock_get_security_settings,
     )
 
-    response = await async_client.get("/api/guilds/123/config/security")
+    response = async_client.get("/api/guilds/123/config/security")
     assert response.status_code == 200
     settings = response.json()
     assert settings["bot_detection"]["enabled"] is True
 
 
-@pytest.mark.asyncio
-async def test_get_ai_settings(async_client: AsyncClient, monkeypatch):
+def test_get_ai_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching AI settings.
     """
@@ -320,14 +310,13 @@ async def test_get_ai_settings(async_client: AsyncClient, monkeypatch):
         }
     monkeypatch.setattr("dashboard.backend.app.crud.get_ai_settings", mock_get_ai_settings)
 
-    response = await async_client.get("/api/guilds/123/config/ai")
+    response = async_client.get("/api/guilds/123/config/ai")
     assert response.status_code == 200
     settings = response.json()
     assert settings["channel_exclusions"]["excluded_channels"] == ["123"]
 
 
-@pytest.mark.asyncio
-async def test_get_channels_settings(async_client: AsyncClient, monkeypatch):
+def test_get_channels_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching channels settings.
     """
@@ -335,14 +324,13 @@ async def test_get_channels_settings(async_client: AsyncClient, monkeypatch):
         return {"exclusions": ["123"], "rules": {"456": "Be nice"}}
     monkeypatch.setattr("dashboard.backend.app.crud.get_channels_settings", mock_get_channels_settings)
 
-    response = await async_client.get("/api/guilds/123/config/channels")
+    response = async_client.get("/api/guilds/123/config/channels")
     assert response.status_code == 200
     settings = response.json()
     assert settings["exclusions"] == ["123"]
 
 
-@pytest.mark.asyncio
-async def test_get_rate_limiting_settings(async_client: AsyncClient, monkeypatch):
+def test_get_rate_limiting_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching rate limiting settings.
     """
@@ -354,14 +342,13 @@ async def test_get_rate_limiting_settings(async_client: AsyncClient, monkeypatch
         }
     monkeypatch.setattr("dashboard.backend.app.crud.get_rate_limiting_settings", mock_get_rate_limiting_settings)
 
-    response = await async_client.get("/api/guilds/123/config/rate-limiting")
+    response = async_client.get("/api/guilds/123/config/rate-limiting")
     assert response.status_code == 200
     settings = response.json()
     assert settings["enabled"] is True
 
 
-@pytest.mark.asyncio
-async def test_get_raid_defense_settings(async_client: AsyncClient, monkeypatch):
+def test_get_raid_defense_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching raid defense settings.
     """
@@ -369,12 +356,11 @@ async def test_get_raid_defense_settings(async_client: AsyncClient, monkeypatch)
         return {"enabled": True, "threshold": 10, "timeframe": 60, "alert_channel": "123", "auto_action": "kick"}
     monkeypatch.setattr("dashboard.backend.app.crud.get_raid_defense_config", mock_get_raid_defense_config)
 
-    response = await async_client.get("/api/guilds/123/config/raid-defense")
+    response = async_client.get("/api/guilds/123/config/raid-defense")
     assert response.status_code == 200
     settings = response.json()
     assert settings["enabled"] is True
-@pytest.mark.asyncio
-async def test_update_security_settings(async_client: AsyncClient, monkeypatch):
+def test_update_security_settings(async_client: TestClient, monkeypatch):
     """
     Test for updating security settings.
     """
@@ -389,14 +375,13 @@ async def test_update_security_settings(async_client: AsyncClient, monkeypatch):
     monkeypatch.setattr("dashboard.backend.app.crud.update_security_settings", mock_update_security_settings)
 
     update_data = {"bot_detection": {"enabled": False}}
-    response = await async_client.put("/api/guilds/123/config/security", json=update_data)
+    response = async_client.put("/api/guilds/123/config/security", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["bot_detection"]["enabled"] is False
 
 
-@pytest.mark.asyncio
-async def test_update_ai_settings(async_client: AsyncClient, monkeypatch):
+def test_update_ai_settings(async_client: TestClient, monkeypatch):
     """
     Test for updating AI settings.
     """
@@ -411,14 +396,13 @@ async def test_update_ai_settings(async_client: AsyncClient, monkeypatch):
         "channel_exclusions": {"excluded_channels": ["456"]},
         "channel_rules": {"channel_rules": {"789": "No spam"}},
     }
-    response = await async_client.put("/api/guilds/123/config/ai", json=update_data)
+    response = async_client.put("/api/guilds/123/config/ai", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["channel_exclusions"]["excluded_channels"] == ["456"]
 
 
-@pytest.mark.asyncio
-async def test_update_channels_settings(async_client: AsyncClient, monkeypatch):
+def test_update_channels_settings(async_client: TestClient, monkeypatch):
     """
     Test for updating channels settings.
     """
@@ -427,52 +411,72 @@ async def test_update_channels_settings(async_client: AsyncClient, monkeypatch):
     monkeypatch.setattr("dashboard.backend.app.crud.update_channels_settings", mock_update_channels_settings)
 
     update_data = {"exclusions": ["channel1"], "rules": {"channel2": "rule2"}}
-    response = await async_client.put("/api/guilds/123/config/channels", json=update_data)
+    response = async_client.put("/api/guilds/123/config/channels", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["exclusions"] == ["channel1"]
 
 
-@pytest.mark.asyncio
-async def test_update_rate_limiting_settings(async_client: AsyncClient, monkeypatch):
+def test_update_rate_limiting_settings(async_client: TestClient, monkeypatch):
     """
     Test for updating rate limiting settings.
     """
     async def mock_update_rate_limiting_settings(db, guild_id, settings):
-        return settings.dict(exclude_unset=True)
+        # Create a full dictionary representing the new state
+        full_settings = {
+            "enabled": True,
+            "high_rate_threshold": 10,
+            "low_rate_threshold": 5,
+            "high_rate_slowmode": 10,
+            "low_rate_slowmode": 3,
+            "check_interval": 60,
+            "analysis_window": 120,
+            "notifications_enabled": True,
+            "notification_channel": "123",
+        }
+        update_dict = settings.dict(exclude_unset=True)
+        full_settings.update(update_dict)
+        return full_settings
     monkeypatch.setattr("dashboard.backend.app.crud.update_rate_limiting_settings", mock_update_rate_limiting_settings)
 
     update_data = {"enabled": False, "high_rate_threshold": 20}
-    response = await async_client.put("/api/guilds/123/config/rate-limiting", json=update_data)
+    response = async_client.put("/api/guilds/123/config/rate-limiting", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["enabled"] is False
     assert settings["high_rate_threshold"] == 20
 
 
-@pytest.mark.asyncio
-async def test_update_raid_defense_settings(async_client: AsyncClient, monkeypatch):
+def test_update_raid_defense_settings(async_client: TestClient, monkeypatch):
     """
     Test for updating raid defense settings.
     """
     async def mock_update_raid_defense_config(db, guild_id, settings):
-        return settings.dict(exclude_unset=True)
+        full_settings = {
+            "enabled": True,
+            "threshold": 10,
+            "timeframe": 60,
+            "alert_channel": "123",
+            "auto_action": "kick",
+        }
+        update_dict = settings.dict(exclude_unset=True)
+        full_settings.update(update_dict)
+        return full_settings
     monkeypatch.setattr("dashboard.backend.app.crud.update_raid_defense_config", mock_update_raid_defense_config)
 
     update_data = {"enabled": False, "threshold": 5}
-    response = await async_client.put("/api/guilds/123/config/raid-defense", json=update_data)
+    response = async_client.put("/api/guilds/123/config/raid-defense", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["enabled"] is False
     assert settings["threshold"] == 5
-@pytest.mark.asyncio
-async def test_create_blog_post(async_client: AsyncClient, monkeypatch):
+def test_create_blog_post(async_client: TestClient, monkeypatch):
     """
     Test for creating a blog post.
     """
     async def mock_get_current_blog_admin():
         return User(id="123", username="admin", discriminator="1234", avatar=None)
-    app.dependency_overrides["dashboard.backend.app.api.get_current_blog_admin"] = mock_get_current_blog_admin
+    app.dependency_overrides[get_current_blog_admin] = mock_get_current_blog_admin
 
     async def mock_create_blog_post(db, post, author_id):
         return {
@@ -487,15 +491,14 @@ async def test_create_blog_post(async_client: AsyncClient, monkeypatch):
     monkeypatch.setattr("dashboard.backend.app.crud.get_blog_post_by_slug", mock_get_blog_post_by_slug)
 
     post_data = {"title": "Test Post", "content": "Test content", "slug": "test-post", "published": True}
-    response = await async_client.post("/api/blog/posts", json=post_data)
+    response = async_client.post("/api/blog/posts", json=post_data)
     assert response.status_code == 200
     post = response.json()
     assert post["title"] == "Test Post"
-    del app.dependency_overrides["dashboard.backend.app.api.get_current_blog_admin"]
+    del app.dependency_overrides[get_current_blog_admin]
 
 
-@pytest.mark.asyncio
-async def test_get_blog_posts(async_client: AsyncClient, monkeypatch):
+def test_get_blog_posts(async_client: TestClient, monkeypatch):
     """
     Test for fetching blog posts.
     """
@@ -507,15 +510,14 @@ async def test_get_blog_posts(async_client: AsyncClient, monkeypatch):
         return 1
     monkeypatch.setattr("dashboard.backend.app.crud.count_blog_posts", mock_count_blog_posts)
 
-    response = await async_client.get("/api/blog/posts")
+    response = async_client.get("/api/blog/posts")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
     assert len(data["posts"]) == 1
 
 
-@pytest.mark.asyncio
-async def test_get_blog_post(async_client: AsyncClient, monkeypatch):
+def test_get_blog_post(async_client: TestClient, monkeypatch):
     """
     Test for fetching a single blog post.
     """
@@ -523,20 +525,19 @@ async def test_get_blog_post(async_client: AsyncClient, monkeypatch):
         return {"id": 1, "title": "Test Post", "content": "Test content", "slug": "test-post", "published": True, "author_id": 123, "created_at": "2023-01-01T00:00:00", "updated_at": "2023-01-01T00:00:00"}
     monkeypatch.setattr("dashboard.backend.app.crud.get_blog_post", mock_get_blog_post)
 
-    response = await async_client.get("/api/blog/posts/1")
+    response = async_client.get("/api/blog/posts/1")
     assert response.status_code == 200
     post = response.json()
     assert post["title"] == "Test Post"
 
 
-@pytest.mark.asyncio
-async def test_update_blog_post(async_client: AsyncClient, monkeypatch):
+def test_update_blog_post(async_client: TestClient, monkeypatch):
     """
     Test for updating a blog post.
     """
     async def mock_get_current_blog_admin():
         return User(id="123", username="admin", discriminator="1234", avatar=None)
-    app.dependency_overrides["dashboard.backend.app.api.get_current_blog_admin"] = mock_get_current_blog_admin
+    app.dependency_overrides[get_current_blog_admin] = mock_get_current_blog_admin
 
     async def mock_get_blog_post(db, post_id):
         return {"id": 1, "title": "Test Post", "content": "Test content", "slug": "test-post", "published": True, "author_id": 123, "created_at": "2023-01-01T00:00:00", "updated_at": "2023-01-01T00:00:00"}
@@ -547,27 +548,26 @@ async def test_update_blog_post(async_client: AsyncClient, monkeypatch):
     monkeypatch.setattr("dashboard.backend.app.crud.update_blog_post", mock_update_blog_post)
 
     update_data = {"title": "Updated Post"}
-    response = await async_client.put("/api/blog/posts/1", json=update_data)
+    response = async_client.put("/api/blog/posts/1", json=update_data)
     assert response.status_code == 200
     post = response.json()
     assert post["title"] == "Updated Post"
-    del app.dependency_overrides["dashboard.backend.app.api.get_current_blog_admin"]
+    del app.dependency_overrides[get_current_blog_admin]
 
 
-@pytest.mark.asyncio
-async def test_delete_blog_post(async_client: AsyncClient, monkeypatch):
+def test_delete_blog_post(async_client: TestClient, monkeypatch):
     """
     Test for deleting a blog post.
     """
     async def mock_get_current_blog_admin():
         return User(id="123", username="admin", discriminator="1234", avatar=None)
-    app.dependency_overrides["dashboard.backend.app.api.get_current_blog_admin"] = mock_get_current_blog_admin
+    app.dependency_overrides[get_current_blog_admin] = mock_get_current_blog_admin
 
     async def mock_delete_blog_post(db, post_id):
         return True
     monkeypatch.setattr("dashboard.backend.app.crud.delete_blog_post", mock_delete_blog_post)
 
-    response = await async_client.delete("/api/blog/posts/1")
+    response = async_client.delete("/api/blog/posts/1")
     assert response.status_code == 200
     assert response.json() == {"message": "Blog post deleted successfully"}
-    del app.dependency_overrides["dashboard.backend.app.api.get_current_blog_admin"]
+    del app.dependency_overrides[get_current_blog_admin]
