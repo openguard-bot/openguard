@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
 const badgeVariants = {
@@ -8,7 +8,7 @@ const badgeVariants = {
   outline: 'text-foreground border border-input bg-background hover:bg-accent hover:text-accent-foreground',
 };
 
-export const Badge = React.forwardRef(({ className, variant = 'default', ...props }, ref) => {
+export const Badge = forwardRef(({ className, variant = 'default', ...props }, ref) => {
   return (
     <div
       ref={ref}

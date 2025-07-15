@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
-export const Switch = React.forwardRef(({ className, checked, onCheckedChange, disabled, ...props }, ref) => {
+export const Switch = forwardRef(({ className, checked, onCheckedChange, disabled, ...props }, ref) => {
   return (
     <button
       type="button"
