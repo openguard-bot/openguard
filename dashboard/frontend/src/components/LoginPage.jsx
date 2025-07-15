@@ -10,7 +10,7 @@ import {
 import { FaDiscord } from 'react-icons/fa';
 
 const LoginPage = () => {
-  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+  const API_BASE_URL = import.meta.env.VITE_REACT_APP_API_URL || '';
 
   const handleLogin = () => {
     window.location.href = `${API_BASE_URL}/api/login`;
