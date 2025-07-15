@@ -9,7 +9,6 @@ import LoginPage from "./components/LoginPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import { Toaster } from "./components/ui/sonner";
-import "./App.css";
 
 const DashboardPage = lazy(() => import("./components/DashboardPage"));
 const GuildOverviewPage = lazy(() => import("./components/GuildOverviewPage"));
