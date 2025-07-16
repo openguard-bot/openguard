@@ -125,6 +125,14 @@ function App() {
               }
             />
             <Route
+              path="blog"
+              element={
+                <Suspense fallback={<div>Loading Blog Management...</div>}>
+                  <BlogManagement />
+                </Suspense>
+              }
+            />
+            <Route
               path="raw-db"
               element={
                 <Suspense fallback={<div>Loading Raw DB Viewer...</div>}>
