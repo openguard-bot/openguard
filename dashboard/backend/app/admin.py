@@ -11,30 +11,28 @@ from .api import (
     get_current_admin,
     is_bot_admin,
 )
-from database.cache import get_cache
+from database.cache import get_cache, get_redis
 
 router = APIRouter()
-
-# Redis client for caching
-redis_client = redis.from_url("redis://localhost")
 
 
 async def get_guild_details(guild_id: int):
     """
     Fetches guild details from cache or Discord API.
     """
-    cache_key = f"guild_details:{guild_id}"
-    cached_details = await redis_client.get(cache_key)
-    if cached_details:
-        return json.loads(cached_details)
+    redis_client = await get_redis()
+    if redis_client:
+        cache_key = f"guild_details:{guild_id}"
+        cached_details = await redis_client.get(cache_key)
+        if cached_details:
+            return json.loads(cached_details)
 
-    details = await _fetch_from_discord_api(f"/guilds/{guild_id}")
-    # The 'owner' field is not provided by this endpoint, so we need to fetch the full guild object
-    guild_object = await _fetch_from_discord_api(f"/guilds/{guild_id}?with_counts=true")
-    details["owner_id"] = guild_object.get("owner_id")
-    details["member_count"] = guild_object.get("approximate_member_count")
+    details = await _fetch_from_discord_api(f"/guilds/{guild_id}?with_counts=true")
 
-    await redis_client.set(cache_key, json.dumps(details), ex=300)  # 5-minute TTL
+    if redis_client:
+        await redis_client.set(
+            cache_key, json.dumps(details), ex=300
+        )  # 5-minute TTL
     return details
 
 
@@ -81,7 +79,9 @@ async def refresh_guild_cache(guild_id: int):
     """
     Manually refresh the cache for a specific guild.
     """
-    await redis_client.delete(f"guild_details:{guild_id}")
+    redis_client = await get_redis()
+    if redis_client:
+        await redis_client.delete(f"guild_details:{guild_id}")
     return None
 
 
