@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { ScrollArea } from "./ui/scroll-area";
-import { Home, Server } from "lucide-react";
+import { Home, Server, Database } from "lucide-react";
 
 const AdminSidebar = ({ isOpen, toggleSidebar }) => {
 
@@ -43,6 +43,20 @@ const AdminSidebar = ({ isOpen, toggleSidebar }) => {
               >
                 <Server className="h-5 w-5" />
                 <span className="truncate">Guilds</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/admin/raw-db"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-muted ${
+                    isActive ? "bg-muted" : ""
+                  }`
+                }
+                onClick={toggleSidebar}
+              >
+                <Database className="h-5 w-5" />
+                <span className="truncate">Raw DB</span>
               </NavLink>
             </li>
           </ul>

@@ -4,6 +4,7 @@ import axios from "axios";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { toast } from "sonner";
+import AdminGuildSettings from "./AdminGuildSettings";
 
 const AdminGuildDetailsPage = () => {
   const { guildId } = useParams();
@@ -67,6 +68,8 @@ const AdminGuildDetailsPage = () => {
           </p>
         </CardContent>
       </Card>
+
+      <AdminGuildSettings guildId={guildId} />
     </div>
   );
 };

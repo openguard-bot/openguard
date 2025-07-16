@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 from . import schemas
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import json
 from datetime import datetime
 import logging
@@ -1239,5 +1239,161 @@ async def update_raid_defense_config(
 
     await db.commit()
     return await get_raid_defense_config(db, guild_id)
+
+
+async def get_all_guild_settings(db: Session, guild_id: int) -> schemas.GuildConfig:
+    """Retrieve all settings for a guild."""
+    result = await db.execute(
+        text("SELECT key, value FROM guild_settings WHERE guild_id = :guild_id"),
+        {"guild_id": guild_id},
+    )
+    settings_data = {}
+    for key, value in result.fetchall():
+        try:
+            settings_data[key] = json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            settings_data[key] = value
+    return schemas.GuildConfig(**settings_data)
+
+
+async def update_all_guild_settings(
+    db: Session, guild_id: int, settings_data: schemas.GuildConfigUpdate
+) -> schemas.GuildConfig:
+    """Update all settings for a guild."""
+    for key, value in settings_data.model_dump(exclude_unset=True).items():
+        db_value = json.dumps(value)
+        await db.execute(
+            text(
+                """
+                INSERT INTO guild_settings (guild_id, key, value)
+                VALUES (:guild_id, :key, :value)
+                ON CONFLICT (guild_id, key)
+                DO UPDATE SET value = :value
+                """
+            ),
+            {"guild_id": guild_id, "key": key, "value": db_value},
+        )
+        if key == "prefix":
+            await redis_client.publish("prefix_updates", f"{guild_id}:{db_value}")
+    await db.commit()
+    return await get_all_guild_settings(db, guild_id)
+
+
+# Raw DB Access CRUD Functions
+
+
+async def get_table_names(db: Session) -> List[str]:
+    """Retrieve all table names in the public schema."""
+    result = await db.execute(
+        text("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'")
+    )
+    return [row[0] for row in result.fetchall()]
+
+
+async def get_table_data(
+    db: Session, table_name: str, guild_id: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    """Retrieve data from a specific table, optionally filtered by guild_id."""
+    # Sanitize table_name to prevent SQL injection
+    safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
+    if safe_table_name != table_name:
+        raise ValueError("Invalid table name")
+
+    # Get column names for the table from the database inspector
+    inspector = inspect(db.connection)
+    columns = [col["name"] for col in inspector.get_columns(table_name)]
+
+    query_str = f"SELECT * FROM {safe_table_name}"
+    params = {}
+    if guild_id and "guild_id" in columns:
+        query_str += " WHERE guild_id = :guild_id"
+        params["guild_id"] = guild_id
+
+    result = await db.execute(text(query_str), params)
+
+    data = []
+    for row in result.mappings().all():
+        row_data = {}
+        for key, value in row.items():
+            if isinstance(value, datetime):
+                row_data[key] = value.isoformat()
+            else:
+                row_data[key] = value
+        data.append(row_data)
+    return data
+
+
+async def get_primary_key_column(db: Session, table_name: str) -> Optional[str]:
+    """Get the primary key column name for a table."""
+    result = await db.execute(
+        text(
+            """
+            SELECT kcu.column_name
+            FROM information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+              ON tc.constraint_name = kcu.constraint_name
+              AND tc.table_schema = kcu.table_schema
+            WHERE tc.constraint_type = 'PRIMARY KEY'
+              AND tc.table_name = :table_name
+              AND tc.table_schema = 'public';
+            """
+        ),
+        {"table_name": table_name},
+    )
+    pk_column = result.scalar_one_or_none()
+    return pk_column
+
+
+async def update_table_row(
+    db: Session, table_name: str, pk_value: Any, row_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Update a row in a specific table."""
+    safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
+    if safe_table_name != table_name:
+        raise ValueError("Invalid table name")
+
+    pk_column = await get_primary_key_column(db, safe_table_name)
+    if not pk_column:
+        raise ValueError(f"No primary key found for table {safe_table_name}")
+
+    update_fields = []
+    params = {f"pk_value": pk_value}
+    for key, value in row_data.items():
+        # Do not allow updating the primary key
+        if key == pk_column:
+            continue
+
+        sanitized_key = "".join(c for c in key if c.isalnum() or c == "_")
+        if sanitized_key != key:
+            # skip potentially malicious keys
+            continue
+
+        update_fields.append(f"{sanitized_key} = :{key}")
+        params[key] = value
+
+    if not update_fields:
+        raise ValueError("No fields to update")
+
+    query = f"""
+        UPDATE {safe_table_name}
+        SET {', '.join(update_fields)}
+        WHERE {pk_column} = :pk_value
+        RETURNING *
+    """
+
+    result = await db.execute(text(query), params)
+    await db.commit()
+
+    updated_row = result.mappings().one()
+
+    # Convert datetime objects to ISO format strings
+    response_data = {}
+    for key, value in updated_row.items():
+        if isinstance(value, datetime):
+            response_data[key] = value.isoformat()
+        else:
+            response_data[key] = value
+
+    return response_data
 
 
