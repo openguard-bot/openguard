@@ -6,7 +6,7 @@ opencv-python>=4.11.0.86,<5
 Pillow>=9.2.0,<12
 protobuf>=3.20.2,<7
 python-dotenv>=1.1.0,<2
-litellm@git+https://github.com/Slipstreamm/litellm@68ebaf49c626e24d840e794b357633fb0bca1288#egg=litellm
+litellm@git+https://github.com/Slipstreamm/litellm@main
 asyncpg>=0.29.0,<1.0
 psycopg2-binary>=2.9.0,<3.0
 redis
