@@ -8,6 +8,11 @@ export default defineConfig({
   vite: {
     // @ts-ignore
     plugins: [tailwindcss({applyBaseStyles: false})],
+    resolve: {
+      alias: {
+        '@': new URL('./src', import.meta.url).pathname,
+      },
+    },
   },
   integrations: [react()]
 });
