@@ -799,7 +799,9 @@ async def get_blog_posts(
 
     result = await db.execute(text(query), params)
     rows = result.fetchall()
-    return [schemas.BlogPost(**dict(row)) for row in rows]
+    logger.info(f"Type of row: {type(rows[0]) if rows else 'No rows'}")
+    logger.info(f"Content of first row: {rows[0] if rows else 'No rows'}")
+    return [schemas.BlogPost(**row._asdict()) for row in rows]
 
 
 async def update_blog_post(
