@@ -22,9 +22,6 @@ from lists import config
 
 prefix_cache = TTLCache(maxsize=1000, ttl=3600)
 
-
-
-
 class DualStream:
     def __init__(self, original_stream, log_file):
         self.original_stream = original_stream
