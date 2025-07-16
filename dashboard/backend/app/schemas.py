@@ -463,3 +463,9 @@ class DiscordChannel(BaseModel):
     name: str
     type: int
     position: int
+
+
+class AdminMessage(BaseModel):
+    content: str
+    channel_id: Optional[str] = None
+    user_id: Optional[str] = None
