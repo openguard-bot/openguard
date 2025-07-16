@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Edit, Menu } from "lucide-react";
 import { useNavigate } from "react-router";
 
-const Navbar = ({ toggleSidebar }) => {
+const Navbar = ({ toggleSidebar, isAdminPage = false }) => {
   const { theme = "system", setTheme } = useTheme();
   const { user, logout } = useAuth();
   const { isAdmin } = useAdmin();
@@ -34,10 +34,12 @@ const Navbar = ({ toggleSidebar }) => {
         >
           <Menu className="h-6 w-6" />
         </Button>
-        <h1 className="text-xl font-semibold">Discord Dashboard</h1>
+        <h1 className="text-xl font-semibold">
+          {isAdminPage ? "Admin Panel" : "Discord Dashboard"}
+        </h1>
       </div>
       <div className="flex items-center gap-4">
-        {isAdmin && (
+        {isAdmin && !isAdminPage && (
           <Button
             variant="outline"
             size="sm"
