@@ -44,7 +44,7 @@ const AdminSidebar = () => (
   </aside>
 );
 
-const AdminLayout = ({ children }) => {
+const AdminLayout = () => {
   return (
     <div className="flex h-screen">
       <AdminSidebar />
