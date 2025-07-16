@@ -1,0 +1,1 @@
+Never do `npm run dev` or use a web browser to check the dev site for the astro site or dashboard frontend. Ask the user to do it for you.
