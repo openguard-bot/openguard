@@ -8,7 +8,7 @@ function LandingPage() {
       <h1 className="text-3xl font-bold">Welcome to OpenGuard</h1>
       <p className="text-muted-foreground">Your moderation dashboard.</p>
       <Button asChild>
-        <Link to="/login">Go to Dashboard</Link>
+        <Link to="/dashboard">Go to Dashboard</Link>
       </Button>
     </div>
   );

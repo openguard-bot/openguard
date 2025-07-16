@@ -1,41 +1,24 @@
-# Node modules
+# build output
+dist/
+# generated types
+.astro/
+
+# dependencies
 node_modules/
 
-# Build output
-dist/
-
-# Astro specific generated files
-.astro/
-# This directory is where Astro generates types and other build artifacts.
-
-# Local development and environment files
-.env
-.env.local
-.env.*.local
-# Environment variables should never be committed directly to source control.
-
-# Log files
+# logs
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
 
-# OS and editor specific files
-.DS_Store # macOS
-.vscode/ # VS Code settings (if you don't want to share them)
-.idea/ # IntelliJ/WebStorm IDE settings
-.history/ # Some VS Code extensions like "Local History" create this
 
-# Package manager lock files (optional, depending on preference)
-# You might want to ignore these if you're using a monorepo or
-# have specific deployment strategies where a fresh install is preferred,
-# but generally, it's good practice to commit them to ensure consistent installs.
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
+# environment variables
+.env
+.env.production
 
-# Local fonts (if you generate them locally and don't want to commit them)
-# fonts/
+# macOS-specific files
+.DS_Store
 
-# Other temporary files
-*.log
-*.tmp
+# jetbrains setting folder
+.idea/
