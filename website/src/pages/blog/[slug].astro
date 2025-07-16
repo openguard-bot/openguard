@@ -3,31 +3,13 @@ import Layout from '@/layouts/Layout.astro';
 import { Badge } from '@/components/ui/badge.tsx';
 import { format } from 'date-fns';
 
-export async function getStaticPaths() {
-    const response = await fetch('http://localhost:8000/api/blog/posts?published_only=true');
-    const data = await response.json();
-    const posts = data.posts;
+import BlogPost from '@/components/blog/BlogPost.tsx';
 
-    return posts.map((post) => ({
-        params: { slug: post.slug },
-        props: { post },
-    }));
-}
-
-const { post } = Astro.props;
+const { slug } = Astro.params;
 ---
 
 <Layout title={post.title}>
     <main class="container py-12">
-        <article class="prose dark:prose-invert max-w-none">
-            <h1 class="mb-2">{post.title}</h1>
-            <div class="mb-4 flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{format(new Date(post.created_at), 'MMMM d, yyyy')}</span>
-                {post.tags && post.tags.map((tag: string) => (
-                    <Badge variant="secondary">{tag}</Badge>
-                ))}
-            </div>
-            <div class="mt-8" set:html={post.content} />
-        </article>
+        <BlogPost slug={slug} client:load />
     </main>
 </Layout>
