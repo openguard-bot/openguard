@@ -1,56 +1,24 @@
-import React from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import {
-  Home,
-  Server,
-  Settings,
-  BarChart,
-  MessageSquare,
-} from "lucide-react";
-
-const AdminSidebar = () => (
-  <aside className="w-64 bg-gray-800 text-white p-4">
-    <h2 className="text-2xl font-bold mb-4">Admin Panel</h2>
-    <nav>
-      <ul>
-        <li>
-          <NavLink
-            to="/admin/dashboard"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-md ${
-                isActive ? "bg-gray-700" : "hover:bg-gray-700"
-              }`
-            }
-          >
-            <Home className="mr-2" />
-            Dashboard
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/admin/guilds"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-md ${
-                isActive ? "bg-gray-700" : "hover:bg-gray-700"
-              }`
-            }
-          >
-            <Server className="mr-2" />
-            Guilds
-          </NavLink>
-        </li>
-      </ul>
-    </nav>
-  </aside>
-);
+import React, { useState } from "react";
+import Navbar from "./Navbar";
+import AdminSidebar from "./AdminSidebar"; // We will create this component next
+import { Outlet } from "react-router-dom";
 
 const AdminLayout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
-    <div className="flex h-screen">
-      <AdminSidebar />
-      <main className="flex-1 p-6 bg-gray-100 overflow-y-auto">
-        <Outlet />
-      </main>
+    <div className="flex min-h-screen">
+      <AdminSidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      <div className="flex flex-1 flex-col">
+        <Navbar toggleSidebar={toggleSidebar} />
+        <main className="flex-1 p-4">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };
