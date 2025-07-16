@@ -44,16 +44,19 @@ async def get_guild_details(guild_id: int):
 async def get_all_guilds():
     """
     Get a list of all guilds the bot is in.
+    Tries to fetch from cache first, then falls back to the Discord API.
     """
-    bot_guild_ids = await get_cache("bot_guilds")
-    if not bot_guild_ids:
+    bot_guilds = await _fetch_from_discord_api("/users/@me/guilds")
+    if not bot_guilds:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Could not retrieve guild list from cache.",
+            detail="Could not retrieve guild list from Discord API.",
         )
 
+    guild_ids = [guild["id"] for guild in bot_guilds]
+
     guilds = await asyncio.gather(
-        *[get_guild_details(int(guild_id)) for guild_id in bot_guild_ids]
+        *[get_guild_details(int(guild_id)) for guild_id in guild_ids]
     )
     return guilds
 

@@ -228,7 +228,11 @@ def is_blog_admin(user: schemas.User) -> bool:
 
 def is_bot_admin(user: schemas.User) -> bool:
     """Check if the user is a bot admin."""
-    return user.id in config.Owners.__dict__.values()
+    # User ID from token is a string, owner IDs from config are integers.
+    try:
+        return int(user.id) in config.Owners.__dict__.values()
+    except (ValueError, TypeError):
+        return False
 
 
 async def get_current_blog_admin(
