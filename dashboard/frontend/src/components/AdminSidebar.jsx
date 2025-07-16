@@ -1,10 +1,9 @@
 import React from "react";
-import { NavLink, useParams } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { ScrollArea } from "./ui/scroll-area";
 import { Home, Server } from "lucide-react";
 
 const AdminSidebar = ({ isOpen, toggleSidebar }) => {
-  const { guildId } = useParams();
 
   return (
     <div
