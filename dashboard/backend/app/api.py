@@ -643,6 +643,15 @@ async def get_blog_post(post_id: int, db: Session = Depends(get_db)):
     return post
 
 
+@router.get("/blog/posts/slug/{slug}", response_model=schemas.BlogPost)
+async def get_blog_post_by_slug(slug: str, db: Session = Depends(get_db)):
+    """Get a specific blog post by slug."""
+    post = await crud.get_blog_post_by_slug(db, slug)
+    if not post:
+        raise HTTPException(status_code=404, detail="Blog post not found")
+    return post
+
+
 @router.post("/blog/posts", response_model=schemas.BlogPost)
 async def create_blog_post(
     post: schemas.BlogPostCreate,
