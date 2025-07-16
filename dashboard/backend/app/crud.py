@@ -1298,7 +1298,7 @@ async def get_table_data(
         raise ValueError("Invalid table name")
 
     # Get column names for the table from the database inspector
-    async with db.get_bind().connect() as conn:
+    async with db.connection() as conn:
         def get_columns_sync(sync_conn):
             inspector = inspect(sync_conn)
             return inspector.get_columns(table_name)
