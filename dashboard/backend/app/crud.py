@@ -1300,8 +1300,8 @@ async def get_table_data(
         raise ValueError("Invalid table name")
 
     # Get column names for the table from the database inspector
-    inspector = inspect(db.connection)
-    columns = [col["name"] for col in inspector.get_columns(table_name)]
+    inspector = inspect(db.get_bind())
+    columns = [col["name"] for col in await inspector.get_columns(table_name)]
 
     query_str = f"SELECT * FROM {safe_table_name}"
     params = {}
