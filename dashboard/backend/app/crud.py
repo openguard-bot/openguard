@@ -1298,13 +1298,12 @@ async def get_table_data(
         raise ValueError("Invalid table name")
 
     # Get column names for the table from the database inspector
-    async with await db.connection() as conn:
-        def get_columns_sync(sync_conn):
-            inspector = inspect(sync_conn)
-            return inspector.get_columns(table_name)
+    def get_columns_sync(sync_conn):
+        inspector = inspect(sync_conn)
+        return inspector.get_columns(table_name)
 
-        column_dicts = await conn.run_sync(get_columns_sync)
-        columns = [c['name'] for c in column_dicts]
+    column_dicts = await db.run_sync(get_columns_sync)
+    columns = [c["name"] for c in column_dicts]
 
     query_str = f"SELECT * FROM {safe_table_name}"
     params = {}
