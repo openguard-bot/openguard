@@ -1,48 +1,55 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useParams } from "react-router-dom";
+import { ScrollArea } from "./ui/scroll-area";
 import { Home, Server } from "lucide-react";
 
 const AdminSidebar = ({ isOpen, toggleSidebar }) => {
+  const { guildId } = useParams();
+
   return (
-    <aside
-      className={`bg-gray-800 text-white w-64 p-4 transition-transform transform ${
+    <div
+      className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-background p-4 transition-transform duration-300 ease-in-out md:relative md:z-auto md:translate-x-0 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
-      } md:translate-x-0 md:relative fixed h-full z-20`}
+      }`}
     >
-      <h2 className="text-2xl font-bold mb-4">Admin Panel</h2>
-      <nav>
-        <ul>
-          <li>
-            <NavLink
-              to="/admin/dashboard"
-              className={({ isActive }) =>
-                `flex items-center p-2 rounded-md ${
-                  isActive ? "bg-gray-700" : "hover:bg-gray-700"
-                }`
-              }
-              onClick={toggleSidebar}
-            >
-              <Home className="mr-2" />
-              Dashboard
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/admin/guilds"
-              className={({ isActive }) =>
-                `flex items-center p-2 rounded-md ${
-                  isActive ? "bg-gray-700" : "hover:bg-gray-700"
-                }`
-              }
-              onClick={toggleSidebar}
-            >
-              <Server className="mr-2" />
-              Guilds
-            </NavLink>
-          </li>
-        </ul>
-      </nav>
-    </aside>
+      <div className="flex items-center justify-between p-4">
+        <h2 className="text-xl font-semibold">Admin Panel</h2>
+      </div>
+      <ScrollArea className="flex-1">
+        <nav className="p-2">
+          <ul>
+            <li>
+              <NavLink
+                to="/admin/dashboard"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-muted ${
+                    isActive ? "bg-muted" : ""
+                  }`
+                }
+                onClick={toggleSidebar}
+              >
+                <Home className="h-5 w-5" />
+                <span className="truncate">Dashboard</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/admin/guilds"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-muted ${
+                    isActive ? "bg-muted" : ""
+                  }`
+                }
+                onClick={toggleSidebar}
+              >
+                <Server className="h-5 w-5" />
+                <span className="truncate">Guilds</span>
+              </NavLink>
+            </li>
+          </ul>
+        </nav>
+      </ScrollArea>
+    </div>
   );
 };
 
