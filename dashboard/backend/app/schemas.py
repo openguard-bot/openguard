@@ -428,6 +428,7 @@ class BlogPost(BaseModel):
     slug: str
     created_at: datetime
     updated_at: datetime
+    tags: Optional[List[str]] = []
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -6,7 +6,7 @@ interface Post {
     title: string;
     content: string;
     created_at: string;
-    tags: string[];
+    tags?: string[];
 }
 
 interface BlogPostProps {
@@ -21,12 +21,12 @@ const BlogPost: React.FC<BlogPostProps> = ({ slug }) => {
     useEffect(() => {
         const fetchPost = async () => {
             try {
-                const response = await fetch(`https://openguard.lol/api/blog/posts/${slug}`);
+                const response = await fetch(`https://openguard.lol/api/blog/posts/slug/${slug}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
-                setPost(data.post);
+                setPost(data);
             } catch (e: any) {
                 setError(e.message);
             } finally {
@@ -54,7 +54,7 @@ const BlogPost: React.FC<BlogPostProps> = ({ slug }) => {
             <h1 className="mb-2">{post.title}</h1>
             <div className="mb-4 flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{format(new Date(post.created_at), 'MMMM d, yyyy')}</span>
-                {post.tags && post.tags.map((tag: string) => (
+                {post.tags && post.tags.length > 0 && post.tags.map((tag: string) => (
                     <Badge variant="secondary" key={tag}>{tag}</Badge>
                 ))}
             </div>
