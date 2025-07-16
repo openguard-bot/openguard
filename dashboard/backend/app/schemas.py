@@ -6,9 +6,9 @@ from datetime import datetime
 class Guild(BaseModel):
     id: str
     name: str
-    icon: Optional[str]
-    owner: bool
-    permissions: int
+    icon: Optional[str] = None
+    owner: Optional[bool] = None
+    permissions: Optional[int] = None
 
 
 class User(BaseModel):
