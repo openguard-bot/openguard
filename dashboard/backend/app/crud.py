@@ -1299,7 +1299,7 @@ async def get_table_data(
 
     # Get column names for the table from the database inspector
     def get_columns_sync(sync_conn):
-        inspector = inspect(sync_conn)
+        inspector = inspect(sync_conn.bind)
         return inspector.get_columns(table_name)
 
     column_dicts = await db.run_sync(get_columns_sync)
