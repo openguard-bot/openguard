@@ -19,7 +19,6 @@ import {
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
-import { useParams } from "react-router-dom";
 
 const AdminRawDBPage = () => {
   const [tables, setTables] = useState([]);
