@@ -14,7 +14,7 @@ const AdminLayout = () => {
     <div className="flex min-h-screen">
       <AdminSidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       <div className="flex flex-1 flex-col">
-        <Navbar toggleSidebar={toggleSidebar} />
+        <Navbar toggleSidebar={toggleSidebar} isAdminPage={true} />
         <main className="flex-1 p-4">
           <Outlet />
         </main>
