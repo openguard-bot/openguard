@@ -23,6 +23,7 @@ app = FastAPI(lifespan=lifespan)
 # CORS configuration
 origins = [
     "http://localhost:3000",  # React frontend
+    "http://localhost:4321",  # Astro website
 ]
 
 app.add_middleware(

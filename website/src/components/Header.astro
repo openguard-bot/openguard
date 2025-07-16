@@ -1,31 +1,18 @@
-<header class="bg-indigo-600">
-    <nav class="container mx-auto flex items-center justify-between p-4">
-        <a href="/" class="text-2xl font-bold">OpenGuard</a>
-        <div class="hidden md:flex items-center space-x-4">
-            <a href="/blog" class="hover:text-gray-300">Blog</a>
-            <a href="https://discord.com/oauth2/authorize?client_id=1381359157109854268&permissions=1374926793926&integration_type=0&scope=bot+applications.commands" class="rounded bg-white px-4 py-2 text-indigo-600 hover:bg-gray-200">Add to Server</a>
-            <a href="/dashboard" class="rounded bg-gray-700 px-4 py-2 hover:bg-gray-600">Dashboard</a>
-        </div>
-        <div class="md:hidden">
-            <button id="menu-btn" class="text-white focus:outline-none">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
-                </svg>
-            </button>
-        </div>
+---
+import { Button } from '@/components/ui/button.tsx';
+import { ThemeToggle } from './ThemeToggle';
+---
+
+<header class="container flex items-center justify-between py-4">
+    <a href="/" class="text-2xl font-bold">
+        OpenGuard
+    </a>
+    <nav class="flex items-center gap-4">
+        <a href="/blog">Blog</a>
+        <a href="/about">About</a>
+        <a href="/dashboard/" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3">
+            Go to Dashboard
+        </a>
+        <ThemeToggle client:load />
     </nav>
-    <div id="mobile-menu" class="hidden md:hidden">
-        <a href="/blog" class="block p-4 hover:bg-indigo-700">Blog</a>
-        <a href="https://discord.com/oauth2/authorize?client_id=1381359157109854268&permissions=1374926793926&integration_type=0&scope=bot+applications.commands" class="block p-4 hover:bg-indigo-700">Add to Server</a>
-        <a href="/dashboard" class="block p-4 hover:bg-indigo-700">Dashboard</a>
-    </div>
 </header>
-
-<script>
-    const menuBtn = document.getElementById('menu-btn');
-    const mobileMenu = document.getElementById('mobile-menu');
-
-    menuBtn.addEventListener('click', () => {
-        mobileMenu.classList.toggle('hidden');
-    });
-</script>
