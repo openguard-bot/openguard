@@ -122,16 +122,15 @@ const AdminRawDBPage = () => {
               <TableBody>
                 {tableData.map((row, index) => (
                   <TableRow key={index}>
-                    {Object.entries(row).map(([key, value]) => {
-                      if (typeof value === "object" && value !== null) {
-                        console.log(`Value for key ${key} is an object:`, value);
-                      }
-                      return (
-                        <TableCell key={key}>
-                          {typeof value === "boolean" ? String(value) : value}
-                        </TableCell>
-                      );
-                    })}
+                    {Object.entries(row).map(([key, value]) => (
+                      <TableCell key={key}>
+                        {typeof value === "object" && value !== null
+                          ? JSON.stringify(value, null, 2)
+                          : typeof value === "boolean"
+                          ? String(value)
+                          : value}
+                      </TableCell>
+                    ))}
                     <TableCell>
                       <Dialog>
                         <DialogTrigger asChild>
@@ -155,7 +154,12 @@ const AdminRawDBPage = () => {
                                     <Input
                                       id={key}
                                       name={key}
-                                      value={value}
+                                      value={
+                                        typeof value === "object" &&
+                                        value !== null
+                                          ? JSON.stringify(value)
+                                          : value
+                                      }
                                       onChange={handleRowChange}
                                       disabled={key === pkColumn}
                                     />
