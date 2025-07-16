@@ -2,27 +2,12 @@
 import Layout from '@/layouts/Layout.astro';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 
-const response = await fetch('http://localhost:8000/api/blog/posts?published_only=true');
-const data = await response.json();
-const posts = data.posts;
+import BlogIndex from '@/components/blog/BlogIndex.tsx';
 ---
 
 <Layout title="Blog">
     <main class="container py-12">
         <h1 class="mb-8 text-4xl font-bold">Blog</h1>
-        <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
-                <a href={`/blog/${post.slug}`}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{post.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>{post.excerpt}</p>
-                        </CardContent>
-                    </Card>
-                </a>
-            ))}
-        </div>
+        <BlogIndex client:load />
     </main>
 </Layout>
