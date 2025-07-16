@@ -52,12 +52,12 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /srv/http/openguard
+            cd /home/discordbot/openguard
             git pull origin main
-            sudo /srv/http/openguard/scripts/build_website_prod.sh
+            sudo /home/discordbot/openguard/scripts/build_website_prod.sh
 
       - name: Mark Deployment as Successful
         if: success()
@@ -97,12 +97,12 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /srv/http/openguard
+            cd /home/discordbot/openguard
             git pull origin main
-            sudo /srv/http/openguard/scripts/deploy_frontend.sh
+            sudo /home/discordbot/openguard/scripts/deploy_frontend.sh
 
       - name: Mark Deployment as Successful
         if: success()
@@ -142,7 +142,7 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/discordbot/openguard
