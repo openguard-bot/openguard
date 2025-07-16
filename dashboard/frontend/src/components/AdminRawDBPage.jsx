@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "./ui/table";
 import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import {
   Dialog,
   DialogContent,
