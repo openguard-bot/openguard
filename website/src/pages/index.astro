@@ -1,5 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { Image } from 'astro:assets';
+import openguardHero from 'public/openguard-hero.png';
 ---
 
 <Layout title="OpenGuard">
@@ -26,7 +28,7 @@ import Layout from '../layouts/Layout.astro';
 				</div>
 			</div>
 			<div class="flex justify-center items-center">
-				<img src="/openguard-hero.png" alt="OpenGuard illustration" class="max-w-full h-auto rounded-xl shadow-lg" />
+				<Image src={openguardHero} alt="OpenGuard illustration" class="max-w-full h-auto rounded-xl shadow-lg" />
 			</div>
 		</section>
 
