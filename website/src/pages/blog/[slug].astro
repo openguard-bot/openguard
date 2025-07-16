@@ -1,38 +1,33 @@
 ---
+import Layout from '@/layouts/Layout.astro';
+import { Badge } from '@/components/ui/badge.tsx';
+import { format } from 'date-fns';
+
 export async function getStaticPaths() {
-  const postFiles = await import.meta.glob('../../content/posts/*.md');
-  const posts = await Promise.all(
-    Object.values(postFiles).map(async (file) => await file())
-  );
+    const response = await fetch('http://localhost:8000/api/blog/posts?published_only=true');
+    const data = await response.json();
+    const posts = data.posts;
 
-  return posts
-    .filter((post) => post.url)
-    .map((post) => {
-      const slug = post.url.split('/').pop()?.replace('.md', '');
-      if (!slug) return null;
-
-      return {
-        params: { slug },
+    return posts.map((post) => ({
+        params: { slug: post.slug },
         props: { post },
-      };
-    })
-    .filter(Boolean);
+    }));
 }
 
 const { post } = Astro.props;
-const { Content } = post;
 ---
-<Layout title={post.frontmatter.title}>
-	<Header />
-	<main class="container mx-auto py-16">
-		<article class="prose prose-invert mx-auto">
-			<a href="/blog" class="mb-8 block text-indigo-400 hover:underline">
-				&larr; Back to blog
-			</a>
-			<h1>{post.frontmatter.title}</h1>
-			<p class="text-gray-400">{new Date(post.frontmatter.date).toLocaleDateString()}</p>
-			<Content />
-		</article>
-	</main>
-	<Footer />
+
+<Layout title={post.title}>
+    <main class="container py-12">
+        <article class="prose dark:prose-invert max-w-none">
+            <h1 class="mb-2">{post.title}</h1>
+            <div class="mb-4 flex items-center gap-4 text-sm text-muted-foreground">
+                <span>{format(new Date(post.created_at), 'MMMM d, yyyy')}</span>
+                {post.tags && post.tags.map((tag: string) => (
+                    <Badge variant="secondary">{tag}</Badge>
+                ))}
+            </div>
+            <div class="mt-8" set:html={post.content} />
+        </article>
+    </main>
 </Layout>

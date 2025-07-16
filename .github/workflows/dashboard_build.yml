@@ -2,13 +2,7 @@ name: Dashboard Frontend Build
 
 on:
   push:
-    branches: [ "main", "dev" ]
-    paths:
-      - 'dashboard/frontend/**'
   pull_request:
-    branches: [ "main", "dev" ]
-    paths:
-      - 'dashboard/frontend/**'
 
 permissions:
   contents: read

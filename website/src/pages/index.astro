@@ -1,32 +1,76 @@
 ---
-import Layout from '../components/Layout.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import FeatureCard from '../components/FeatureCard.astro';
+import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="OpenGuard">
-	<Header />
 	<main>
-		<section class="bg-gradient-to-r from-indigo-700 to-purple-800 py-20 text-center">
-			<div class="container mx-auto">
-				<h1 class="text-5xl font-bold">Moderation Powered by AI</h1>
-				<p class="mt-4 text-xl">Keep your community safe with the OpenGuard bot.</p>
-				<div class="mt-8 space-x-4">
-					<a href="https://discord.com/oauth2/authorize?client_id=1381359157109854268&permissions=1374926793926&integration_type=0&scope=bot+applications.commands" class="rounded bg-white px-6 py-3 text-lg text-indigo-600 hover:bg-gray-200">Add to Server</a>
-					<a href="/dashboard" class="rounded bg-gray-700 px-6 py-3 text-lg hover:bg-gray-600">Go to Dashboard</a>
+		<section class="container grid grid-cols-1 items-center gap-12 py-24 md:grid-cols-2">
+			<div class="flex flex-col gap-4">
+				<h1 class="text-5xl font-bold">
+					The Ultimate Guardian for Your Discord Server
+				</h1>
+				<p class="text-muted-foreground">
+					OpenGuard is a powerful, open-source Discord bot designed to provide
+					top-tier security, moderation, and management for your community.
+				</p>
+				<div class="flex gap-4">
+					<a href="/dashboard/" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3">
+						Get Started
+					</a>
+					<a href="https://github.com/discordaimod/openguard" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3">
+						View on GitHub
+					</a>
 				</div>
+			</div>
+			<div>
+				{/* Placeholder for an image or illustration */}
+				<img src="https://placehold.co/600x400/e0e0e0/333333/png?text=OpenGuard+Logo" alt="OpenGuard Logo Illustration" class="rounded-lg w-full h-auto" />
 			</div>
 		</section>
 
-		<section class="container mx-auto py-16">
-			<h2 class="mb-12 text-center text-4xl font-bold">Features</h2>
-			<div class="grid grid-cols-1 gap-8 md:grid-cols-3">
-				<FeatureCard title="Smart Detection" description="Automatically flag spam, toxicity, and unwanted content." />
-				<FeatureCard title="Fast Response" description="Our system reacts instantly to keep conversations clean." />
-				<FeatureCard title="Easy Configuration" description="Manage settings directly from your dashboard." />
+		{/* Feature Section 1: AI Moderation */}
+		<section class="container grid grid-cols-1 items-center gap-12 py-24 md:grid-cols-2">
+			<div class="flex justify-center items-center">
+				<img src="https://placehold.co/600x400/e0e0e0/333333/png?text=AI+Moderation" alt="AI Moderation Illustration" class="rounded-lg w-full h-auto" />
+			</div>
+			<div class="flex flex-col gap-4">
+				<h2 class="text-4xl font-bold">Intelligent AI Moderation</h2>
+				<p class="text-muted-foreground">
+					Leverage cutting-edge AI to automatically detect and handle spam,
+					hate speech, and other undesirable content, keeping your community safe
+					24/7.
+				</p>
+			</div>
+		</section>
+
+		{/* Feature Section 2: Customizable Settings */}
+		<section class="container grid grid-cols-1 items-center gap-12 py-24 md:grid-cols-2">
+			<div class="flex flex-col gap-4">
+				<h2 class="text-4xl font-bold">Fully Customizable Settings</h2>
+				<p class="text-muted-foreground">
+					Tailor OpenGuard to your server's unique needs with an intuitive
+					dashboard, allowing you to configure moderation rules, AI behavior,
+					and more with ease.
+				</p>
+			</div>
+			<div class="flex justify-center items-center">
+				<img src="https://placehold.co/600x400/e0e0e0/333333/png?text=Customizable+Settings" alt="Customizable Settings Illustration" class="rounded-lg w-full h-auto" />
+			</div>
+		</section>
+
+		{/* Feature Section 3: Community & Support */}
+		<section class="container grid grid-cols-1 items-center gap-12 py-24 md:grid-cols-2">
+			<div class="flex justify-center items-center">
+				<img src="https://placehold.co/600x400/e0e0e0/333333/png?text=Community+%26+Support" alt="Community & Support Illustration" class="rounded-lg w-full h-auto" />
+			</div>
+			<div class="flex flex-col gap-4">
+				<h2 class="text-4xl font-bold">Open-Source & Community Driven</h2>
+				<p class="text-muted-foreground">
+					OpenGuard is built with transparency in mind. Join our growing
+					community, contribute to its development, and get support from
+					fellow server administrators.
+				</p>
 			</div>
 		</section>
 	</main>
-	<Footer />
 </Layout>
