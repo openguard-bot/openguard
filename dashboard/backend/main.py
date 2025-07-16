@@ -8,7 +8,7 @@ sys.path.insert(0, project_root)
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .app import api
+from .app import api, admin  # Import the admin router
 from database.connection import initialize_database
 
 
@@ -35,6 +35,7 @@ app.add_middleware(
 )
 
 app.include_router(api.router, prefix="/api")
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 
 
 @app.get("/")

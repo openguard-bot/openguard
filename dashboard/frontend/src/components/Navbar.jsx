@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useAuth } from "../hooks/useAuth";
+import { useAdmin } from "../hooks/useAdmin";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
@@ -19,28 +20,9 @@ import { useNavigate } from "react-router";
 const Navbar = ({ toggleSidebar }) => {
   const { theme = "system", setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const isDark = theme === "dark";
-  const [blogAdmins, setBlogAdmins] = useState([]);
-
-  useEffect(() => {
-    const fetchOwners = async () => {
-      try {
-        const response = await fetch("/api/owners");
-        if (response.ok) {
-          const data = await response.json();
-          setBlogAdmins(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch owners:", error);
-      }
-    };
-
-    fetchOwners();
-  }, []);
-
-  // Check if user is authorized to manage blog posts
-  const isBlogAdmin = user && blogAdmins.includes(parseInt(user.id));
 
   return (
     <nav className="flex items-center justify-between border-b px-4 py-2">
@@ -56,15 +38,15 @@ const Navbar = ({ toggleSidebar }) => {
         <h1 className="text-xl font-semibold">Discord Dashboard</h1>
       </div>
       <div className="flex items-center gap-4">
-        {isBlogAdmin && (
+        {isAdmin && (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate("/dashboard/blog")}
+            onClick={() => navigate("/admin/dashboard")}
             className="flex items-center gap-2"
           >
             <Edit className="h-4 w-4" />
-            Manage Blog
+            Admin Panel
           </Button>
         )}
         <div className="flex items-center gap-2">

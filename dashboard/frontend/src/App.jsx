@@ -7,7 +7,9 @@ import {
 } from "react-router-dom";
 import LoginPage from "./components/LoginPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 import Layout from "./components/Layout";
+import AdminLayout from "./components/AdminLayout";
 import { Toaster } from "./components/ui/sonner";
 
 const DashboardPage = lazy(() => import("./components/DashboardPage"));
@@ -15,6 +17,11 @@ const GuildOverviewPage = lazy(() => import("./components/GuildOverviewPage"));
 const GuildConfigPage = lazy(() => import("./components/GuildConfigPage"));
 const AnalyticsDashboard = lazy(() => import("./components/AnalyticsDashboard"));
 const BlogManagement = lazy(() => import("./components/BlogManagement"));
+const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
+const AdminGuildsPage = lazy(() => import("./components/AdminGuildsPage"));
+const AdminGuildDetailsPage = lazy(() =>
+  import("./components/AdminGuildDetailsPage")
+);
 
 function App() {
   return (
@@ -84,6 +91,39 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
+            <Route
+              path="dashboard"
+              element={
+                <Suspense fallback={<div>Loading Admin Dashboard...</div>}>
+                  <AdminDashboard />
+                </Suspense>
+              }
+            />
+            <Route
+              path="guilds"
+              element={
+                <Suspense fallback={<div>Loading Admin Guilds...</div>}>
+                  <AdminGuildsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="guilds/:guildId"
+              element={
+                <Suspense fallback={<div>Loading Admin Guild Details...</div>}>
+                  <AdminGuildDetailsPage />
+                </Suspense>
+              }
+            />
+          </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
         <Toaster />

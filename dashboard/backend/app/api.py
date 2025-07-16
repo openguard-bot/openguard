@@ -85,19 +85,25 @@ async def _fetch_discord_guilds_from_api(access_token: str):
 
 
 @handle_rate_limit
-async def _fetch_from_discord_api(endpoint: str):
+async def _fetch_from_discord_api(
+    endpoint: str, method: str = "GET", json: Optional[dict] = None
+):
     headers = {"Authorization": f"Bot {os.getenv('DISCORD_TOKEN')}"}
     async with aiohttp.ClientSession() as session:
-        async with session.get(f"{DISCORD_API_URL}{endpoint}", headers=headers) as resp:
-            if resp.status != 200:
+        async with session.request(
+            method, f"{DISCORD_API_URL}{endpoint}", headers=headers, json=json
+        ) as resp:
+            if resp.status not in [200, 204]:
                 logger.error(
-                    f"Discord API error on {endpoint}: {resp.status} {await resp.text()}"
+                    f"Discord API error on {method} {endpoint}: {resp.status} {await resp.text()}"
                 )
                 raise HTTPException(
                     status_code=resp.status,
-                    detail=f"Failed to fetch {endpoint} from Discord",
+                    detail=f"Failed to {method} {endpoint} from Discord",
                     headers=resp.headers,
                 )
+            if resp.status == 204:
+                return None
             return await resp.json()
 
 
@@ -220,6 +226,11 @@ def is_blog_admin(user: schemas.User) -> bool:
     return user.id in authorized_user_ids
 
 
+def is_bot_admin(user: schemas.User) -> bool:
+    """Check if the user is a bot admin."""
+    return user.id in config.Owners.__dict__.values()
+
+
 async def get_current_blog_admin(
     current_user: schemas.User = Depends(get_current_user),
 ) -> schemas.User:
@@ -228,6 +239,18 @@ async def get_current_blog_admin(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to manage blog posts",
+        )
+    return current_user
+
+
+async def get_current_admin(
+    current_user: schemas.User = Depends(get_current_user),
+) -> schemas.User:
+    """Dependency to ensure the user is a bot admin."""
+    if not is_bot_admin(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access this resource.",
         )
     return current_user
 
