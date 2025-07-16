@@ -423,6 +423,7 @@ async def on_ready():
     )
     await update_bot_guilds_cache()
     await update_launch_time_cache()
+    await update_all_guild_member_caches()
     bot.loop.create_task(prefix_update_listener())
 
 
@@ -444,6 +445,7 @@ async def on_guild_join(guild):
     """Event handler for when the bot joins a guild."""
     print(f"Joined guild: {guild.name} ({guild.id})")
     await update_bot_guilds_cache()
+    await update_guild_member_cache(guild)
 
 
 @bot.event
@@ -451,6 +453,59 @@ async def on_guild_remove(guild):
     """Event handler for when the bot is removed from a guild."""
     print(f"Removed from guild: {guild.name} ({guild.id})")
     await update_bot_guilds_cache()
+    redis = await get_redis_client()
+    if redis:
+        await redis.delete(f"guild:{guild.id}:members")
+        print(f"Removed member cache for guild {guild.id}")
+
+
+@bot.event
+async def on_member_join(member):
+    """Event handler for when a member joins a guild."""
+    redis = await get_redis_client()
+    if redis:
+        await redis.sadd(f"guild:{member.guild.id}:members", member.id)
+        print(f"Added member {member.id} to cache for guild {member.guild.id}")
+
+
+@bot.event
+async def on_member_remove(member):
+    """Event handler for when a member leaves a guild."""
+    redis = await get_redis_client()
+    if redis:
+        await redis.srem(f"guild:{member.guild.id}:members", member.id)
+        print(f"Removed member {member.id} from cache for guild {member.guild.id}")
+
+
+async def update_guild_member_cache(guild):
+    """Caches the member IDs for a specific guild."""
+    redis = await get_redis_client()
+    if not redis:
+        return
+
+    key = f"guild:{guild.id}:members"
+    try:
+        # Fetch all members and store their IDs
+        member_ids = [str(member.id) for member in guild.members]
+        # Use a pipeline to clear and re-add members efficiently
+        pipe = redis.pipeline()
+        pipe.delete(key)
+        if member_ids:
+            pipe.sadd(key, *member_ids)
+        await pipe.execute()
+        print(f"Updated member cache for guild {guild.name} ({guild.id}) with {len(member_ids)} members.")
+    except discord.Forbidden:
+        print(f"Missing permissions to fetch members for guild {guild.name} ({guild.id}).")
+    except Exception as e:
+        print(f"Error caching members for guild {guild.name} ({guild.id}): {e}")
+
+
+async def update_all_guild_member_caches():
+    """Iterates through all guilds and caches their members."""
+    print("Starting to cache all guild members...")
+    for guild in bot.guilds:
+        await update_guild_member_cache(guild)
+    print("Finished caching all guild members.")
 
 
 @bot.event

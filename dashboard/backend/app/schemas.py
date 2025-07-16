@@ -9,6 +9,8 @@ class Guild(BaseModel):
     icon: Optional[str] = None
     owner: Optional[bool] = None
     permissions: Optional[int] = None
+    member_count: Optional[int] = None
+    owner_id: Optional[str] = None
 
 
 class User(BaseModel):
@@ -469,3 +471,7 @@ class AdminMessage(BaseModel):
     content: str
     channel_id: Optional[str] = None
     user_id: Optional[str] = None
+
+
+class RawTableRowUpdate(BaseModel):
+    row_data: Dict[str, Any]

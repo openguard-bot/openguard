@@ -22,6 +22,7 @@ const AdminGuildsPage = lazy(() => import("./components/AdminGuildsPage"));
 const AdminGuildDetailsPage = lazy(() =>
   import("./components/AdminGuildDetailsPage")
 );
+const AdminRawDBPage = lazy(() => import("./components/AdminRawDBPage"));
 
 function App() {
   return (
@@ -120,6 +121,14 @@ function App() {
               element={
                 <Suspense fallback={<div>Loading Admin Guild Details...</div>}>
                   <AdminGuildDetailsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="raw-db"
+              element={
+                <Suspense fallback={<div>Loading Raw DB Viewer...</div>}>
+                  <AdminRawDBPage />
                 </Suspense>
               }
             />

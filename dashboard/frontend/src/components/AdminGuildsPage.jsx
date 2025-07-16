@@ -43,6 +43,7 @@ const AdminGuildsPage = () => {
             <TableHead>Icon</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>ID</TableHead>
+            <TableHead>Owner ID</TableHead>
             <TableHead>Members</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -61,6 +62,7 @@ const AdminGuildsPage = () => {
               </TableCell>
               <TableCell>{guild.name}</TableCell>
               <TableCell>{guild.id}</TableCell>
+              <TableCell>{guild.owner_id}</TableCell>
               <TableCell>{guild.member_count}</TableCell>
               <TableCell>
                 <Link to={`/admin/guilds/${guild.id}`}>
