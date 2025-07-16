@@ -22,54 +22,41 @@ import Layout from '../layouts/Layout.astro';
 					</a>
 				</div>
 			</div>
-			<div>
-				{/* Placeholder for an image or illustration */}
-				<img src="https://placehold.co/600x400/e0e0e0/333333/png?text=OpenGuard+Logo" alt="OpenGuard Logo Illustration" class="rounded-lg w-full h-auto" />
-			</div>
 		</section>
 
-		{/* Feature Section 1: AI Moderation */}
-		<section class="container grid grid-cols-1 items-center gap-12 py-24 md:grid-cols-2">
-			<div class="flex justify-center items-center">
-				<img src="https://placehold.co/600x400/e0e0e0/333333/png?text=AI+Moderation" alt="AI Moderation Illustration" class="rounded-lg w-full h-auto" />
-			</div>
-			<div class="flex flex-col gap-4">
-				<h2 class="text-4xl font-bold">Intelligent AI Moderation</h2>
-				<p class="text-muted-foreground">
-					Leverage cutting-edge AI to automatically detect and handle spam,
-					hate speech, and other undesirable content, keeping your community safe
-					24/7.
-				</p>
-			</div>
-		</section>
-
-		{/* Feature Section 2: Customizable Settings */}
-		<section class="container grid grid-cols-1 items-center gap-12 py-24 md:grid-cols-2">
-			<div class="flex flex-col gap-4">
-				<h2 class="text-4xl font-bold">Fully Customizable Settings</h2>
-				<p class="text-muted-foreground">
-					Tailor OpenGuard to your server's unique needs with an intuitive
-					dashboard, allowing you to configure moderation rules, AI behavior,
-					and more with ease.
-				</p>
-			</div>
-			<div class="flex justify-center items-center">
-				<img src="https://placehold.co/600x400/e0e0e0/333333/png?text=Customizable+Settings" alt="Customizable Settings Illustration" class="rounded-lg w-full h-auto" />
-			</div>
-		</section>
-
-		{/* Feature Section 3: Community & Support */}
-		<section class="container grid grid-cols-1 items-center gap-12 py-24 md:grid-cols-2">
-			<div class="flex justify-center items-center">
-				<img src="https://placehold.co/600x400/e0e0e0/333333/png?text=Community+%26+Support" alt="Community & Support Illustration" class="rounded-lg w-full h-auto" />
-			</div>
-			<div class="flex flex-col gap-4">
-				<h2 class="text-4xl font-bold">Open-Source & Community Driven</h2>
-				<p class="text-muted-foreground">
-					OpenGuard is built with transparency in mind. Join our growing
-					community, contribute to its development, and get support from
-					fellow server administrators.
-				</p>
+		{/* Feature Section: AI Moderation */}
+		<section class="container py-24">
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+				<div class="flex flex-col gap-4 items-center bg-background rounded-xl shadow p-8">
+					<h2 class="text-2xl font-bold text-center">
+						Intelligent AI Moderation
+					</h2>
+					<p class="text-muted-foreground text-center">
+						Leverage cutting-edge AI to automatically detect and handle spam,
+						hate speech, and other undesirable content, keeping your community safe
+						24/7.
+					</p>
+				</div>
+				<div class="flex flex-col gap-4 items-center bg-background rounded-xl shadow p-8">
+					<h2 class="text-2xl font-bold text-center">
+						Fully Customizable Settings
+					</h2>
+					<p class="text-muted-foreground text-center">
+						Tailor OpenGuard to your server's unique needs with an intuitive
+						dashboard, allowing you to configure moderation rules, AI behavior,
+						and more with ease.
+					</p>
+				</div>
+				<div class="flex flex-col gap-4 items-center bg-background rounded-xl shadow p-8">
+					<h2 class="text-2xl font-bold text-center">
+						Open-Source & Community Driven
+					</h2>
+					<p class="text-muted-foreground text-center">
+						OpenGuard is built with transparency in mind. Join our growing
+						community, contribute to its development, and get support from
+						fellow server administrators.
+					</p>
+				</div>
 			</div>
 		</section>
 	</main>
