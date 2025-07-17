@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenGuard Astro Website
+After=network.target
+
+[Service]
+User=http
+Group=http
+WorkingDirectory=/srv/http/website
+ExecStart=/usr/bin/node /srv/http/website/server/entry.mjs
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -29,8 +29,8 @@ class Ping(commands.Cog):
     async def _sample_pg(self, samples: int = 3) -> float:
         connection = await get_connection()
         if not connection:
-            return float('inf')
-        
+            return float("inf")
+
         latencies = []
         async with connection as conn:
             for _ in range(samples):
@@ -41,8 +41,8 @@ class Ping(commands.Cog):
 
     async def _sample_redis(self, samples: int = 3) -> float:
         if not self.redis:
-            return float('inf')
-            
+            return float("inf")
+
         latencies = []
         for _ in range(samples):
             start = time.perf_counter()
@@ -68,14 +68,14 @@ class Ping(commands.Cog):
 
         # 3) Postgres average over a few SELECT 1 calls
         pg_avg = await self._sample_pg()
-        if pg_avg == float('inf'):
+        if pg_avg == float("inf"):
             pg_line = "Postgres: Unreachable"
         else:
             pg_line = f"Postgres latency (avg): {pg_avg:.2f}ms"
 
         # 4) Redis average over a few PINGs
         redis_avg = await self._sample_redis()
-        if redis_avg == float('inf'):
+        if redis_avg == float("inf"):
             redis_line = "Redis: Unreachable"
         else:
             redis_line = f"Redis latency (avg): {redis_avg:.2f}ms"

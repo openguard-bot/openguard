@@ -761,7 +761,7 @@ async def create_blog_post(
     row = result.fetchone()
     logger.info(f"Type of row in create_blog_post: {type(row)}")
     logger.info(f"Content of row in create_blog_post: {row}")
-    if hasattr(row, '_asdict'):
+    if hasattr(row, "_asdict"):
         return schemas.BlogPost(**row._asdict())
     else:
         return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
@@ -777,7 +777,7 @@ async def get_blog_post(db: Session, post_id: int) -> Optional[schemas.BlogPost]
         logger.info(f"Type of row in get_blog_post: {type(row)}")
         logger.info(f"Content of row in get_blog_post: {row}")
         # Attempt to convert to dictionary using _asdict() if available, otherwise iterate
-        if hasattr(row, '_asdict'):
+        if hasattr(row, "_asdict"):
             return schemas.BlogPost(**row._asdict())
         else:
             # Fallback for Row objects that might not have _asdict() but are iterable
@@ -792,7 +792,7 @@ async def get_blog_post_by_slug(db: Session, slug: str) -> Optional[schemas.Blog
     )
     row = result.fetchone()
     if row:
-        if hasattr(row, '_asdict'):
+        if hasattr(row, "_asdict"):
             return schemas.BlogPost(**row._asdict())
         else:
             return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
@@ -856,7 +856,7 @@ async def update_blog_post(
     await db.commit()
     row = result.fetchone()
     if row:
-        if hasattr(row, '_asdict'):
+        if hasattr(row, "_asdict"):
             return schemas.BlogPost(**row._asdict())
         else:
             return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
@@ -1131,9 +1131,7 @@ async def update_rate_limiting_settings(
     return await get_rate_limiting_settings(db, guild_id)
 
 
-async def get_security_settings(
-    db: Session, guild_id: int
-) -> schemas.SecuritySettings:
+async def get_security_settings(db: Session, guild_id: int) -> schemas.SecuritySettings:
     """Get security settings for a guild."""
     bot_detection = await get_bot_detection_config(db, guild_id)
     return schemas.SecuritySettings(bot_detection=bot_detection)
@@ -1144,9 +1142,7 @@ async def update_security_settings(
 ) -> schemas.SecuritySettings:
     """Update security settings for a guild."""
     if settings.bot_detection:
-        await update_bot_detection_config(
-            db, guild_id, settings.bot_detection
-        )
+        await update_bot_detection_config(db, guild_id, settings.bot_detection)
     return await get_security_settings(db, guild_id)
 
 
@@ -1170,9 +1166,7 @@ async def update_ai_settings(
     return await get_ai_settings(db, guild_id)
 
 
-async def get_channels_settings(
-    db: Session, guild_id: int
-) -> schemas.ChannelsSettings:
+async def get_channels_settings(db: Session, guild_id: int) -> schemas.ChannelsSettings:
     """Get channels settings for a guild."""
     exclusions = await get_channel_exclusions(db, guild_id)
     rules = await get_channel_rules(db, guild_id)
@@ -1415,5 +1409,3 @@ async def update_table_row(
             response_data[key] = value
 
     return response_data
-
-
