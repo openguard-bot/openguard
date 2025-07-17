@@ -1,12 +1,11 @@
-// jest-dom adds custom jest matchers for asserting on DOM nodes.
-// allows you to do things like:
-// expect(element).toHaveTextContent(/react/i)
-// learn more: https://github.com/testing-library/jest-dom
-import '@testing-library/jest-dom';
-// src/setupTests.js
+import '@testing-library/jest-dom/vitest'; // for Vitest, not just jest-dom!
 import { vi } from 'vitest';
 
-vi.mock("./components/ui/form", () => ({
-  ...vi.importActual("./components/ui/form"),
-  FormDescription: ({ children }) => <div>{children}</div>,
-}));
+vi.mock("./components/ui/form", async () => {
+  const actual = await vi.importActual("./components/ui/form");
+  return {
+    ...actual,
+    Form: ({ children }) => <div data-testid="form-mock">{children}</div>,
+    FormDescription: ({ children }) => <div>{children}</div>,
+  };
+});
