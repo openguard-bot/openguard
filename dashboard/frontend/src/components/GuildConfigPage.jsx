@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import {
@@ -22,6 +22,11 @@ import ChannelManagement from "./ChannelManagement";
 const GuildConfigPage = () => {
   const { guildId } = useParams();
   const [activeTab, setActiveTab] = useState("general");
+
+  useEffect(() => {
+    console.log("GuildConfigPage - guildId:", guildId);
+    console.log("GuildConfigPage - activeTab:", activeTab);
+  }, [guildId, activeTab]);
 
   return (
     <div className="space-y-6">
