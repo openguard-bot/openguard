@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
     uvicorn_error_logger.setLevel(logging.WARNING)
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 
 # CORS configuration
@@ -52,5 +53,3 @@ app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 @app.get("/")
 async def root():
     return {"message": "Welcome to the backend!"}
-
-
