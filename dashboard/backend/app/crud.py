@@ -792,7 +792,10 @@ async def get_blog_post_by_slug(db: Session, slug: str) -> Optional[schemas.Blog
     )
     row = result.fetchone()
     if row:
-        return schemas.BlogPost(**dict(row))
+        if hasattr(row, '_asdict'):
+            return schemas.BlogPost(**row._asdict())
+        else:
+            return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
     return None
 
 
@@ -853,7 +856,10 @@ async def update_blog_post(
     await db.commit()
     row = result.fetchone()
     if row:
-        return schemas.BlogPost(**dict(row))
+        if hasattr(row, '_asdict'):
+            return schemas.BlogPost(**row._asdict())
+        else:
+            return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
     return None
 
 
