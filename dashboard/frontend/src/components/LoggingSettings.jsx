@@ -13,8 +13,9 @@ import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
 import { FileText, Save, RefreshCw, AlertTriangle } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { FormDescription } from "./ui/form";
+import { Form, FormDescription } from "./ui/form";
 
 const ALL_EVENT_KEYS = [
   "member_join",
@@ -69,6 +70,7 @@ const ALL_EVENT_KEYS = [
 ];
 
 const LoggingSettings = ({ guildId }) => {
+  const form = useForm();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -158,53 +160,57 @@ const LoggingSettings = ({ guildId }) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="webhook_url">Logging Webhook URL</Label>
-          <Input
-            id="webhook_url"
-            value={config.webhook_url || ""}
-            onChange={(e) => handleInputChange("webhook_url", e.target.value)}
-            placeholder="https://discord.com/api/webhooks/..."
-            type="url"
-          />
-          <FormDescription>
-            The webhook where all enabled log events will be sent.
-          </FormDescription>
-        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="webhook_url">Logging Webhook URL</Label>
+              <Input
+                id="webhook_url"
+                value={config.webhook_url || ""}
+                onChange={(e) => handleInputChange("webhook_url", e.target.value)}
+                placeholder="https://discord.com/api/webhooks/..."
+                type="url"
+              />
+              <FormDescription>
+                The webhook where all enabled log events will be sent.
+              </FormDescription>
+            </div>
 
-        <Separator />
+            <Separator />
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Event Toggles</h3>
-          <FormDescription>
-            Select which events you want to log.
-          </FormDescription>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {ALL_EVENT_KEYS.map((key) => (
-              <div key={key} className="flex items-center space-x-2">
-                <Switch
-                  id={key}
-                  checked={config.enabled_events?.[key] ?? false}
-                  onCheckedChange={(checked) => handleEventToggle(key, checked)}
-                />
-                <Label htmlFor={key} className="text-sm">
-                  {formatEventKey(key)}
-                </Label>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Event Toggles</h3>
+              <FormDescription>
+                Select which events you want to log.
+              </FormDescription>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {ALL_EVENT_KEYS.map((key) => (
+                  <div key={key} className="flex items-center space-x-2">
+                    <Switch
+                      id={key}
+                      checked={config.enabled_events?.[key] ?? false}
+                      onCheckedChange={(checked) => handleEventToggle(key, checked)}
+                    />
+                    <Label htmlFor={key} className="text-sm">
+                      {formatEventKey(key)}
+                    </Label>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={fetchConfig} disabled={loading}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Reset
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={fetchConfig} disabled={loading}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reset
+              </Button>
+              <Button type="submit" disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

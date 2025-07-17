@@ -320,8 +320,9 @@ async def callback(code: str, db: Session = Depends(get_db)):
     }
     jwt_token = create_access_token(data=jwt_data)
 
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
     response = RedirectResponse(
-        url="/dashboard/"
+        url=f"{frontend_url}/dashboard/"
     )  # Redirect to frontend dashboard with trailing slash
     response.set_cookie(
         key="access_token",
