@@ -586,9 +586,7 @@ async def get_system_health(request: Request):
 
     launch_time_timestamp = await get_cache("bot_launch_time")
     uptime_seconds = (
-        int(time.time() - float(launch_time_timestamp))
-        if launch_time_timestamp
-        else 0
+        int(time.time() - float(launch_time_timestamp)) if launch_time_timestamp else 0
     )
 
     return schemas.SystemHealth(
@@ -714,8 +712,6 @@ async def delete_blog_post(
     return {"message": "Blog post deleted successfully"}
 
 
-
-
 @router.get("/guilds/{guild_id}/users", response_model=List[schemas.GuildUser])
 async def get_guild_users(
     guild_id: int,
@@ -821,12 +817,6 @@ async def create_moderation_action(
 
 
 # Enhanced Configuration Endpoints
-
-
-
-
-
-
 
 
 @router.get(
@@ -1017,9 +1007,7 @@ async def get_general_config(
         return await crud.get_general_settings(db=db, guild_id=guild_id)
 
 
-@router.put(
-    "/guilds/{guild_id}/config/general", response_model=schemas.GeneralSettings
-)
+@router.put("/guilds/{guild_id}/config/general", response_model=schemas.GeneralSettings)
 async def update_general_settings(
     guild_id: int,
     settings_data: schemas.GeneralSettingsUpdate,
@@ -1081,9 +1069,7 @@ async def get_logging_config(
         return await crud.get_logging_settings(db=db, guild_id=guild_id)
 
 
-@router.put(
-    "/guilds/{guild_id}/config/logging", response_model=schemas.LoggingSettings
-)
+@router.put("/guilds/{guild_id}/config/logging", response_model=schemas.LoggingSettings)
 async def update_logging_settings(
     guild_id: int,
     settings_data: schemas.LoggingSettingsUpdate,

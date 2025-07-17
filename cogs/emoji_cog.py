@@ -13,11 +13,13 @@ class EmojiCog(commands.Cog):
         self._load_emojis_from_config()
 
     def _load_emojis_from_config(self):
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'configs', 'config.yaml')
-        with open(config_path, 'r') as file:
+        config_path = os.path.join(
+            os.path.dirname(__file__), "..", "configs", "config.yaml"
+        )
+        with open(config_path, "r") as file:
             config_data = yaml.safe_load(file)
-            if 'CustomEmoji' in config_data:
-                self.custom_emojis = config_data['CustomEmoji']
+            if "CustomEmoji" in config_data:
+                self.custom_emojis = config_data["CustomEmoji"]
 
     @commands.command(name="emojis")
     @commands.cooldown(1, 10, commands.BucketType.user)
@@ -33,7 +35,8 @@ class EmojiCog(commands.Cog):
             emoji_id = None
             if isinstance(emoji_str_or_id, str):
                 import re
-                match = re.search(r':(\d+)>', emoji_str_or_id)
+
+                match = re.search(r":(\d+)>", emoji_str_or_id)
                 if match:
                     emoji_id = int(match.group(1))
             elif isinstance(emoji_str_or_id, int):

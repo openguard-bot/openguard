@@ -10,6 +10,7 @@ from watchdog.observers import Observer
 
 logger = logging.getLogger(__name__)
 
+
 class Config:
     def __init__(self, config_path: Path):
         self.config_path = config_path
@@ -35,7 +36,7 @@ class Config:
                 setattr(self, key, SimpleNamespace(**value))
             else:
                 setattr(self, key, value)
-        
+
         if "Owners" in self._data:
             self.OwnersTuple = tuple(self.Owners.__dict__.values())
 
@@ -50,8 +51,10 @@ class Config:
                 return value
         raise AttributeError(f"'Config' object has no attribute '{name}'")
 
+
 class ConfigChangeHandler(FileSystemEventHandler):
     """A robust handler for config file changes that works with various editors."""
+
     def __init__(self, config: Config):
         self.config = config
         self._timer: threading.Timer | None = None
@@ -59,18 +62,20 @@ class ConfigChangeHandler(FileSystemEventHandler):
 
     def dispatch(self, event):
         # We only care about events for the config file path.
-        if event.src_path == str(self.config.config_path) or \
-           getattr(event, 'dest_path', None) == str(self.config.config_path):
+        if event.src_path == str(self.config.config_path) or getattr(
+            event, "dest_path", None
+        ) == str(self.config.config_path):
             if event.is_directory:
                 return
 
             with self._lock:
                 if self._timer is not None:
                     self._timer.cancel()
-                
+
                 # Use a small delay to debounce in case of multiple events
                 self._timer = threading.Timer(0.5, self.config.load_config)
                 self._timer.start()
+
 
 # Path to the configuration file
 CONFIG_FILE = Path(__file__).parent / "configs" / "config.yaml"
@@ -81,7 +86,9 @@ print(CONFIG_FILE)
 
 # Set up watchdog observer
 observer = Observer()
-observer.schedule(ConfigChangeHandler(config), path=str(CONFIG_FILE.parent), recursive=False)
+observer.schedule(
+    ConfigChangeHandler(config), path=str(CONFIG_FILE.parent), recursive=False
+)
 observer.daemon = True
 observer.start()
 
