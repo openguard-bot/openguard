@@ -759,7 +759,12 @@ async def create_blog_post(
     )
     await db.commit()
     row = result.fetchone()
-    return schemas.BlogPost(**dict(row))
+    logger.info(f"Type of row in create_blog_post: {type(row)}")
+    logger.info(f"Content of row in create_blog_post: {row}")
+    if hasattr(row, '_asdict'):
+        return schemas.BlogPost(**row._asdict())
+    else:
+        return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
 
 
 async def get_blog_post(db: Session, post_id: int) -> Optional[schemas.BlogPost]:
@@ -769,7 +774,14 @@ async def get_blog_post(db: Session, post_id: int) -> Optional[schemas.BlogPost]
     )
     row = result.fetchone()
     if row:
-        return schemas.BlogPost(**dict(row))
+        logger.info(f"Type of row in get_blog_post: {type(row)}")
+        logger.info(f"Content of row in get_blog_post: {row}")
+        # Attempt to convert to dictionary using _asdict() if available, otherwise iterate
+        if hasattr(row, '_asdict'):
+            return schemas.BlogPost(**row._asdict())
+        else:
+            # Fallback for Row objects that might not have _asdict() but are iterable
+            return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
     return None
 
 
