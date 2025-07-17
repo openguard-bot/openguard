@@ -22,6 +22,7 @@ from lists import config
 
 prefix_cache = TTLCache(maxsize=1000, ttl=3600)
 
+
 class DualStream:
     def __init__(self, original_stream, log_file):
         self.original_stream = original_stream
@@ -120,7 +121,9 @@ def catch_exceptions(func):
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__)).strip()
+            tb_string = "".join(
+                traceback.format_exception(type(e), e, e.__traceback__)
+            ).strip()
 
             print(f"Uncaught exception in {func.__name__}:")
             print(tb_string)
@@ -147,7 +150,9 @@ def catch_exceptions(func):
                     if tb_string:
                         if len(tb_string) > 1500:
                             tb_string = tb_string[:1500] + "...(truncated)"
-                        error_content += f"**Traceback:**\n```\n{tb_string.strip()}\n```"
+                        error_content += (
+                            f"**Traceback:**\n```\n{tb_string.strip()}\n```"
+                        )
 
                     await user.send(error_content)
 
@@ -330,7 +335,9 @@ async def on_app_command_error(
         should_notify_owner = False
     elif isinstance(error, app_commands.MissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
-        user_message = f"❌ You are missing the following required permissions: {missing_perms}"
+        user_message = (
+            f"❌ You are missing the following required permissions: {missing_perms}"
+        )
         should_notify_owner = False
     elif isinstance(error, app_commands.BotMissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
@@ -340,9 +347,7 @@ async def on_app_command_error(
         user_message = "❌ This command cannot be used in private messages."
         should_notify_owner = False
     elif isinstance(error, app_commands.CommandOnCooldown):
-        user_message = (
-            f"❌ This command is on cooldown. Try again in {error.retry_after:.2f} seconds."
-        )
+        user_message = f"❌ This command is on cooldown. Try again in {error.retry_after:.2f} seconds."
         should_notify_owner = False
     elif isinstance(error, app_commands.CheckFailure):
         user_message = "❌ You don't have permission to use this command."
@@ -493,9 +498,13 @@ async def update_guild_member_cache(guild):
         if member_ids:
             pipe.sadd(key, *member_ids)
         await pipe.execute()
-        print(f"Updated member cache for guild {guild.name} ({guild.id}) with {len(member_ids)} members.")
+        print(
+            f"Updated member cache for guild {guild.name} ({guild.id}) with {len(member_ids)} members."
+        )
     except discord.Forbidden:
-        print(f"Missing permissions to fetch members for guild {guild.name} ({guild.id}).")
+        print(
+            f"Missing permissions to fetch members for guild {guild.name} ({guild.id})."
+        )
     except Exception as e:
         print(f"Error caching members for guild {guild.name} ({guild.id}): {e}")
 

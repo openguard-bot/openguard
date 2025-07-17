@@ -37,6 +37,12 @@ const BlogPost: React.FC<BlogPostProps> = ({ slug }) => {
         fetchPost();
     }, [slug]);
 
+    useEffect(() => {
+        if (post) {
+            document.title = `${post.title} | OpenGuard Blog`;
+        }
+    }, [post]);
+
     if (loading) {
         return <p>Loading blog post...</p>;
     }
