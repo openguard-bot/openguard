@@ -79,7 +79,7 @@ const Sidebar = ({ isOpen }) => { // Removed unused 'toggleSidebar'
             {guilds.map((guild) => (
               <li key={guild.id}>
                 <Link
-                  to={`/dashboard/${guild.id}`}
+                  to={`/${guild.id}`}
                   className={`flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-muted ${
                     guildId === guild.id ? "bg-muted" : ""
                   }`}
