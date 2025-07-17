@@ -1,27 +1,12 @@
 ---
 import Layout from '@/layouts/Layout.astro';
-import { Badge } from '@/components/ui/badge.tsx';
-import { format } from 'date-fns';
-
 import BlogPost from '@/components/blog/BlogPost.tsx';
 
 const { slug } = Astro.params;
-
-export async function getStaticPaths() {
-    const response = await fetch('https://openguard.lol/api/blog/posts');
-    const data = await response.json();
-    const posts = data.posts;
-
-    return posts.map((post: any) => ({
-        params: { slug: post.slug },
-        props: { post },
-    }));
-}
-
-const { post } = Astro.props;
+export const prerender = false;
 ---
 
-<Layout title={post.title}>
+<Layout title="Blog">
     <main class="container py-12">
         <BlogPost slug={slug} client:load />
     </main>
