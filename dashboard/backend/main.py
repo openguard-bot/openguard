@@ -34,7 +34,7 @@ app = FastAPI(lifespan=lifespan)
 
 # CORS configuration
 origins = [
-    "http://localhost:3000",  # React frontend
+    os.getenv("FRONTEND_URL", "http://localhost"),
     "http://localhost:4321",  # Astro website
 ]
 

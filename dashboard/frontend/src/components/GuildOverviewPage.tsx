@@ -94,7 +94,7 @@ const GuildOverviewPage = () => {
               logging, and more in one place.
             </p>
             <Button asChild className="mt-4">
-              <Link to={`/dashboard/${guildId}/config`}>
+              <Link to={`/${guildId}/config`}>
                 Configure Server <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -114,7 +114,7 @@ const GuildOverviewPage = () => {
               usage, and moderation statistics.
             </p>
             <Button asChild className="mt-4" variant="outline">
-              <Link to={`/dashboard/${guildId}/analytics`}>
+              <Link to={`/${guildId}/analytics`}>
                 View Analytics <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
