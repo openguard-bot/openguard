@@ -28,6 +28,12 @@ if ! cp -r website/dist/* /srv/http/website/; then
     # exit 1
 fi
 
+# Install runtime Node dependencies for the built server
+cp website/package.json /srv/http/website/
+cp website/package-lock.json /srv/http/website/
+echo "Installing production node modules..."
+(cd /srv/http/website && npm ci --omit=dev)
+
 chown -R http:http /srv/http/website # Ensure correct ownership for web server
 
 # Deploy Node server with systemd
