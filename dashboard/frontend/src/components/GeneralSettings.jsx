@@ -13,10 +13,12 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Settings, Save, RefreshCw, AlertTriangle } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { FormDescription } from "./ui/form";
+import { Form, FormDescription } from "./ui/form";
 
 const GeneralSettings = ({ guildId }) => {
+  const form = useForm();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,83 +91,87 @@ const GeneralSettings = ({ guildId }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="prefix">Command Prefix</Label>
-            <Input
-              id="prefix"
-              value={config.prefix || "!"}
-              onChange={(e) => handleInputChange("prefix", e.target.value)}
-              placeholder="!"
-            />
-            <FormDescription>
-              The prefix used to call bot commands.
-            </FormDescription>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="language">Language</Label>
-            <Select
-              value={config.language || "en"}
-              onValueChange={(value) => handleInputChange("language", value)}
-            >
-              <SelectTrigger id="language">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="es">Spanish</SelectItem>
-                <SelectItem value="fr">French</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormDescription>
-              The language the bot will use for responses.
-            </FormDescription>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="bot-enabled" className="text-base">
-                Bot Enabled
-              </Label>
-              <FormDescription>
-                Enable or disable the bot completely in this server.
-              </FormDescription>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="prefix">Command Prefix</Label>
+                <Input
+                  id="prefix"
+                  value={config.prefix || "!"}
+                  onChange={(e) => handleInputChange("prefix", e.target.value)}
+                  placeholder="!"
+                />
+                <FormDescription>
+                  The prefix used to call bot commands.
+                </FormDescription>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="language">Language</Label>
+                <Select
+                  value={config.language || "en"}
+                  onValueChange={(value) => handleInputChange("language", value)}
+                >
+                  <SelectTrigger id="language">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Spanish</SelectItem>
+                    <SelectItem value="fr">French</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  The language the bot will use for responses.
+                </FormDescription>
+              </div>
             </div>
-            <Switch
-              id="bot-enabled"
-              checked={config.bot_enabled || false}
-              onCheckedChange={(value) =>
-                handleInputChange("bot_enabled", value)
-              }
-            />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="test-mode" className="text-base">
-                Test Mode
-              </Label>
-              <FormDescription>
-                Enable test mode to restrict certain features to admins.
-              </FormDescription>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="bot-enabled" className="text-base">
+                    Bot Enabled
+                  </Label>
+                  <FormDescription>
+                    Enable or disable the bot completely in this server.
+                  </FormDescription>
+                </div>
+                <Switch
+                  id="bot-enabled"
+                  checked={config.bot_enabled || false}
+                  onCheckedChange={(value) =>
+                    handleInputChange("bot_enabled", value)
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="test-mode" className="text-base">
+                    Test Mode
+                  </Label>
+                  <FormDescription>
+                    Enable test mode to restrict certain features to admins.
+                  </FormDescription>
+                </div>
+                <Switch
+                  id="test-mode"
+                  checked={config.test_mode || false}
+                  onCheckedChange={(value) => handleInputChange("test_mode", value)}
+                />
+              </div>
             </div>
-            <Switch
-              id="test-mode"
-              checked={config.test_mode || false}
-              onCheckedChange={(value) => handleInputChange("test_mode", value)}
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={fetchConfig} disabled={loading}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Reset
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={fetchConfig} disabled={loading}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reset
+              </Button>
+              <Button type="submit" disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

@@ -20,10 +20,12 @@ import {
   PlusCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { FormDescription } from "./ui/form";
+import { Form, FormDescription } from "./ui/form";
 import DiscordSelector from "./DiscordSelector";
+import { useForm } from "react-hook-form";
 
 const ChannelManagement = ({ guildId }) => {
+  const form = useForm();
   const [config, setConfig] = useState({
     nsfw_channels: [],
     suggestions_channel: "",
@@ -116,64 +118,68 @@ const ChannelManagement = ({ guildId }) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">NSFW Channels</h3>
-          <FormDescription>
-            Add Channel IDs that are designated as NSFW. The bot will allow
-            NSFW content in these channels.
-          </FormDescription>
-          <div className="flex gap-2">
-            <Input
-              value={newNsfwChannel}
-              onChange={(e) => setNewNsfwChannel(e.target.value)}
-              placeholder="Enter Channel ID"
-            />
-            <Button onClick={handleAddNsfwChannel} size="icon" aria-label="Add NSFW Channel">
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {config.nsfw_channels?.map((channelId) => (
-              <Badge key={channelId} variant="secondary">
-                {channelId}
-                <button
-                  onClick={() => handleRemoveNsfwChannel(channelId)}
-                  className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  aria-label={`Remove channel ${channelId}`}
-                >
-                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">NSFW Channels</h3>
+              <FormDescription>
+                Add Channel IDs that are designated as NSFW. The bot will allow
+                NSFW content in these channels.
+              </FormDescription>
+              <div className="flex gap-2">
+                <Input
+                  value={newNsfwChannel}
+                  onChange={(e) => setNewNsfwChannel(e.target.value)}
+                  placeholder="Enter Channel ID"
+                />
+                <Button onClick={handleAddNsfwChannel} size="icon" aria-label="Add NSFW Channel">
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {config.nsfw_channels?.map((channelId) => (
+                  <Badge key={channelId} variant="secondary">
+                    {channelId}
+                    <button
+                      onClick={() => handleRemoveNsfwChannel(channelId)}
+                      className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      aria-label={`Remove channel ${channelId}`}
+                    >
+                      <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
-        <div className="space-y-2">
-          <Label>Suggestions Channel</Label>
-          <DiscordSelector
-            guildId={guildId}
-            type="channels"
-            value={config.suggestions_channel}
-            onValueChange={(value) =>
-              handleInputChange("suggestions_channel", value)
-            }
-            placeholder="Select a channel..."
-          />
-          <FormDescription>
-            Channel where user suggestions will be sent.
-          </FormDescription>
-        </div>
+            <div className="space-y-2">
+              <Label>Suggestions Channel</Label>
+              <DiscordSelector
+                guildId={guildId}
+                type="channels"
+                value={config.suggestions_channel}
+                onValueChange={(value) =>
+                  handleInputChange("suggestions_channel", value)
+                }
+                placeholder="Select a channel..."
+              />
+              <FormDescription>
+                Channel where user suggestions will be sent.
+              </FormDescription>
+            </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={fetchConfig} disabled={loading}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Reset
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={fetchConfig} disabled={loading}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reset
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );
