@@ -1,5 +1,4 @@
 ---
-import { Button } from '@/components/ui/button.tsx';
 import { ThemeToggle } from './ThemeToggle';
 ---
 
@@ -7,7 +6,20 @@ import { ThemeToggle } from './ThemeToggle';
     <a href="/" class="text-2xl font-bold">
         OpenGuard
     </a>
-    <nav class="flex items-center gap-4">
+    <details class="relative md:hidden">
+        <summary class="cursor-pointer list-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </summary>
+        <nav class="absolute right-0 mt-2 flex w-40 flex-col gap-2 rounded-md border bg-background p-2 shadow">
+            <a href="/blog">Blog</a>
+            <a href="/about">About</a>
+            <a href="/dashboard/" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3">Go to Dashboard</a>
+            <ThemeToggle client:load />
+        </nav>
+    </details>
+    <nav class="hidden md:flex items-center gap-4">
         <a href="/blog">Blog</a>
         <a href="/about">About</a>
         <a href="/dashboard/" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3">
