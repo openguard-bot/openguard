@@ -223,7 +223,10 @@ async def has_admin_permissions(guild_id: int, request: Request):
 def is_blog_admin(user: schemas.User) -> bool:
     """Check if the user is authorized to manage blog posts."""
     authorized_user_ids = config.OwnersTuple
-    return user.id in authorized_user_ids
+    try:
+        return int(user.id) in authorized_user_ids
+    except (ValueError, TypeError):
+        return False
 
 
 def is_bot_admin(user: schemas.User) -> bool:
