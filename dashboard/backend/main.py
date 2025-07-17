@@ -10,12 +10,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .app import api, admin  # Import the admin router
 from database.connection import initialize_database
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("dashboard.backend.app.crud")
+logger.setLevel(logging.INFO)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the database schema on startup."""
     await initialize_database()
+    # Set uvicorn logger level to INFO as well, to see all requests
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.setLevel(logging.INFO)
+    uvicorn_error_logger = logging.getLogger("uvicorn.error")
+    uvicorn_error_logger.setLevel(logging.INFO)
     yield
 
 app = FastAPI(lifespan=lifespan)
