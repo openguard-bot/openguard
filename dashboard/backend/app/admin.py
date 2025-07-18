@@ -192,6 +192,21 @@ async def get_db_tables(db: Session = Depends(get_db)):
 
 
 @router.get(
+    "/db/tables/{table_name}/pk",
+    response_model=List[str],
+    dependencies=[Depends(get_current_admin)],
+)
+async def get_db_table_pk(table_name: str, db: Session = Depends(get_db)):
+    """
+    Get the primary key column(s) for a specific table.
+    """
+    try:
+        return await crud.get_primary_key_columns(db, table_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
     "/db/tables/{table_name}",
     response_model=List[dict],
     dependencies=[Depends(get_current_admin)],
@@ -209,62 +224,50 @@ async def get_db_table_data(
 
 
 @router.put(
-    "/db/tables/{table_name}/{pk_value}",
+    "/db/tables/{table_name}/row",
     response_model=dict,
     dependencies=[Depends(get_current_admin)],
 )
 async def update_db_table_row(
     table_name: str,
-    pk_value: Any,
     update_data: schemas.RawTableRowUpdate,
     db: Session = Depends(get_db),
 ):
     """
-    Update a row in a specific table.
+    Update a row in a specific table, handling composite keys via request body.
     """
     try:
-        # The pk_value from the URL can be a string, int, etc.
-        # We try to convert it to an int if it looks like one.
-        try:
-            pk_value_int = int(pk_value)
-            pk_value = pk_value_int
-        except ValueError:
-            pass  # Keep it as a string if conversion fails
-
         return await crud.update_table_row(
-            db, table_name, pk_value, update_data.row_data
+            db, table_name, update_data.pk_values, update_data.row_data
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        # Catch specific exceptions if needed, e.g., for not found
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
         raise HTTPException(
             status_code=500, detail=f"An unexpected error occurred: {e}"
         )
 
 
 @router.delete(
-    "/db/tables/{table_name}/{pk_value}",
+    "/db/tables/{table_name}/row",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(get_current_admin)],
 )
 async def delete_db_table_row(
     table_name: str,
-    pk_value: Any,
+    delete_data: schemas.RawTableRowDelete,
     db: Session = Depends(get_db),
 ):
     """
-    Delete a row from a specific table.
+    Delete a row from a specific table, handling composite keys via request body.
     """
     try:
-        try:
-            pk_value_int = int(pk_value)
-            pk_value = pk_value_int
-        except ValueError:
-            pass
-
-        success = await crud.delete_table_row(db, table_name, pk_value)
+        success = await crud.delete_table_row(db, table_name, delete_data.pk_values)
         if not success:
-            raise HTTPException(status_code=404, detail="Row not found.")
+            raise HTTPException(status_code=404, detail="Row not found or already deleted.")
         return None
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

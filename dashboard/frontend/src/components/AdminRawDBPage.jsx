@@ -38,8 +38,8 @@ const AdminRawDBPage = () => {
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
-  const [deletingRowPk, setDeletingRowPk] = useState(null);
-  const [pkColumn, setPkColumn] = useState(null);
+  const [deletingRow, setDeletingRow] = useState(null);
+  const [pkColumns, setPkColumns] = useState([]);
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -57,19 +57,17 @@ const AdminRawDBPage = () => {
   const fetchTableData = useCallback(async (tableName) => {
     setLoading(true);
     setSelectedTable(tableName);
+    setPkColumns([]); // Reset PK columns on table change
     try {
-      const response = await axios.get(`/api/admin/db/tables/${tableName}`);
-      setTableData(response.data);
-      if (response.data.length > 0) {
-        // A simple heuristic to find a primary key.
-        // A more robust solution would be to get this from the backend.
-        const potentialPks = ["id", "user_id", "guild_id"];
-        const foundPk = potentialPks.find(pk => pk in response.data[0]);
-        setPkColumn(foundPk);
-      }
+      const [dataRes, pkRes] = await Promise.all([
+        axios.get(`/api/admin/db/tables/${tableName}`),
+        axios.get(`/api/admin/db/tables/${tableName}/pk`),
+      ]);
+      setTableData(dataRes.data);
+      setPkColumns(pkRes.data);
     } catch (error) {
       console.error(`Failed to fetch data for table ${tableName}:`, error);
-      toast.error(`Failed to fetch data for table ${tableName}.`);
+      toast.error(`Failed to fetch data or PK for table ${tableName}.`);
     } finally {
       setLoading(false);
     }
@@ -81,36 +79,53 @@ const AdminRawDBPage = () => {
   };
 
   const handleSave = async () => {
-    if (!editingRow || !selectedTable || !pkColumn) return;
+    if (!editingRow || !selectedTable || pkColumns.length === 0) return;
 
-    const pkValue = editingRow[pkColumn];
+    const pkValues = pkColumns.reduce((acc, pk) => {
+      acc[pk] = editingRow[pk];
+      return acc;
+    }, {});
+
+    const rowData = { ...editingRow };
+    // Remove pk values from the main row data if they are not editable
+    pkColumns.forEach(pk => delete rowData[pk]);
+
     try {
-      await axios.put(
-        `/api/admin/db/tables/${selectedTable}/${pkValue}`,
-        { row_data: editingRow }
-      );
+      await axios.put(`/api/admin/db/tables/${selectedTable}/row`, {
+        pk_values: pkValues,
+        row_data: rowData,
+      });
       toast.success("Row updated successfully.");
       setEditingRow(null);
       fetchTableData(selectedTable); // Refresh data
     } catch (error) {
       console.error("Failed to update row:", error);
-      toast.error("Failed to update row.");
+      toast.error(
+        `Failed to update row: ${error.response?.data?.detail || error.message}`
+      );
     }
   };
 
   const handleDelete = async () => {
-    if (!deletingRowPk || !selectedTable || !pkColumn) return;
+    if (!deletingRow || !selectedTable || pkColumns.length === 0) return;
+
+    const pkValues = pkColumns.reduce((acc, pk) => {
+      acc[pk] = deletingRow[pk];
+      return acc;
+    }, {});
 
     try {
-      await axios.delete(
-        `/api/admin/db/tables/${selectedTable}/${deletingRowPk}`
-      );
+      await axios.delete(`/api/admin/db/tables/${selectedTable}/row`, {
+        data: { pk_values: pkValues },
+      });
       toast.success("Row deleted successfully.");
-      setDeletingRowPk(null);
+      setDeletingRow(null);
       fetchTableData(selectedTable); // Refresh data
     } catch (error) {
       console.error("Failed to delete row:", error);
-      toast.error("Failed to delete row.");
+      toast.error(
+        `Failed to delete row: ${error.response?.data?.detail || error.message}`
+      );
     }
   };
 
@@ -190,7 +205,7 @@ const AdminRawDBPage = () => {
                                             : value
                                         }
                                         onChange={handleRowChange}
-                                        disabled={key === pkColumn}
+                                        disabled={pkColumns.includes(key)}
                                       />
                                     </div>
                                   )
@@ -206,8 +221,8 @@ const AdminRawDBPage = () => {
                             <Button
                               variant="destructive"
                               onClick={() => {
-                                if (pkColumn) {
-                                  setDeletingRowPk(row[pkColumn]);
+                                if (pkColumns.length > 0) {
+                                  setDeletingRow(row);
                                 } else {
                                   toast.error(
                                     "Primary key not identified, cannot delete."
@@ -230,7 +245,7 @@ const AdminRawDBPage = () => {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel
-                                onClick={() => setDeletingRowPk(null)}
+                                onClick={() => setDeletingRow(null)}
                               >
                                 Cancel
                               </AlertDialogCancel>
