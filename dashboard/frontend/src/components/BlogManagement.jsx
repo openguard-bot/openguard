@@ -101,13 +101,14 @@ const BlogManagement = () => {
       .trim('-');
   };
 
-  const handleTitleChange = (title) => {
-    setFormData(prev => ({
-      ...prev,
-      title,
-      slug: prev.slug || generateSlug(title)
-    }));
-  };
+const handleTitleChange = (title) => {
+  setFormData(prev => ({
+    ...prev,
+    title,
+    // Only auto-generate slug if the slug field is empty and user hasn't manually edited it
+    slug: prev.slug === '' ? generateSlug(title) : prev.slug
+  }));
+};
 
   const PostForm = ({ onSubmit, submitText }) => (
     <form onSubmit={onSubmit} className="space-y-4">
