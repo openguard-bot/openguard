@@ -120,6 +120,8 @@ jobs:
       - name: Build Dashboard Frontend
         run: npm run build
         working-directory: ./dashboard/frontend
+        env:
+          VITE_DISCORD_CLIENT_ID: ${{ vars.VITE_DISCORD_CLIENT_ID }}
 
       - name: Install Wrangler
         run: npm install -g wrangler
