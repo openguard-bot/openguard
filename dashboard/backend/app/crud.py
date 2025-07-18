@@ -1399,7 +1399,12 @@ async def update_table_row(
     update_stmt = (
         update(table_obj)
         .where(column(pk_column) == pk_value)
-        .values({sanitized_key: params[key] for sanitized_key, key in zip(update_fields, row_data.keys())})
+        .values(
+            {
+                sanitized_key: params[key]
+                for sanitized_key, key in zip(update_fields, row_data.keys())
+            }
+        )
         .returning(*[column(c) for c in row_data.keys()])
     )
 
