@@ -168,7 +168,13 @@ async def get_logging_settings(db: Session, guild_id: int) -> schemas.LoggingSet
         "member_leave_logging": False,
     }
     for key, value in result.fetchall():
-        settings_data[key] = value
+        if isinstance(value, str):
+            try:
+                settings_data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                settings_data[key] = value
+        else:
+            settings_data[key] = value
     logger.info(f"Logging settings data for guild {guild_id}: {settings_data}")
     try:
         return schemas.LoggingSettings(**settings_data)
@@ -182,6 +188,7 @@ async def update_logging_settings(
 ) -> schemas.LoggingSettings:
     """Update logging settings for a guild."""
     for key, value in settings_data.model_dump(exclude_unset=True).items():
+        db_value = json.dumps(value)
         await db.execute(
             text(
                 """
@@ -191,7 +198,7 @@ async def update_logging_settings(
                 DO UPDATE SET value = :value
                 """
             ),
-            {"guild_id": guild_id, "key": key, "value": value},
+            {"guild_id": guild_id, "key": key, "value": db_value},
         )
     await db.commit()
     return await get_logging_settings(db, guild_id)
