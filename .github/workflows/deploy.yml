@@ -18,6 +18,7 @@ jobs:
       website: ${{ steps.filter.outputs.website }}
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
+      bot: ${{ steps.filter.outputs.bot }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,6 +34,11 @@ jobs:
               - 'dashboard/frontend/**'
             backend:
               - 'dashboard/backend/**'
+            bot:
+              - 'bot.py'
+              - 'cogs/**'
+              - 'database/**'
+              - 'requirements.txt'
 
   deploy-website:
     needs: changes
@@ -205,6 +211,52 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: backend-prod
           status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+  deploy-bot:
+    needs: changes
+    if: ${{ needs.changes.outputs.bot == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: bot-prod
+          ref: ${{ github.sha }}
+
+      - name: Deploy Discord Bot
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ vars.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/discordbot/openguard
+            git pull origin main
+            /home/discordbot/.pyenv/versions/3.11.2/bin/python -m pip install -r requirements.txt
+            sudo systemctl restart openguard-bot.service
+
+      - name: Mark Deployment as Successful
+        if: success()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: bot-prod
+          status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Mark Deployment as Failed
+        if: failure()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: bot-prod
+          status: failure
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
 
       - name: Mark Deployment as Failed
