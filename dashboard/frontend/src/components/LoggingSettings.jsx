@@ -12,7 +12,14 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
-import { FileText, Save, RefreshCw, AlertTriangle } from "lucide-react";
+import {
+  FileText,
+  Save,
+  RefreshCw,
+  AlertTriangle,
+  CheckSquare,
+  XSquare,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Form, FormDescription } from "./ui/form";
@@ -110,6 +117,17 @@ const LoggingSettings = ({ guildId }) => {
     }));
   };
 
+  const handleBulkToggle = (enable) => {
+    const newEnabledEvents = {};
+    for (const key of ALL_EVENT_KEYS) {
+      newEnabledEvents[key] = enable;
+    }
+    setConfig((prev) => ({
+      ...prev,
+      enabled_events: newEnabledEvents,
+    }));
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -179,7 +197,29 @@ const LoggingSettings = ({ guildId }) => {
             <Separator />
 
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Event Toggles</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Event Toggles</h3>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkToggle(true)}
+                  >
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    Enable All
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkToggle(false)}
+                  >
+                    <XSquare className="mr-2 h-4 w-4" />
+                    Disable All
+                  </Button>
+                </div>
+              </div>
               <FormDescription>
                 Select which events you want to log.
               </FormDescription>
