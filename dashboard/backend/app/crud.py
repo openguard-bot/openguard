@@ -1453,15 +1453,13 @@ async def delete_table_row(
     if not all(key in pk_values for key in pk_columns):
         raise ValueError("All parts of the primary key must be provided for deletion.")
 
-    from sqlalchemy.sql import delete, table, column
-    from sqlalchemy import and_
+    # Use raw SQL with named parameters for clarity and to avoid potential type issues
+    where_clauses = [f'"{col}" = :{col}' for col in pk_columns]
+    where_clause = " AND ".join(where_clauses)
 
-    table_obj = table(safe_table_name)
+    query = text(f'DELETE FROM "{safe_table_name}" WHERE {where_clause}')
 
-    conditions = [column(pk_col) == pk_values[pk_col] for pk_col in pk_columns]
-    delete_stmt = delete(table_obj).where(and_(*conditions))
-
-    result = await db.execute(delete_stmt)
+    result = await db.execute(query, pk_values)
     await db.commit()
 
     return result.rowcount > 0
