@@ -1,58 +1,50 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router';
-import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 import ProtectedRoute from './ProtectedRoute';
 
-let authState;
-vi.mock('../hooks/useAuth.js', () => ({
-  useAuth: () => authState,
-}));
+vi.mock('../hooks/useAuth', () => ({ useAuth: vi.fn() }));
+vi.mock('react-router', async () => {
+  const actual = await vi.importActual('react-router');
+  return { ...actual, Navigate: ({ to }) => <div>Navigate to {to}</div> };
+});
 
-const mockUseAuth = (state) => {
-  authState = state;
-};
+import { useAuth } from '../hooks/useAuth';
+
+const mockUseAuth = useAuth;
 
 describe('ProtectedRoute', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('shows loading indicator when auth is loading', () => {
-    mockUseAuth({ isAuthenticated: false, loading: true });
+  it('shows loading when auth is loading', () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, loading: true });
     render(
-      <MemoryRouter initialEntries={['/protected']}>
-        <Routes>
-          <Route path="/protected" element={<ProtectedRoute><div>Protected</div></ProtectedRoute>} />
-        </Routes>
-      </MemoryRouter>
+      <ProtectedRoute>
+        <div>Secret</div>
+      </ProtectedRoute>
     );
-    expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('redirects to login when not authenticated', () => {
-    mockUseAuth({ isAuthenticated: false, loading: false });
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, loading: false });
     render(
-      <MemoryRouter initialEntries={['/protected']}>
-        <Routes>
-          <Route path="/login" element={<div>Login Page</div>} />
-          <Route path="/protected" element={<ProtectedRoute><div>Protected</div></ProtectedRoute>} />
-        </Routes>
-      </MemoryRouter>
+      <ProtectedRoute>
+        <div>Secret</div>
+      </ProtectedRoute>
     );
-    expect(screen.getByText('Login Page')).toBeInTheDocument();
+    expect(screen.getByText('Navigate to /login')).toBeInTheDocument();
   });
 
   it('renders children when authenticated', () => {
-    mockUseAuth({ isAuthenticated: true, loading: false });
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, loading: false });
     render(
-      <MemoryRouter initialEntries={['/protected']}>
-        <Routes>
-          <Route path="/protected" element={<ProtectedRoute><div>Protected</div></ProtectedRoute>} />
-        </Routes>
-      </MemoryRouter>
+      <ProtectedRoute>
+        <div>Secret</div>
+      </ProtectedRoute>
     );
-    expect(screen.getByText('Protected')).toBeInTheDocument();
+    expect(screen.getByText('Secret')).toBeInTheDocument();
   });
 });

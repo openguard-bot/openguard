@@ -1,64 +1,67 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 import AdminRoute from './AdminRoute';
 
-let authState;
-let adminState;
-vi.mock('../hooks/useAuth.js', () => ({
-  useAuth: () => authState,
-}));
-vi.mock('../hooks/useAdmin.js', () => ({
-  useAdmin: () => adminState,
-}));
+vi.mock('../hooks/useAuth', () => ({ useAuth: vi.fn() }));
+vi.mock('../hooks/useAdmin', () => ({ useAdmin: vi.fn() }));
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return { ...actual, Navigate: ({ to }) => <div>Navigate to {to}</div> };
+});
 
-const mockHooks = (auth, admin) => {
-  authState = auth;
-  adminState = admin;
-};
+import { useAuth } from '../hooks/useAuth';
+import { useAdmin } from '../hooks/useAdmin';
+
+const mockUseAuth = useAuth;
+const mockUseAdmin = useAdmin;
 
 describe('AdminRoute', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('redirects to login when not authenticated', () => {
-    mockHooks({ isAuthenticated: false, loading: false }, { isAdmin: false, loading: false });
+  it('shows loading when auth or admin is loading', () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, loading: true });
+    mockUseAdmin.mockReturnValue({ isAdmin: false, loading: true });
     render(
-      <MemoryRouter initialEntries={['/admin']}>
-        <Routes>
-          <Route path="/login" element={<div>Login Page</div>} />
-          <Route path="/admin" element={<AdminRoute><div>Admin</div></AdminRoute>} />
-        </Routes>
-      </MemoryRouter>
+      <AdminRoute>
+        <div>Secret</div>
+      </AdminRoute>
     );
-    expect(screen.getByText('Login Page')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
-  it('redirects to home when not an admin', () => {
-    mockHooks({ isAuthenticated: true, loading: false }, { isAdmin: false, loading: false });
+  it('redirects to login when not authenticated', () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, loading: false });
+    mockUseAdmin.mockReturnValue({ isAdmin: false, loading: false });
     render(
-      <MemoryRouter initialEntries={['/admin']}>
-        <Routes>
-          <Route path="/" element={<div>Home</div>} />
-          <Route path="/admin" element={<AdminRoute><div>Admin</div></AdminRoute>} />
-        </Routes>
-      </MemoryRouter>
+      <AdminRoute>
+        <div>Secret</div>
+      </AdminRoute>
     );
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Navigate to /login')).toBeInTheDocument();
+  });
+
+  it('redirects to home when not admin', () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, loading: false });
+    mockUseAdmin.mockReturnValue({ isAdmin: false, loading: false });
+    render(
+      <AdminRoute>
+        <div>Secret</div>
+      </AdminRoute>
+    );
+    expect(screen.getByText('Navigate to /')).toBeInTheDocument();
   });
 
   it('renders children when authenticated and admin', () => {
-    mockHooks({ isAuthenticated: true, loading: false }, { isAdmin: true, loading: false });
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, loading: false });
+    mockUseAdmin.mockReturnValue({ isAdmin: true, loading: false });
     render(
-      <MemoryRouter initialEntries={['/admin']}>
-        <Routes>
-          <Route path="/admin" element={<AdminRoute><div>Admin</div></AdminRoute>} />
-        </Routes>
-      </MemoryRouter>
+      <AdminRoute>
+        <div>Secret</div>
+      </AdminRoute>
     );
-    expect(screen.getByText('Admin')).toBeInTheDocument();
+    expect(screen.getByText('Secret')).toBeInTheDocument();
   });
 });
