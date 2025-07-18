@@ -240,3 +240,35 @@ async def update_db_table_row(
         raise HTTPException(
             status_code=500, detail=f"An unexpected error occurred: {e}"
         )
+
+
+@router.delete(
+    "/db/tables/{table_name}/{pk_value}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(get_current_admin)],
+)
+async def delete_db_table_row(
+    table_name: str,
+    pk_value: Any,
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a row from a specific table.
+    """
+    try:
+        try:
+            pk_value_int = int(pk_value)
+            pk_value = pk_value_int
+        except ValueError:
+            pass
+
+        success = await crud.delete_table_row(db, table_name, pk_value)
+        if not success:
+            raise HTTPException(status_code=404, detail="Row not found.")
+        return None
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {e}"
+        )

@@ -17,6 +17,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
@@ -27,6 +38,7 @@ const AdminRawDBPage = () => {
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
+  const [deletingRowPk, setDeletingRowPk] = useState(null);
   const [pkColumn, setPkColumn] = useState(null);
 
   useEffect(() => {
@@ -86,10 +98,26 @@ const AdminRawDBPage = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deletingRowPk || !selectedTable || !pkColumn) return;
+
+    try {
+      await axios.delete(
+        `/api/admin/db/tables/${selectedTable}/${deletingRowPk}`
+      );
+      toast.success("Row deleted successfully.");
+      setDeletingRowPk(null);
+      fetchTableData(selectedTable); // Refresh data
+    } catch (error) {
+      console.error("Failed to delete row:", error);
+      toast.error("Failed to delete row.");
+    }
+  };
+
   return (
-    <div>
+    <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Raw Database Access</h1>
-      <div className="flex space-x-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         {tables.map((table) => (
           <Button
             key={table}
@@ -109,74 +137,115 @@ const AdminRawDBPage = () => {
             <CardTitle>Table: {selectedTable}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {tableData.length > 0 &&
-                    Object.keys(tableData[0]).map((key) => (
-                      <TableHead key={key}>{key}</TableHead>
-                    ))}
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tableData.map((row, index) => (
-                  <TableRow key={index}>
-                    {Object.entries(row).map(([key, value]) => (
-                      <TableCell key={key}>
-                        {typeof value === "object" && value !== null
-                          ? JSON.stringify(value, null, 2)
-                          : typeof value === "boolean"
-                          ? String(value)
-                          : value}
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            onClick={() => setEditingRow(row)}
-                          >
-                            Edit
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Edit Row</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            {editingRow &&
-                              Object.entries(editingRow).map(
-                                ([key, value]) => (
-                                  <div key={key}>
-                                    <Label htmlFor={key}>{key}</Label>
-                                    <Input
-                                      id={key}
-                                      name={key}
-                                      value={
-                                        typeof value === "object" &&
-                                        value !== null
-                                          ? JSON.stringify(value)
-                                          : value
-                                      }
-                                      onChange={handleRowChange}
-                                      disabled={key === pkColumn}
-                                    />
-                                  </div>
-                                )
-                              )}
-                          </div>
-                          <Button onClick={handleSave} className="mt-4">
-                            Save
-                          </Button>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {tableData.length > 0 &&
+                      Object.keys(tableData[0]).map((key) => (
+                        <TableHead key={key}>{key}</TableHead>
+                      ))}
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {tableData.map((row, index) => (
+                    <TableRow key={index}>
+                      {Object.entries(row).map(([key, value]) => (
+                        <TableCell key={key}>
+                          {typeof value === "object" && value !== null
+                            ? JSON.stringify(value, null, 2)
+                            : typeof value === "boolean"
+                            ? String(value)
+                            : value}
+                        </TableCell>
+                      ))}
+                      <TableCell className="flex gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              onClick={() => setEditingRow(row)}
+                            >
+                              Edit
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Edit Row</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              {editingRow &&
+                                Object.entries(editingRow).map(
+                                  ([key, value]) => (
+                                    <div key={key}>
+                                      <Label htmlFor={key}>{key}</Label>
+                                      <Input
+                                        id={key}
+                                        name={key}
+                                        value={
+                                          typeof value === "object" &&
+                                          value !== null
+                                            ? JSON.stringify(value)
+                                            : value
+                                        }
+                                        onChange={handleRowChange}
+                                        disabled={key === pkColumn}
+                                      />
+                                    </div>
+                                  )
+                                )}
+                            </div>
+                            <Button onClick={handleSave} className="mt-4">
+                              Save
+                            </Button>
+                          </DialogContent>
+                        </Dialog>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              onClick={() => {
+                                if (pkColumn) {
+                                  setDeletingRowPk(row[pkColumn]);
+                                } else {
+                                  toast.error(
+                                    "Primary key not identified, cannot delete."
+                                  );
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Are you absolutely sure?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will
+                                permanently delete the row from the database.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel
+                                onClick={() => setDeletingRowPk(null)}
+                              >
+                                Cancel
+                              </AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDelete}>
+                                Continue
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
