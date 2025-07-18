@@ -1388,14 +1388,17 @@ async def update_table_row(
     if not update_fields:
         raise ValueError("No fields to update")
 
-    query = f"""
-        UPDATE {safe_table_name}
-        SET {', '.join(update_fields)}
-        WHERE {pk_column} = :pk_value
-        RETURNING *
-    """
+    from sqlalchemy.sql import update, table, column
 
-    result = await db.execute(text(query), params)
+    table_obj = table(safe_table_name)
+    update_stmt = (
+        update(table_obj)
+        .where(column(pk_column) == pk_value)
+        .values({sanitized_key: params[key] for sanitized_key, key in zip(update_fields, row_data.keys())})
+        .returning(*[column(c) for c in row_data.keys()])
+    )
+
+    result = await db.execute(update_stmt)
     await db.commit()
 
     updated_row = result.mappings().one()
