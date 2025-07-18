@@ -84,5 +84,9 @@ export default defineConfig([
         test: true,
       },
     },
+    rules: {
+    '@typescript-eslint/no-empty-function': 'off',
+    // You can relax other rules here too if needed
+  },
   },
 ])
