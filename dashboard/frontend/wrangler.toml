@@ -1,6 +1,6 @@
 name = "openguard-dashboard"
 account_id = "f97093bac8d84a0eb995c9c7f40bf984"
-route = "openguard.lol/dashboard/*"
+route = "openguard.lol/dashboard*"
 workers_dev = false
 compatibility_date = "2024-04-05"
 
