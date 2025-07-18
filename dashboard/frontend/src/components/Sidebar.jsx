@@ -105,7 +105,7 @@ const Sidebar = ({ isOpen }) => { // Removed unused 'toggleSidebar'
       <div className="p-4">
         <Button asChild className="w-full">
           <a
-            href={`https://discord.com/api/oauth2/authorize?client_id=${import.meta.env.VITE_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`}
+            href={`https://discord.com/oauth2/authorize?client_id=${import.meta.env.VITE_DISCORD_CLIENT_ID}&permissions=1512365747270&integration_type=0&scope=bot+applications.commands`}
             target="_blank"
             rel="noopener noreferrer"
           >
