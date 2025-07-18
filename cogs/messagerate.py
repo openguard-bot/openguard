@@ -288,7 +288,7 @@ class MessageRateCog(commands.Cog):
         notification_channel: Optional[discord.TextChannel] = None,
     ):
         """Configure automatic message rate limiting for channels."""
-        if hasattr(interaction, 'response'):
+        if hasattr(interaction, "response"):
             await interaction.response.defer()
         else:
             await interaction.defer()
@@ -351,14 +351,14 @@ class MessageRateCog(commands.Cog):
                     inline=False,
                 )
 
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(embed=embed)
             else:
                 await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in toggle action: {e}")
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(
                     "❌ An error occurred while toggling auto rate limiting.",
                     ephemeral=True,
@@ -396,14 +396,14 @@ class MessageRateCog(commands.Cog):
                 inline=False,
             )
 
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(embed=embed)
             else:
                 await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in enable action: {e}")
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(
                     "❌ An error occurred while enabling auto rate limiting.",
                     ephemeral=True,
@@ -431,16 +431,16 @@ class MessageRateCog(commands.Cog):
                 title="✅ Auto Rate Limiting Disabled",
                 description=f"Automatic rate limiting has been **disabled** for {channel.mention}",
                 color=discord.Color.red(),
-                )
+            )
 
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(embed=embed)
             else:
                 await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in disable action: {e}")
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(
                     "❌ An error occurred while toggling auto rate limiting.",
                     ephemeral=True,
@@ -538,22 +538,20 @@ class MessageRateCog(commands.Cog):
                         inline=False,
                     )
 
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(embed=embed)
             else:
                 await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in status action: {e}")
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(
                     "❌ An error occurred while getting status.",
                     ephemeral=True,
                 )
             else:
-                await interaction.send(
-                    "❌ An error occurred while getting status."
-                )
+                await interaction.send("❌ An error occurred while getting status.")
 
     async def handle_config_action(
         self,
@@ -626,14 +624,14 @@ class MessageRateCog(commands.Cog):
                     inline=True,
                 )
 
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(embed=embed)
             else:
                 await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in config action: {e}")
-            if hasattr(interaction, 'followup'):
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(
                     "❌ An error occurred while updating configuration.", ephemeral=True
                 )
