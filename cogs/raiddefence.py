@@ -167,7 +167,10 @@ class RaidDefenceCog(commands.Cog):
         user = interaction.user if hasattr(interaction, "user") else interaction.author
         embed.set_footer(text=f"Configured by {user}")
 
-        await interaction.response.send_message(embed=embed, ephemeral=False)
+        if hasattr(interaction, "response"):
+            await interaction.response.send_message(embed=embed, ephemeral=False)
+        else:
+            await interaction.send(embed=embed, ephemeral=False)
         print(
             f"[RAID DEFENSE] Configuration updated for guild {interaction.guild.name}: enabled={enable}, threshold={threshold}, timeframe={timeframe}"
         )
