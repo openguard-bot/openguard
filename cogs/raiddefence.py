@@ -163,7 +163,9 @@ class RaidDefenceCog(commands.Cog):
         )
         embed.add_field(name="Threshold", value=f"{threshold} users", inline=True)
         embed.add_field(name="Timeframe", value=f"{timeframe} seconds", inline=True)
-        embed.set_footer(text=f"Configured by {interaction.user}")
+
+        user = interaction.user if hasattr(interaction, "user") else interaction.author
+        embed.set_footer(text=f"Configured by {user}")
 
         await interaction.response.send_message(embed=embed, ephemeral=False)
         print(
