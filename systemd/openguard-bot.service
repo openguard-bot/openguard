@@ -1,0 +1,21 @@
+[Unit]
+Description=OpenGuard Discord Bot
+After=network.target
+
+[Service]
+User=discordbot
+Group=discordbot
+WorkingDirectory=/home/discordbot/openguard
+
+# Set up pyenv environment
+Environment=PYENV_ROOT=/home/discordbot/.pyenv
+Environment=PATH=/home/discordbot/.pyenv/versions/3.11.2/bin:/home/discordbot/.pyenv/bin:/usr/bin:/bin
+
+# Use pyenv's Python
+ExecStart=/home/discordbot/.pyenv/versions/3.11.2/bin/python -u bot.py
+
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
