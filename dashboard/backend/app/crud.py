@@ -1317,13 +1317,18 @@ async def get_table_data(
     column_dicts = await db.run_sync(get_columns_sync)
     columns = [c["name"] for c in column_dicts]
 
-    query_str = f"SELECT * FROM {safe_table_name}"
-    params = {}
-    if guild_id and "guild_id" in columns:
-        query_str += " WHERE guild_id = :guild_id"
-        params["guild_id"] = guild_id
+    from sqlalchemy.sql import select, table, column
 
-    result = await db.execute(text(query_str), params)
+    # Dynamically create the table object
+    dynamic_table = table(safe_table_name, *[column(col) for col in columns])
+
+    # Build the query
+    query = select(dynamic_table)
+    if guild_id and "guild_id" in columns:
+        query = query.where(dynamic_table.c.guild_id == guild_id)
+
+    # Execute the query
+    result = await db.execute(query)
 
     data = []
     for row in result.mappings().all():
