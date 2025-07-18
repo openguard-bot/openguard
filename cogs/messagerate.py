@@ -288,7 +288,10 @@ class MessageRateCog(commands.Cog):
         notification_channel: Optional[discord.TextChannel] = None,
     ):
         """Configure automatic message rate limiting for channels."""
-        await interaction.response.defer()
+        if hasattr(interaction, 'response'):
+            await interaction.response.defer()
+        else:
+            await interaction.defer()
 
         guild_id = interaction.guild.id
         target_channel = channel or interaction.channel
