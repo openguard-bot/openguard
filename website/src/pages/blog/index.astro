@@ -5,7 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.t
 import BlogIndex from '@/components/blog/BlogIndex.tsx';
 ---
 
-<Layout title="Blog">
+<Layout
+    title="OpenGuard Blog"
+    description="Discover the latest news, updates, and tips from the OpenGuard team."
+>
     <main class="container py-12">
         <h1 class="mb-8 text-4xl font-bold">Blog</h1>
         <BlogIndex client:load />

@@ -6,7 +6,10 @@ const { slug } = Astro.params;
 export const prerender = false;
 ---
 
-<Layout title="Blog">
+<Layout
+    title="OpenGuard Blog"
+    description="Read the latest insights and updates from the OpenGuard blog."
+>
     <main class="container py-12">
         <BlogPost slug={slug} client:load />
     </main>
