@@ -1429,3 +1429,24 @@ async def update_table_row(
             response_data[key] = value
 
     return response_data
+
+
+async def delete_table_row(db: Session, table_name: str, pk_value: Any) -> bool:
+    """Delete a row from a specific table."""
+    safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
+    if safe_table_name != table_name:
+        raise ValueError("Invalid table name")
+
+    pk_column = await get_primary_key_column(db, safe_table_name)
+    if not pk_column:
+        raise ValueError(f"No primary key found for table {safe_table_name}")
+
+    from sqlalchemy.sql import delete, table, column
+
+    table_obj = table(safe_table_name)
+    delete_stmt = delete(table_obj).where(column(pk_column) == pk_value)
+
+    result = await db.execute(delete_stmt)
+    await db.commit()
+
+    return result.rowcount > 0
