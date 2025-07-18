@@ -48,16 +48,29 @@ jobs:
           env: production
           ref: ${{ github.sha }}
 
-      - name: Deploy Website
-        uses: appleboy/ssh-action@master
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ vars.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/discordbot/openguard
-            git pull origin main
-            sudo /home/discordbot/openguard/scripts/build_website_prod.sh
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./website
+
+      - name: Build Website
+        run: npm run build
+        working-directory: ./website
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy Website
+        run: wrangler deploy
+        working-directory: ./website
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Mark Deployment as Successful
         if: success()
@@ -93,16 +106,29 @@ jobs:
           env: frontend-prod
           ref: ${{ github.sha }}
 
-      - name: Deploy Dashboard Frontend
-        uses: appleboy/ssh-action@master
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ vars.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/discordbot/openguard
-            git pull origin main
-            sudo /home/discordbot/openguard/scripts/deploy_frontend.sh
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./dashboard/frontend
+
+      - name: Build Dashboard Frontend
+        run: npm run build
+        working-directory: ./dashboard/frontend
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy Dashboard Frontend
+        run: wrangler deploy
+        working-directory: ./dashboard/frontend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Mark Deployment as Successful
         if: success()

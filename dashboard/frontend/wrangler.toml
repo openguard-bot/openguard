@@ -1,0 +1,12 @@
+name = "openguard-dashboard"
+account_id = "f97093bac8d84a0eb995c9c7f40bf984"
+route = "openguard.lol/dashboard/*"
+workers_dev = false
+compatibility_date = "2024-04-05"
+
+main = "worker.js"
+
+[assets]
+directory = "./dist"   # whatever Astro wrote your static files to
+binding   = "ASSETS"          # optional – “ASSETS” is the default
+run_worker_first = true       # optional; keeps SSR working on 404s
