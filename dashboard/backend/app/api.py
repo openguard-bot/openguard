@@ -856,6 +856,37 @@ async def update_security_settings(
 
 
 @router.get(
+    "/guilds/{guild_id}/config/bot-detection",
+    response_model=schemas.BotDetectionSettings,
+)
+async def get_bot_detection_settings(
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Get bot detection settings for a guild."""
+    if has_admin:
+        return await crud.get_bot_detection_config(db=db, guild_id=guild_id)
+
+
+@router.put(
+    "/guilds/{guild_id}/config/bot-detection",
+    response_model=schemas.BotDetectionSettings,
+)
+async def update_bot_detection_settings(
+    guild_id: int,
+    settings: schemas.BotDetectionSettingsUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Update bot detection settings for a guild."""
+    if has_admin:
+        return await crud.update_bot_detection_config(
+            db=db, guild_id=guild_id, settings=settings
+        )
+
+
+@router.get(
     "/guilds/{guild_id}/config/ai",
     response_model=schemas.AISettings,
 )
@@ -954,6 +985,37 @@ async def update_rate_limiting_settings(
     """
     Update rate limiting settings for a guild.
     """
+    if has_admin:
+        return await crud.update_rate_limiting_settings(
+            db=db, guild_id=guild_id, settings=settings
+        )
+
+
+@router.get(
+    "/guilds/{guild_id}/config/message-rate",
+    response_model=schemas.RateLimitingSettings,
+)
+async def get_message_rate_settings(
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Get message rate settings for a guild."""
+    if has_admin:
+        return await crud.get_rate_limiting_settings(db=db, guild_id=guild_id)
+
+
+@router.put(
+    "/guilds/{guild_id}/config/message-rate",
+    response_model=schemas.RateLimitingSettings,
+)
+async def update_message_rate_settings(
+    guild_id: int,
+    settings: schemas.RateLimitingSettingsUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Update message rate settings for a guild."""
     if has_admin:
         return await crud.update_rate_limiting_settings(
             db=db, guild_id=guild_id, settings=settings
