@@ -86,8 +86,6 @@ DEFAULT_SCAM_KEYWORDS = [
     "bit.ly",
     "tinyurl",
     "discord-nitro",
-    "discrod",
-    "discordapp",
     "steam-community",
     "steamcommunlty",
     "steampowered",
