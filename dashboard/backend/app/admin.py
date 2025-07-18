@@ -237,8 +237,16 @@ async def update_db_table_row(
     Update a row in a specific table, handling composite keys via request body.
     """
     try:
+        # Attempt to convert numeric-looking string PKs to integers
+        pk_values = {}
+        for key, value in update_data.pk_values.items():
+            try:
+                pk_values[key] = int(value)
+            except (ValueError, TypeError):
+                pk_values[key] = value
+
         return await crud.update_table_row(
-            db, table_name, update_data.pk_values, update_data.row_data
+            db, table_name, pk_values, update_data.row_data
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -265,7 +273,15 @@ async def delete_db_table_row(
     Delete a row from a specific table, handling composite keys via request body.
     """
     try:
-        success = await crud.delete_table_row(db, table_name, delete_data.pk_values)
+        # Attempt to convert numeric-looking string PKs to integers
+        pk_values = {}
+        for key, value in delete_data.pk_values.items():
+            try:
+                pk_values[key] = int(value)
+            except (ValueError, TypeError):
+                pk_values[key] = value
+
+        success = await crud.delete_table_row(db, table_name, pk_values)
         if not success:
             raise HTTPException(status_code=404, detail="Row not found or already deleted.")
         return None
