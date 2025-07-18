@@ -1349,8 +1349,8 @@ async def get_table_data(
     return data
 
 
-async def get_primary_key_column(db: Session, table_name: str) -> Optional[str]:
-    """Get the primary key column name for a table."""
+async def get_primary_key_columns(db: Session, table_name: str) -> List[str]:
+    """Get the primary key column names for a table."""
     result = await db.execute(
         text(
             """
@@ -1361,64 +1361,71 @@ async def get_primary_key_column(db: Session, table_name: str) -> Optional[str]:
               AND tc.table_schema = kcu.table_schema
             WHERE tc.constraint_type = 'PRIMARY KEY'
               AND tc.table_name = :table_name
-              AND tc.table_schema = 'public';
+              AND tc.table_schema = 'public'
+            ORDER BY kcu.ordinal_position;
             """
         ),
         {"table_name": table_name},
     )
-    pk_column = result.scalar_one_or_none()
-    return pk_column
+    pk_columns = [row[0] for row in result.fetchall()]
+    return pk_columns
 
 
 async def update_table_row(
-    db: Session, table_name: str, pk_value: Any, row_data: Dict[str, Any]
+    db: Session, table_name: str, pk_values: Dict[str, Any], row_data: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Update a row in a specific table."""
+    """Update a row in a specific table, handling composite keys."""
     safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
     if safe_table_name != table_name:
         raise ValueError("Invalid table name")
 
-    pk_column = await get_primary_key_column(db, safe_table_name)
-    if not pk_column:
+    pk_columns = await get_primary_key_columns(db, safe_table_name)
+    if not pk_columns:
         raise ValueError(f"No primary key found for table {safe_table_name}")
 
-    update_fields = []
-    params = {f"pk_value": pk_value}
+    # Ensure all parts of the composite key are present in pk_values
+    if not all(key in pk_values for key in pk_columns):
+        raise ValueError("All parts of the primary key must be provided for update.")
+
+    update_dict = {}
     for key, value in row_data.items():
-        # Do not allow updating the primary key
-        if key == pk_column:
+        # Do not allow updating primary key columns
+        if key in pk_columns:
             continue
-
+        # Sanitize column names to prevent injection, though SQLAlchemy parameters help
         sanitized_key = "".join(c for c in key if c.isalnum() or c == "_")
-        if sanitized_key != key:
-            # skip potentially malicious keys
-            continue
+        if sanitized_key == key:
+            update_dict[sanitized_key] = value
 
-        update_fields.append(f"{sanitized_key} = :{key}")
-        params[key] = value
-
-    if not update_fields:
-        raise ValueError("No fields to update")
+    if not update_dict:
+        raise ValueError("No valid fields to update.")
 
     from sqlalchemy.sql import update, table, column
+    from sqlalchemy import and_
 
     table_obj = table(safe_table_name)
+    conditions = [column(pk_col) == pk_values[pk_col] for pk_col in pk_columns]
+
+    # Get all columns to return the updated row
+    def get_columns_sync(sync_conn):
+        inspector = inspect(sync_conn.bind)
+        return inspector.get_columns(table_name)
+    column_dicts = await db.run_sync(get_columns_sync)
+    all_columns = [c["name"] for c in column_dicts]
+
     update_stmt = (
         update(table_obj)
-        .where(column(pk_column) == pk_value)
-        .values(
-            {
-                sanitized_key: params[key]
-                for sanitized_key, key in zip(update_fields, row_data.keys())
-            }
-        )
-        .returning(*[column(c) for c in row_data.keys()])
+        .where(and_(*conditions))
+        .values(update_dict)
+        .returning(*[column(c) for c in all_columns])
     )
 
     result = await db.execute(update_stmt)
     await db.commit()
 
-    updated_row = result.mappings().one()
+    updated_row = result.mappings().one_or_none()
+    if not updated_row:
+        raise ValueError("Row not found or update failed.")
 
     # Convert datetime objects to ISO format strings
     response_data = {}
@@ -1431,20 +1438,28 @@ async def update_table_row(
     return response_data
 
 
-async def delete_table_row(db: Session, table_name: str, pk_value: Any) -> bool:
-    """Delete a row from a specific table."""
+async def delete_table_row(
+    db: Session, table_name: str, pk_values: Dict[str, Any]
+) -> bool:
+    """Delete a row from a specific table, handling composite keys."""
     safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
     if safe_table_name != table_name:
         raise ValueError("Invalid table name")
 
-    pk_column = await get_primary_key_column(db, safe_table_name)
-    if not pk_column:
+    pk_columns = await get_primary_key_columns(db, safe_table_name)
+    if not pk_columns:
         raise ValueError(f"No primary key found for table {safe_table_name}")
 
+    if not all(key in pk_values for key in pk_columns):
+        raise ValueError("All parts of the primary key must be provided for deletion.")
+
     from sqlalchemy.sql import delete, table, column
+    from sqlalchemy import and_
 
     table_obj = table(safe_table_name)
-    delete_stmt = delete(table_obj).where(column(pk_column) == pk_value)
+
+    conditions = [column(pk_col) == pk_values[pk_col] for pk_col in pk_columns]
+    delete_stmt = delete(table_obj).where(and_(*conditions))
 
     result = await db.execute(delete_stmt)
     await db.commit()

@@ -475,4 +475,9 @@ class AdminMessage(BaseModel):
 
 
 class RawTableRowUpdate(BaseModel):
+    pk_values: Dict[str, Any]
     row_data: Dict[str, Any]
+
+
+class RawTableRowDelete(BaseModel):
+    pk_values: Dict[str, Any]
