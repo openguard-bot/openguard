@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      website: ${{ steps.filter.outputs.website }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      python: ${{ steps.filter.outputs.python }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Use paths-filter
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            website:
+              - 'website/**'
+            frontend:
+              - 'dashboard/frontend/**'
+            python:
+              - 'bot.py'
+              - 'cogs/**'
+              - 'dashboard/backend/**'
+              - 'database/**'
+              - 'tests/**'
+              - 'requirements.txt'
+              - 'pyrightconfig.json'
+
+  website:
+    name: Website Build
+    needs: changes
+    if: ${{ needs.changes.outputs.website == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: website/node_modules
+          key: ${{ runner.os }}-node-website-${{ hashFiles('website/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-website-
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./website
+
+      - name: Build Astro site
+        run: npm run build
+        working-directory: ./website
+
+  dashboard-frontend:
+    name: Dashboard Frontend CI
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: dashboard/frontend/node_modules
+          key: ${{ runner.os }}-node-frontend-${{ hashFiles('dashboard/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-frontend-
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./dashboard/frontend
+
+      - name: Run ESLint
+        run: npm run lint
+        working-directory: ./dashboard/frontend
+
+      - name: Run frontend tests
+        run: npm test
+        working-directory: ./dashboard/frontend
+
+      - name: Build dashboard
+        run: npm run build
+        working-directory: ./dashboard/frontend
+
+  python:
+    name: Python Tests & Lint
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r dashboard/backend/requirements.txt
+          pip install pyright pytest
+
+      - name: Run Pyright
+        run: pyright
+
+      - name: Run Bot Tests
+        run: pytest tests/
+
+      - name: Run Backend Tests
+        run: pytest dashboard/backend/tests/
