@@ -310,6 +310,31 @@ def test_get_security_settings(async_client: TestClient, monkeypatch):
     assert settings["bot_detection"]["enabled"] is True
 
 
+def test_get_bot_detection_settings(async_client: TestClient, monkeypatch):
+    """Test for fetching bot detection settings."""
+
+    async def mock_get_bot_detection_config(db, guild_id):
+        return {
+            "enabled": True,
+            "keywords": ["bot1"],
+            "action": "kick",
+            "timeout_duration": 600,
+            "log_channel": "123",
+            "whitelist_roles": ["456"],
+            "whitelist_users": ["789"],
+        }
+
+    monkeypatch.setattr(
+        "dashboard.backend.app.crud.get_bot_detection_config",
+        mock_get_bot_detection_config,
+    )
+
+    response = async_client.get("/api/guilds/123/config/bot-detection")
+    assert response.status_code == 200
+    settings = response.json()
+    assert settings["enabled"] is True
+
+
 def test_get_ai_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching AI settings.
@@ -378,6 +403,33 @@ def test_get_rate_limiting_settings(async_client: TestClient, monkeypatch):
     assert settings["enabled"] is True
 
 
+def test_get_message_rate_settings(async_client: TestClient, monkeypatch):
+    """Test for fetching message rate settings."""
+
+    async def mock_get_rate_limiting_settings(db, guild_id):
+        return {
+            "enabled": True,
+            "high_rate_threshold": 10,
+            "low_rate_threshold": 5,
+            "high_rate_slowmode": 10,
+            "low_rate_slowmode": 3,
+            "check_interval": 60,
+            "analysis_window": 120,
+            "notifications_enabled": True,
+            "notification_channel": "123",
+        }
+
+    monkeypatch.setattr(
+        "dashboard.backend.app.crud.get_rate_limiting_settings",
+        mock_get_rate_limiting_settings,
+    )
+
+    response = async_client.get("/api/guilds/123/config/message-rate")
+    assert response.status_code == 200
+    settings = response.json()
+    assert settings["enabled"] is True
+
+
 def test_get_raid_defense_settings(async_client: TestClient, monkeypatch):
     """
     Test for fetching raid defense settings.
@@ -431,6 +483,37 @@ def test_update_security_settings(async_client: TestClient, monkeypatch):
     assert response.status_code == 200
     settings = response.json()
     assert settings["bot_detection"]["enabled"] is False
+
+
+def test_update_bot_detection_settings(async_client: TestClient, monkeypatch):
+    """Test for updating bot detection settings."""
+
+    async def mock_update_bot_detection_config(db, guild_id, settings):
+        full_settings = {
+            "enabled": True,
+            "keywords": ["bot1"],
+            "action": "kick",
+            "timeout_duration": 600,
+            "log_channel": "123",
+            "whitelist_roles": ["456"],
+            "whitelist_users": ["789"],
+        }
+        update_dict = settings.model_dump(exclude_unset=True)
+        full_settings.update(update_dict)
+        return full_settings
+
+    monkeypatch.setattr(
+        "dashboard.backend.app.crud.update_bot_detection_config",
+        mock_update_bot_detection_config,
+    )
+
+    update_data = {"enabled": False}
+    response = async_client.put(
+        "/api/guilds/123/config/bot-detection", json=update_data
+    )
+    assert response.status_code == 200
+    settings = response.json()
+    assert settings["enabled"] is False
 
 
 def test_update_ai_settings(async_client: TestClient, monkeypatch):
@@ -511,6 +594,38 @@ def test_update_rate_limiting_settings(async_client: TestClient, monkeypatch):
     response = async_client.put(
         "/api/guilds/123/config/rate-limiting", json=update_data
     )
+    assert response.status_code == 200
+    settings = response.json()
+    assert settings["enabled"] is False
+    assert settings["high_rate_threshold"] == 20
+
+
+def test_update_message_rate_settings(async_client: TestClient, monkeypatch):
+    """Test for updating message rate settings."""
+
+    async def mock_update_rate_limiting_settings(db, guild_id, settings):
+        full_settings = {
+            "enabled": True,
+            "high_rate_threshold": 10,
+            "low_rate_threshold": 5,
+            "high_rate_slowmode": 10,
+            "low_rate_slowmode": 3,
+            "check_interval": 60,
+            "analysis_window": 120,
+            "notifications_enabled": True,
+            "notification_channel": "123",
+        }
+        update_dict = settings.model_dump(exclude_unset=True)
+        full_settings.update(update_dict)
+        return full_settings
+
+    monkeypatch.setattr(
+        "dashboard.backend.app.crud.update_rate_limiting_settings",
+        mock_update_rate_limiting_settings,
+    )
+
+    update_data = {"enabled": False, "high_rate_threshold": 20}
+    response = async_client.put("/api/guilds/123/config/message-rate", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["enabled"] is False
