@@ -7,3 +7,4 @@ bot.log
 .env
 **dist/
 **build/
+**.wrangler/
