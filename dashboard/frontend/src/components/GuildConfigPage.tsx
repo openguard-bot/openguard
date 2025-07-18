@@ -79,28 +79,28 @@ const GuildConfigPage = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general">
+        <TabsContent value="general" className="">
           <GeneralSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="moderation">
+        <TabsContent value="moderation" className="">
           <ModerationSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="ai">
+        <TabsContent value="ai" className="">
           <AISettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="security">
+        <TabsContent value="security" className="">
           <SecuritySettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="raid-defense">
+        <TabsContent value="raid-defense" className="">
           <RaidDefenseSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="rate-limiting">
+        <TabsContent value="rate-limiting" className="">
           <RateLimitingSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="logging">
+        <TabsContent value="logging" className="">
           <LoggingSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="channels">
+        <TabsContent value="channels" className="">
           <ChannelManagement guildId={guildId} />
         </TabsContent>
       </Tabs>
