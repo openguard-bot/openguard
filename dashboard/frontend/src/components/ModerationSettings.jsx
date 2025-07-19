@@ -136,7 +136,7 @@ const ModerationSettings = ({ guildId }) => {
                   <DiscordSelector
                     guildId={guildId}
                     type="roles"
-                    value={config.suicidal_content_ping_role_id}
+                    value={config.suicidal_content_ping_role_id || ""}
                     onValueChange={(value) =>
                       handleInputChange("suicidal_content_ping_role_id", value)
                     }
@@ -148,7 +148,7 @@ const ModerationSettings = ({ guildId }) => {
                   <DiscordSelector
                     guildId={guildId}
                     type="roles"
-                    value={config.confirmation_ping_role_id}
+                    value={config.confirmation_ping_role_id || ""}
                     onValueChange={(value) =>
                       handleInputChange("confirmation_ping_role_id", value)
                     }
