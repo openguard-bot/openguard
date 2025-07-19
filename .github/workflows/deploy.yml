@@ -90,7 +90,9 @@ jobs:
       - name: Determine Ref
         id: get_ref
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_run" && "${{ github.event.workflow_run.event }}" == "pull_request" ]]; then
+            echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
             echo "ref=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
           else
             echo "ref=${{ github.ref }}" >> $GITHUB_OUTPUT
@@ -167,7 +169,9 @@ jobs:
       - name: Determine Ref
         id: get_ref
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_run" && "${{ github.event.workflow_run.event }}" == "pull_request" ]]; then
+            echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
             echo "ref=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
           else
             echo "ref=${{ github.ref }}" >> $GITHUB_OUTPUT
