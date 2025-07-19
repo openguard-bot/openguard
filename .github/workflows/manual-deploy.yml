@@ -1,9 +1,28 @@
-name: Deploy to Production
+name: Manual Deploy
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  workflow_dispatch:
+    inputs:
+      website:
+        description: 'Deploy Website'
+        required: false
+        type: boolean
+        default: false
+      frontend:
+        description: 'Deploy Dashboard Frontend'
+        required: false
+        type: boolean
+        default: false
+      backend:
+        description: 'Deploy Dashboard Backend'
+        required: false
+        type: boolean
+        default: false
+      bot:
+        description: 'Deploy Bot'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -12,33 +31,19 @@ permissions:
 
 jobs:
   changes:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     outputs:
-      website: ${{ steps.filter.outputs.website }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      backend: ${{ steps.filter.outputs.backend }}
-      bot: ${{ steps.filter.outputs.bot }}
+      website: ${{ steps.set_outputs.outputs.website }}
+      frontend: ${{ steps.set_outputs.outputs.frontend }}
+      backend: ${{ steps.set_outputs.outputs.backend }}
+      bot: ${{ steps.set_outputs.outputs.bot }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 2
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          filters: |
-            website:
-              - 'website/**'
-            frontend:
-              - 'dashboard/frontend/**'
-            backend:
-              - 'dashboard/backend/**'
-            bot:
-              - 'bot.py'
-              - 'cogs/**'
-              - 'database/**'
-              - 'requirements.txt'
+      - id: set_outputs
+        run: |
+          echo "website=${{ github.event.inputs.website }}" >> $GITHUB_OUTPUT
+          echo "frontend=${{ github.event.inputs.frontend }}" >> $GITHUB_OUTPUT
+          echo "backend=${{ github.event.inputs.backend }}" >> $GITHUB_OUTPUT
+          echo "bot=${{ github.event.inputs.bot }}" >> $GITHUB_OUTPUT
 
   deploy-website:
     needs: changes
