@@ -24,7 +24,7 @@ class User(BaseModel):
 
 class CommandLog(BaseModel):
     id: Optional[int] = None
-    guild_id: int
+    guild_id: str
     user_id: int
     command_name: str
     timestamp: Optional[datetime] = None
@@ -169,7 +169,7 @@ class Stats(BaseModel):
 
 
 class GuildAPIKey(BaseModel):
-    guild_id: int
+    guild_id: str
     api_provider: Optional[str] = None
     # The 'api_key' and 'github_auth_info' are not included here
     # because we should not be sending them back to the client.
@@ -245,7 +245,7 @@ class GuildUser(BaseModel):
 
 class UserInfraction(BaseModel):
     id: int
-    guild_id: int
+    guild_id: str
     user_id: int
     timestamp: datetime
     rule_violated: Optional[str]

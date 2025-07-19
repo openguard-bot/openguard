@@ -1331,9 +1331,6 @@ async def get_table_data(
 
     # Build the query
     query = select(dynamic_table)
-    if guild_id and "guild_id" in columns:
-        query = query.where(dynamic_table.c.guild_id == guild_id)
-
     # Execute the query
     result = await db.execute(query)
 
@@ -1343,6 +1340,8 @@ async def get_table_data(
         for key, value in row.items():
             if isinstance(value, datetime):
                 row_data[key] = value.isoformat()
+            elif key == "guild_id":
+                row_data[key] = str(value)
             else:
                 row_data[key] = value
         data.append(row_data)
@@ -1392,7 +1391,7 @@ async def update_table_row(
         # Do not allow updating primary key columns
         if key in pk_columns:
             continue
-        # Sanitize column names to prevent injection, though SQLAlchemy parameters help
+        # Sanitize column names to prevent injection
         sanitized_key = "".join(c for c in key if c.isalnum() or c == "_")
         if sanitized_key == key:
             update_dict[sanitized_key] = value
@@ -1400,27 +1399,37 @@ async def update_table_row(
     if not update_dict:
         raise ValueError("No valid fields to update.")
 
-    from sqlalchemy.sql import update, table, column
-    from sqlalchemy import and_
+    from sqlalchemy.sql import table, column
+    from sqlalchemy import text
 
-    table_obj = table(safe_table_name)
-    conditions = [column(pk_col) == pk_values[pk_col] for pk_col in pk_columns]
+    # Build the SET clause
+    set_clause = ", ".join([f'"{key}" = :{key}' for key in update_dict.keys()])
+
+    # Build the WHERE clause with explicit casting for bigint
+    where_clauses = []
+    for col in pk_columns:
+        if col == "guild_id":
+            where_clauses.append(f'"{col}" = CAST(:pk_{col} AS BIGINT)')
+        else:
+            where_clauses.append(f'"{col}" = :pk_{col}')
+    where_clause = " AND ".join(where_clauses)
 
     # Get all columns to return the updated row
     def get_columns_sync(sync_conn):
         inspector = inspect(sync_conn.bind)
         return inspector.get_columns(table_name)
     column_dicts = await db.run_sync(get_columns_sync)
-    all_columns = [c["name"] for c in column_dicts]
+    all_columns = [f'"{c["name"]}"' for c in column_dicts]
 
-    update_stmt = (
-        update(table_obj)
-        .where(and_(*conditions))
-        .values(update_dict)
-        .returning(*[column(c) for c in all_columns])
+    query = text(
+        f'UPDATE "{safe_table_name}" SET {set_clause} WHERE {where_clause} RETURNING {", ".join(all_columns)}'
     )
 
-    result = await db.execute(update_stmt)
+    # Combine pk_values (prefixed) and update_dict for parameters
+    params = {f"pk_{key}": value for key, value in pk_values.items()}
+    params.update(update_dict)
+
+    result = await db.execute(query, params)
     await db.commit()
 
     updated_row = result.mappings().one_or_none()
@@ -1453,13 +1462,28 @@ async def delete_table_row(
     if not all(key in pk_values for key in pk_columns):
         raise ValueError("All parts of the primary key must be provided for deletion.")
 
-    # Use raw SQL with named parameters for clarity and to avoid potential type issues
-    where_clauses = [f'"{col}" = :{col}' for col in pk_columns]
+    # Use raw SQL with explicit casting for bigint to avoid type issues
+    where_clauses = []
+    for col in pk_columns:
+        if col == "guild_id":
+            where_clauses.append(f'"{col}" = CAST(:pk_{col} AS BIGINT)')
+        else:
+            where_clauses.append(f'"{col}" = :pk_{col}')
     where_clause = " AND ".join(where_clauses)
 
     query = text(f'DELETE FROM "{safe_table_name}" WHERE {where_clause}')
 
-    result = await db.execute(query, pk_values)
+    # Create a new dictionary for parameters with prefixed keys
+    params = {}
+    for key, value in pk_values.items():
+        if key == "guild_id":
+            params[f"pk_{key}"] = int(value)  # Ensure guild_id is an integer
+        else:
+            params[f"pk_{key}"] = value
+
+    logger.info(f"crud.py: Executing DELETE query: {query.compile(compile_kwargs={'literal_binds': True})}")
+    logger.info(f"crud.py: DELETE query parameters: {params}")
+    result = await db.execute(query, params)
     await db.commit()
 
     return result.rowcount > 0
