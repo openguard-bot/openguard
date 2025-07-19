@@ -10,38 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      website: ${{ steps.filter.outputs.website }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      python: ${{ steps.filter.outputs.python }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Use paths-filter
-        uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          filters: |
-            website:
-              - 'website/**'
-            frontend:
-              - 'dashboard/frontend/**'
-            python:
-              - 'bot.py'
-              - 'cogs/**'
-              - 'dashboard/backend/**'
-              - 'database/**'
-              - 'tests/**'
-              - 'requirements.txt'
-              - 'pyrightconfig.json'
-
   website:
     name: Website Build
-    needs: changes
-    if: ${{ needs.changes.outputs.website == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -70,8 +40,6 @@ jobs:
 
   dashboard-frontend:
     name: Dashboard Frontend CI
-    needs: changes
-    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -108,8 +76,6 @@ jobs:
 
   python:
     name: Python Tests & Lint
-    needs: changes
-    if: ${{ needs.changes.outputs.python == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
