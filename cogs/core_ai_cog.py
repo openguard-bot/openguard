@@ -1314,7 +1314,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
             )
 
     @ai.command(
-        name="last_decisions", description="View recent AI moderation decisions"
+        name="decisions", description="View recent AI moderation decisions"
     )
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
