@@ -87,18 +87,9 @@ jobs:
           env: production
           ref: ${{ github.sha }}
 
-      - name: Determine Ref
-        id: get_ref
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            echo "ref=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
-          else
-            echo "ref=${{ github.ref }}" >> $GITHUB_OUTPUT
-          fi
-
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.get_ref.outputs.ref }}
+          ref: ${{ github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -164,18 +155,9 @@ jobs:
           env: frontend-prod
           ref: ${{ github.sha }}
 
-      - name: Determine Ref
-        id: get_ref
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            echo "ref=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
-          else
-            echo "ref=${{ github.ref }}" >> $GITHUB_OUTPUT
-          fi
-
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.get_ref.outputs.ref }}
+          ref: ${{ github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
