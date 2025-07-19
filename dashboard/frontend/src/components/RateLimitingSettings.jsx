@@ -223,7 +223,7 @@ const RateLimitingSettings = ({ guildId }) => {
             <div className="flex items-center space-x-2">
               <Switch
                 id="notifications_enabled"
-                checked={config.notifications_enabled || true}
+                checked={config.notifications_enabled ?? true}
                 onCheckedChange={(checked) =>
                   handleSwitchChange("notifications_enabled", checked)
                 }
