@@ -827,7 +827,25 @@ async def get_ai_decisions(
             offset,
             fetch_all=True,
         )
-        return [dict(row) for row in results]
+        normalized = []
+        for row in results:
+            decision_json = row["decision"]
+            decision = json.loads(decision_json) if decision_json else {}
+            normalized.append(
+                {
+                    "message_id": row["message_id"],
+                    "author_id": row["author_id"],
+                    "author_name": row["author_name"],
+                    "message_content_snippet": row["message_content_snippet"],
+                    "timestamp": (
+                        row["decision_timestamp"].isoformat()
+                        if row["decision_timestamp"]
+                        else None
+                    ),
+                    "ai_decision": decision,
+                }
+            )
+        return normalized
     except Exception as e:
         log.error(f"Failed to fetch AI decisions for guild {guild_id}: {e}")
         return []

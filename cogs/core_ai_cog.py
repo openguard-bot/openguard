@@ -1359,7 +1359,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
             f"**Author:** {record.get('author_name', 'N/A')} ({record.get('author_id', 'N/A')})\n"
             f"**Message ID:** {record.get('message_id', 'N/A')}\n"
             f"**Content Snippet:** ```{record.get('message_content_snippet', 'N/A')}```\n"
-            f"**Timestamp:** {record.get('timestamp', 'N/A')[:19].replace('T', ' ')}\n"
+            f"**Timestamp:** {str(record.get('timestamp', 'N/A'))[:19].replace('T', ' ')}\n"
         )
         if error_msg:
             field_value += f"**Status:** Error during processing: {error_msg}\n"
