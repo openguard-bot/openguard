@@ -15,6 +15,9 @@ from .aimod_helpers.config_manager import (
 )
 
 
+from .core_ai_cog import CoreAICog
+
+
 class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
     """
     Manages channel-specific AI moderation settings including exclusions and custom rules.
@@ -23,18 +26,16 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.hybrid_group(
-        name="aichannel",
+    @CoreAICog.ai.group(
+        name="channel",
         description="Manage AI moderation settings for specific channels",
     )
-    async def aichannel(self, ctx: commands.Context):
+    async def channel(self, ctx: commands.Context):
         """AI channel configuration commands"""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @aichannel.command(
-        name="exclude", description="Exclude a channel from AI moderation"
-    )
+    @channel.command(name="exclude", description="Exclude a channel from AI moderation")
     @app_commands.describe(
         channel="The channel to exclude from AI moderation (defaults to current channel)"
     )
@@ -64,7 +65,7 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
         else:
             await ctx.send(response)
 
-    @aichannel.command(
+    @channel.command(
         name="include",
         description="Include a channel in AI moderation (remove exclusion)",
     )
@@ -97,7 +98,7 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
         else:
             await ctx.send(response)
 
-    @aichannel.command(
+    @channel.command(
         name="listexcluded", description="List all channels excluded from AI moderation"
     )
     @app_commands.checks.has_permissions(administrator=True)
@@ -127,7 +128,7 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
         else:
             await ctx.send(response)
 
-    @aichannel.command(
+    @channel.command(
         name="setrules",
         description="Set custom AI moderation rules for a specific channel",
     )
@@ -170,7 +171,7 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
         else:
             await ctx.send(response)
 
-    @aichannel.command(
+    @channel.command(
         name="viewrules",
         description="View custom AI moderation rules for a specific channel",
     )
@@ -211,7 +212,7 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
         else:
             await ctx.send(response)
 
-    @aichannel.command(
+    @channel.command(
         name="listallrules",
         description="List all channels with custom AI moderation rules",
     )
@@ -250,7 +251,7 @@ class AIChannelConfigCog(commands.Cog, name="AI Channel Config"):
         else:
             await ctx.send(response)
 
-    @aichannel.command(
+    @channel.command(
         name="status", description="Check AI moderation status for a specific channel"
     )
     @app_commands.describe(
