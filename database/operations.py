@@ -768,3 +768,66 @@ async def remove_guild_api_key(guild_id: int) -> bool:
     except Exception as e:
         log.error(f"Failed to delete API key for guild {guild_id}: {e}")
         return False
+
+
+# AI Decision Operations
+
+
+async def add_ai_decision(
+    guild_id: int,
+    message_id: int,
+    author_id: int,
+    author_name: str,
+    message_content_snippet: str,
+    decision: Dict[str, Any],
+) -> Optional[int]:
+    """Add an AI moderation decision."""
+    try:
+        result = await execute_query(
+            """
+            INSERT INTO ai_decisions (
+                guild_id,
+                message_id,
+                author_id,
+                author_name,
+                message_content_snippet,
+                decision
+            ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
+            """,
+            guild_id,
+            message_id,
+            author_id,
+            author_name,
+            message_content_snippet,
+            json.dumps(decision),
+            fetch_one=True,
+        )
+        return result["id"] if result else None
+    except Exception as e:
+        log.error(f"Failed to add AI decision: {e}")
+        return None
+
+
+async def get_ai_decisions(
+    guild_id: int, limit: int = 20, offset: int = 0
+) -> List[Dict[str, Any]]:
+    """Retrieve AI decisions for a guild."""
+    try:
+        results = await execute_query(
+            """
+            SELECT id, message_id, author_id, author_name,
+                   message_content_snippet, decision, decision_timestamp
+            FROM ai_decisions
+            WHERE guild_id = $1
+            ORDER BY decision_timestamp DESC
+            LIMIT $2 OFFSET $3
+            """,
+            guild_id,
+            limit,
+            offset,
+            fetch_all=True,
+        )
+        return [dict(row) for row in results]
+    except Exception as e:
+        log.error(f"Failed to fetch AI decisions for guild {guild_id}: {e}")
+        return []
