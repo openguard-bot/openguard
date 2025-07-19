@@ -19,14 +19,12 @@ class Config:
         self.load_config()
 
     def load_config(self) -> None:
-        logger.info("Loading configuration from %s", self.config_path)
         try:
             with self.config_path.open("r") as f:
                 new_data = yaml.safe_load(f)
             with self.lock:
                 self._data = new_data
                 self._update_namespaces()
-            logger.info("Configuration loaded successfully.")
         except (IOError, yaml.YAMLError) as e:
             logger.error("Failed to load or parse config file: %s", e)
 

@@ -13,9 +13,9 @@ from database.connection import initialize_database
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("dashboard.backend.app.crud")
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.INFO)
 
 
 @asynccontextmanager
@@ -24,9 +24,9 @@ async def lifespan(app: FastAPI):
     await initialize_database()
     # Set uvicorn logger level to INFO as well, to see all requests
     uvicorn_access_logger = logging.getLogger("uvicorn.access")
-    uvicorn_access_logger.setLevel(logging.WARNING)
+    uvicorn_access_logger.setLevel(logging.INFO)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
-    uvicorn_error_logger.setLevel(logging.WARNING)
+    uvicorn_error_logger.setLevel(logging.INFO)
     yield
 
 
