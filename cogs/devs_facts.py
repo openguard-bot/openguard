@@ -64,7 +64,7 @@ class DevsFacts(commands.Cog):
         fact_template = random.choice(self.fact_templates)
 
         # Generate a random number (1 to 32-bit integer limit: 2,147,483,647)
-        random_number = random.randint(1, 2147483647)
+        random_number = random.randint(1, 18446744073709551615)
 
         # Format the fact
         fact = fact_template.format(dev=dev, number=random_number)
