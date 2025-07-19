@@ -1316,10 +1316,12 @@ class CoreAICog(commands.Cog, name="Core AI"):
     @ai.command(
         name="last_decisions", description="View recent AI moderation decisions"
     )
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     async def ai_last_decisions(self, ctx: commands.Context):
         guild_id = ctx.guild.id
         decisions = await get_ai_decisions(guild_id, limit=50)
+        decisions = [d for d in decisions if d.get("guild_id") == guild_id]
         if not decisions:
             await ctx.reply("No AI decisions have been recorded yet.", ephemeral=True)
             return

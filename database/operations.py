@@ -815,7 +815,7 @@ async def get_ai_decisions(
     try:
         results = await execute_query(
             """
-            SELECT id, message_id, author_id, author_name,
+            SELECT id, guild_id, message_id, author_id, author_name,
                    message_content_snippet, decision, decision_timestamp
             FROM ai_decisions
             WHERE guild_id = $1
@@ -833,6 +833,7 @@ async def get_ai_decisions(
             decision = json.loads(decision_json) if decision_json else {}
             normalized.append(
                 {
+                    "guild_id": row["guild_id"],
                     "message_id": row["message_id"],
                     "author_id": row["author_id"],
                     "author_name": row["author_name"],
