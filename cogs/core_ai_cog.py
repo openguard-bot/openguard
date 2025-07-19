@@ -43,7 +43,7 @@ def is_dev_aimodtest_user(interaction: discord.Interaction) -> bool:
 
 class DecisionPaginator(discord.ui.View):
     def __init__(self, decisions: list[dict], author_id: int):
-        super().__init__(timeout=60)
+        super().__init__(timeout=3600) # 1 hour
         self.decisions = decisions
         self.author_id = author_id
         self.index = 0
