@@ -25,4 +25,4 @@ Owners:
   PCHAN: 1146391317295935570
 
 # Optional channel ID to send error notifications instead of DMing the user
-ERROR_NOTIFICATION_CHANNEL_ID: null
+ERROR_NOTIFICATION_CHANNEL_ID: 1396224455876939786
