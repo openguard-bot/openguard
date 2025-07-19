@@ -113,6 +113,7 @@ bot = MyBot(command_prefix=get_prefix, intents=intents, help_command=None)
 bot.launch_time = discord.utils.utcnow()
 
 ERROR_NOTIFICATION_USER_ID = config.Owners.ILIKEPANCAKES
+ERROR_NOTIFICATION_CHANNEL_ID = getattr(config, "ERROR_NOTIFICATION_CHANNEL_ID", None)
 
 
 def catch_exceptions(func):
@@ -141,20 +142,12 @@ def catch_exceptions(func):
                 bot_instance = bot
 
             if bot_instance:
-                user = await bot_instance.fetch_user(ERROR_NOTIFICATION_USER_ID)
-                if user:
-                    error_content = f"**Error Type:** {type(e).__name__}\n"
-                    error_content += f"**Error Message:** {str(e)}\n"
-                    error_content += f"**Context:** {context}\n"
-
-                    if tb_string:
-                        if len(tb_string) > 1500:
-                            tb_string = tb_string[:1500] + "...(truncated)"
-                        error_content += (
-                            f"**Traceback:**\n```\n{tb_string.strip()}\n```"
-                        )
-
-                    await user.send(error_content)
+                await send_error_dm(
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    error_traceback=tb_string,
+                    context_info=context,
+                )
 
             raise
 
@@ -194,13 +187,6 @@ async def send_error_dm(
     error_type, error_message, error_traceback=None, context_info=None
 ):
     try:
-        user = await bot.fetch_user(ERROR_NOTIFICATION_USER_ID)
-        if not user:
-            print(
-                f"Could not find user with ID {ERROR_NOTIFICATION_USER_ID} to send error notification"
-            )
-            return
-
         error_content = f"**Error Type:** {error_type}\n"
         error_content += f"**Error Message:** {error_message}\n"
 
@@ -211,6 +197,28 @@ async def send_error_dm(
             if len(error_traceback) > 1500:
                 error_traceback = error_traceback[:1500] + "...(truncated)"
             error_content += f"**Traceback:**\n```\n{error_traceback.strip()}\n```"
+
+        if ERROR_NOTIFICATION_CHANNEL_ID:
+            channel = bot.get_channel(ERROR_NOTIFICATION_CHANNEL_ID)
+            if channel is None:
+                try:
+                    channel = await bot.fetch_channel(ERROR_NOTIFICATION_CHANNEL_ID)
+                except Exception:
+                    channel = None
+            if not channel:
+                print(
+                    f"Could not find channel with ID {ERROR_NOTIFICATION_CHANNEL_ID} to send error notification"
+                )
+                return
+            await channel.send(error_content)
+            return
+
+        user = await bot.fetch_user(ERROR_NOTIFICATION_USER_ID)
+        if not user:
+            print(
+                f"Could not find user with ID {ERROR_NOTIFICATION_USER_ID} to send error notification"
+            )
+            return
 
         await user.send(error_content)
     except Exception as e:

@@ -13,6 +13,7 @@ from bot import (
     send_error_dm,
     catch_exceptions,
     ERROR_NOTIFICATION_USER_ID,
+    ERROR_NOTIFICATION_CHANNEL_ID,
     update_bot_guilds_cache,
     update_launch_time_cache,
     prefix_update_listener,
@@ -45,6 +46,7 @@ class MockOwners:
 
 
 config.Owners = MockOwners
+bot.ERROR_NOTIFICATION_CHANNEL_ID = None
 
 
 # Clear the cache before each test that uses it
@@ -446,6 +448,25 @@ async def test_send_error_dm_handles_dm_error(mock_bot):
 
     mock_print.assert_called_once()
     assert "Failed to send error DM" in mock_print.call_args[0][0]
+
+
+@pytest.mark.asyncio
+async def test_send_error_dm_sends_to_channel(mock_bot):
+    mock_channel_obj = AsyncMock(spec=discord.TextChannel)
+    mock_channel_obj.send = AsyncMock()
+    mock_bot.get_channel = MagicMock(return_value=None)
+    mock_bot.fetch_channel = AsyncMock(return_value=mock_channel_obj)
+    mock_bot.fetch_user = AsyncMock()
+
+    with patch("bot.bot", new=mock_bot), patch(
+        "bot.ERROR_NOTIFICATION_CHANNEL_ID", 999
+    ):
+        await send_error_dm("Type", "Message")
+
+    mock_bot.get_channel.assert_called_once_with(999)
+    mock_bot.fetch_channel.assert_called_once_with(999)
+    mock_channel_obj.send.assert_called_once()
+    mock_bot.fetch_user.assert_not_called()
 
 
 # --- catch_exceptions decorator Tests ---
