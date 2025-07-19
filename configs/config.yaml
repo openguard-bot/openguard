@@ -23,3 +23,6 @@ Owners:
   ILIKEPANCAKES: 1141746562922459136
   SLIPSTREAM: 452666956353503252
   PCHAN: 1146391317295935570
+
+# Optional channel ID to send error notifications instead of DMing the user
+ERROR_NOTIFICATION_CHANNEL_ID: null
