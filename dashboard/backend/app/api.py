@@ -1119,7 +1119,10 @@ async def update_moderation_settings(
         )
 
 
-@router.get("/guilds/{guild_id}/config/logging", response_model=schemas.LoggingSettings)
+@router.get(
+    "/guilds/{guild_id}/config/logging",
+    response_model=schemas.EventLoggingSettings,
+)
 async def get_logging_config(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -1132,10 +1135,13 @@ async def get_logging_config(
         return await crud.get_logging_settings(db=db, guild_id=guild_id)
 
 
-@router.put("/guilds/{guild_id}/config/logging", response_model=schemas.LoggingSettings)
+@router.put(
+    "/guilds/{guild_id}/config/logging",
+    response_model=schemas.EventLoggingSettings,
+)
 async def update_logging_settings(
     guild_id: int,
-    settings_data: schemas.LoggingSettingsUpdate,
+    settings_data: schemas.EventLoggingSettingsUpdate,
     db: Session = Depends(get_db),
     has_admin: bool = Depends(has_admin_permissions),
 ):

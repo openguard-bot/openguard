@@ -114,6 +114,20 @@ class LoggingSettingsUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class EventLoggingSettings(BaseModel):
+    webhook_url: Optional[str] = None
+    enabled_events: Dict[str, bool] = Field(default_factory=dict)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EventLoggingSettingsUpdate(BaseModel):
+    webhook_url: Optional[str] = None
+    enabled_events: Optional[Dict[str, bool]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ChannelExclusionSettings(BaseModel):
     excluded_channels: List[str] = Field(
         default_factory=list,

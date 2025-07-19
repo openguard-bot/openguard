@@ -157,7 +157,7 @@ const ChannelManagement = ({ guildId }) => {
               <DiscordSelector
                 guildId={guildId}
                 type="channels"
-                value={config.suggestions_channel}
+                value={config.suggestions_channel || ""}
                 onValueChange={(value) =>
                   handleInputChange("suggestions_channel", value)
                 }

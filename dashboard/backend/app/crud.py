@@ -152,54 +152,76 @@ async def update_moderation_settings(
     return await get_moderation_settings(db, guild_id)
 
 
-async def get_logging_settings(db: Session, guild_id: int) -> schemas.LoggingSettings:
-    """Retrieve logging settings for a guild."""
+async def get_logging_settings(
+    db: Session, guild_id: int
+) -> schemas.EventLoggingSettings:
+    """Retrieve event logging settings for a guild."""
     result = await db.execute(
         text(
-            "SELECT key, value FROM guild_settings WHERE guild_id = :guild_id AND key IN ('log_channel_id', 'message_delete_logging', 'message_edit_logging', 'member_join_logging', 'member_leave_logging')"
+            "SELECT value FROM guild_settings WHERE guild_id = :guild_id AND key = 'logging_webhook_url'"
         ),
         {"guild_id": guild_id},
     )
-    settings_data: Dict[str, Any] = {
-        "log_channel_id": None,
-        "message_delete_logging": False,
-        "message_edit_logging": False,
-        "member_join_logging": False,
-        "member_leave_logging": False,
-    }
-    for key, value in result.fetchall():
-        if isinstance(value, str):
+    row = result.fetchone()
+    webhook_url = None
+    if row:
+        webhook_url = row[0]
+        if isinstance(webhook_url, str):
             try:
-                settings_data[key] = json.loads(value)
+                webhook_url = json.loads(webhook_url)
             except json.JSONDecodeError:
-                settings_data[key] = value
-        else:
-            settings_data[key] = value
-    logger.info(f"Logging settings data for guild {guild_id}: {settings_data}")
-    try:
-        return schemas.LoggingSettings(**settings_data)
-    except Exception as e:
-        logger.error(f"Error creating LoggingSettings for guild {guild_id}: {e}")
-        raise
+                pass
+
+    toggles_result = await db.execute(
+        text(
+            "SELECT event_key, enabled FROM log_event_toggles WHERE guild_id = :guild_id"
+        ),
+        {"guild_id": guild_id},
+    )
+    enabled_events = {key: bool(val) for key, val in toggles_result.fetchall()}
+
+    return schemas.EventLoggingSettings(
+        webhook_url=webhook_url, enabled_events=enabled_events
+    )
 
 
 async def update_logging_settings(
-    db: Session, guild_id: int, settings_data: schemas.LoggingSettingsUpdate
-) -> schemas.LoggingSettings:
-    """Update logging settings for a guild."""
-    for key, value in settings_data.model_dump(exclude_unset=True).items():
-        db_value = json.dumps(value)
+    db: Session, guild_id: int, settings_data: schemas.EventLoggingSettingsUpdate
+) -> schemas.EventLoggingSettings:
+    """Update event logging settings for a guild."""
+    data = settings_data.model_dump(exclude_unset=True)
+
+    if "webhook_url" in data:
         await db.execute(
             text(
                 """
                 INSERT INTO guild_settings (guild_id, key, value)
-                VALUES (:guild_id, :key, :value)
+                VALUES (:guild_id, 'logging_webhook_url', :value)
                 ON CONFLICT (guild_id, key)
                 DO UPDATE SET value = :value
                 """
             ),
-            {"guild_id": guild_id, "key": key, "value": db_value},
+            {"guild_id": guild_id, "value": json.dumps(data["webhook_url"])},
         )
+
+    if "enabled_events" in data:
+        for event_key, enabled in data["enabled_events"].items():
+            await db.execute(
+                text(
+                    """
+                    INSERT INTO log_event_toggles (guild_id, event_key, enabled)
+                    VALUES (:guild_id, :event_key, :enabled)
+                    ON CONFLICT (guild_id, event_key)
+                    DO UPDATE SET enabled = :enabled, updated_at = CURRENT_TIMESTAMP
+                    """
+                ),
+                {
+                    "guild_id": guild_id,
+                    "event_key": event_key,
+                    "enabled": enabled,
+                },
+            )
+
     await db.commit()
     return await get_logging_settings(db, guild_id)
 
@@ -1418,6 +1440,7 @@ async def update_table_row(
     def get_columns_sync(sync_conn):
         inspector = inspect(sync_conn.bind)
         return inspector.get_columns(table_name)
+
     column_dicts = await db.run_sync(get_columns_sync)
     all_columns = [f'"{c["name"]}"' for c in column_dicts]
 
@@ -1481,7 +1504,9 @@ async def delete_table_row(
         else:
             params[f"pk_{key}"] = value
 
-    logger.info(f"crud.py: Executing DELETE query: {query.compile(compile_kwargs={'literal_binds': True})}")
+    logger.info(
+        f"crud.py: Executing DELETE query: {query.compile(compile_kwargs={'literal_binds': True})}"
+    )
     logger.info(f"crud.py: DELETE query parameters: {params}")
     result = await db.execute(query, params)
     await db.commit()

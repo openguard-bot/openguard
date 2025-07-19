@@ -238,11 +238,8 @@ def test_get_logging_settings(async_client: TestClient, monkeypatch):
 
     async def mock_get_logging_settings(db, guild_id):
         return {
-            "log_channel_id": "11111",
-            "message_delete_logging": True,
-            "message_edit_logging": True,
-            "member_join_logging": False,
-            "member_leave_logging": False,
+            "webhook_url": "https://example.com/webhook",
+            "enabled_events": {"message_delete": True},
         }
 
     monkeypatch.setattr(
@@ -253,8 +250,8 @@ def test_get_logging_settings(async_client: TestClient, monkeypatch):
     response = async_client.get("/api/guilds/123/config/logging")
     assert response.status_code == 200
     settings = response.json()
-    assert settings["log_channel_id"] == "11111"
-    assert settings["message_delete_logging"] is True
+    assert settings["webhook_url"] == "https://example.com/webhook"
+    assert settings["enabled_events"]["message_delete"] is True
 
 
 def test_update_logging_settings(async_client: TestClient, monkeypatch):
@@ -271,14 +268,14 @@ def test_update_logging_settings(async_client: TestClient, monkeypatch):
     )
 
     update_data = {
-        "log_channel_id": "22222",
-        "message_delete_logging": False,
+        "webhook_url": "https://example.com/new",
+        "enabled_events": {"message_delete": False},
     }
     response = async_client.put("/api/guilds/123/config/logging", json=update_data)
     assert response.status_code == 200
     settings = response.json()
-    assert settings["log_channel_id"] == "22222"
-    assert settings["message_delete_logging"] is False
+    assert settings["webhook_url"] == "https://example.com/new"
+    assert settings["enabled_events"]["message_delete"] is False
 
 
 def test_get_security_settings(async_client: TestClient, monkeypatch):
