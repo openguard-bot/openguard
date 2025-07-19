@@ -12,6 +12,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { Textarea } from "./ui/textarea";
+import { FormDescription } from "./ui/form";
 import { Bot, Save, RefreshCw, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,8 +25,11 @@ const AISettings = ({ guildId }) => {
     const fetchConfig = useCallback(async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/guilds/${guildId}/config/ai`);
-        setConfig(response.data);
+        const [aiRes, generalRes] = await Promise.all([
+          axios.get(`/api/guilds/${guildId}/config/ai`),
+          axios.get(`/api/guilds/${guildId}/config/general`),
+        ]);
+        setConfig({ ...aiRes.data, ...generalRes.data });
       } catch (error) {
         toast.error("Failed to load AI settings");
         console.error("Error fetching AI config:", error);
@@ -57,7 +61,13 @@ const AISettings = ({ guildId }) => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.put(`/api/guilds/${guildId}/config/ai`, config);
+      await Promise.all([
+        axios.put(`/api/guilds/${guildId}/config/ai`, config),
+        axios.put(`/api/guilds/${guildId}/config/general`, {
+          bot_enabled: config.bot_enabled,
+          test_mode: config.test_mode,
+        }),
+      ]);
       toast.success("AI settings saved successfully");
     } catch (error) {
       toast.error("Failed to save AI settings");
@@ -116,6 +126,38 @@ const AISettings = ({ guildId }) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="ai-moderation-enabled" className="text-base">
+                AI Moderation Enabled
+              </Label>
+              <FormDescription>
+                Toggle automated actions from the AI moderation system.
+              </FormDescription>
+            </div>
+            <Switch
+              id="ai-moderation-enabled"
+              checked={config.bot_enabled || false}
+              onCheckedChange={(value) => handleInputChange("bot_enabled", value)}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="ai-test-mode" className="text-base">
+                AI Test Mode
+              </Label>
+              <FormDescription>
+                Analyze messages but require manual approval for actions.
+              </FormDescription>
+            </div>
+            <Switch
+              id="ai-test-mode"
+              checked={config.test_mode || false}
+              onCheckedChange={(value) => handleInputChange("test_mode", value)}
+            />
+          </div>
+        </div>
         <div className="flex items-center space-x-2">
           <Switch
             id="ai_enabled"

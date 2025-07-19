@@ -13,6 +13,8 @@ const mockConfig = {
   ai_model: 'gpt-4-turbo',
   ai_temperature: 0.7,
   ai_system_prompt: 'You are a helpful assistant.',
+  bot_enabled: true,
+  test_mode: false,
 };
 
 describe('AISettings', () => {
@@ -35,6 +37,8 @@ describe('AISettings', () => {
   it('renders settings form after loading', async () => {
     render(<AISettings guildId="123" />);
     await waitFor(() => {
+      expect(screen.getByLabelText(/AI Moderation Enabled/i)).toBeChecked();
+      expect(screen.getByLabelText(/AI Test Mode/i)).not.toBeChecked();
       expect(screen.getByLabelText(/Enable AI Features/i)).toBeChecked();
       expect(screen.getByLabelText(/AI Model/i)).toHaveValue(mockConfig.ai_model);
       expect(screen.getByLabelText(/AI Temperature/i)).toHaveValue(mockConfig.ai_temperature);
@@ -61,6 +65,10 @@ describe('AISettings', () => {
     const modelInput = screen.getByLabelText(/AI Model/i);
     fireEvent.change(modelInput, { target: { value: 'new-model' } });
     expect(modelInput).toHaveValue('new-model');
+
+    const testModeSwitch = screen.getByLabelText(/AI Test Mode/i);
+    fireEvent.click(testModeSwitch);
+    expect(testModeSwitch).toBeChecked();
   });
 
   it('saves settings and shows success toast', async () => {
@@ -72,6 +80,7 @@ describe('AISettings', () => {
 
     await waitFor(() => {
       expect(axios.put).toHaveBeenCalledWith('/api/guilds/123/config/ai', expect.any(Object));
+      expect(axios.put).toHaveBeenCalledWith('/api/guilds/123/config/general', expect.any(Object));
       expect(toast.success).toHaveBeenCalledWith('AI settings saved successfully');
     });
   });
