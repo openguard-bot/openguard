@@ -395,8 +395,10 @@ async def test_send_error_dm_success(mock_bot):
     error_traceback = "Traceback data."
     context_info = "Context details."
 
-    with patch("bot.bot", new=mock_bot):  # Patch the global bot object
-        await send_error_dm(error_type, error_message, error_traceback, context_info)
+    with patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
+        await send_error_dm(
+            mock_bot, error_type, error_message, error_traceback, context_info
+        )
 
     mock_bot.fetch_user.assert_called_once_with(ERROR_NOTIFICATION_USER_ID)
     expected_content = (
@@ -412,8 +414,10 @@ async def test_send_error_dm_success(mock_bot):
 async def test_send_error_dm_no_user(mock_bot):
     mock_bot.fetch_user = AsyncMock(return_value=None)  # Simulate user not found
 
-    with patch("bot.bot", new=mock_bot), patch("builtins.print") as mock_print:
-        await send_error_dm("Type", "Message")
+    with patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None), patch(
+        "builtins.print"
+    ) as mock_print:
+        await send_error_dm(mock_bot, "Type", "Message")
 
     mock_bot.fetch_user.assert_called_once_with(ERROR_NOTIFICATION_USER_ID)
     mock_print.assert_called_once()
@@ -428,8 +432,8 @@ async def test_send_error_dm_truncates_traceback(mock_bot):
 
     long_traceback = "A" * 2000  # Longer than 1500 limit
 
-    with patch("bot.bot", new=mock_bot):
-        await send_error_dm("Type", "Message", long_traceback)
+    with patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
+        await send_error_dm(mock_bot, "Type", "Message", long_traceback)
 
     sent_content = mock_user_obj.send.call_args[0][0]
     assert len(sent_content) < 1500 + 100  # Rough check for truncation
@@ -444,7 +448,7 @@ async def test_send_error_dm_handles_dm_error(mock_bot):
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
     with patch("bot.bot", new=mock_bot), patch("builtins.print") as mock_print:
-        await send_error_dm("Type", "Message")
+        await send_error_dm(mock_bot, "Type", "Message")
 
     mock_print.assert_called_once()
     assert "Failed to send error DM" in mock_print.call_args[0][0]
@@ -461,7 +465,7 @@ async def test_send_error_dm_sends_to_channel(mock_bot):
     with patch("bot.bot", new=mock_bot), patch(
         "bot.ERROR_NOTIFICATION_CHANNEL_ID", 999
     ):
-        await send_error_dm("Type", "Message")
+        await send_error_dm(mock_bot, "Type", "Message")
 
     mock_bot.get_channel.assert_called_once_with(999)
     mock_bot.fetch_channel.assert_called_once_with(999)
@@ -499,6 +503,8 @@ async def test_catch_exceptions_sends_dm_on_error(mock_bot):
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
     with patch("bot.bot", new=mock_bot), patch(
+        "bot.ERROR_NOTIFICATION_CHANNEL_ID", None
+    ), patch(
         "sys.exc_info", return_value=(ValueError, ValueError("Test exception"), None)
     ), patch(
         "traceback.format_exception",
@@ -537,7 +543,7 @@ async def test_catch_exceptions_with_self_and_bot_attribute(mock_bot):
     mock_user_obj.send = AsyncMock()
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
-    with patch("bot.bot", new=mock_bot):
+    with patch("bot.bot", new=mock_bot), patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
         with pytest.raises(TypeError, match="Cog error"):
             await cog_instance.my_method()
 
@@ -567,7 +573,7 @@ async def test_catch_exceptions_with_bot_instance_as_arg(mock_bot):
     mock_user_obj.send = AsyncMock()
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
-    with patch("bot.bot", new=mock_bot):
+    with patch("bot.bot", new=mock_bot), patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
         with pytest.raises(IndexError, match="List out of bounds"):
             await my_function(mock_bot)
 

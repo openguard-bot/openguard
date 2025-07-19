@@ -143,6 +143,7 @@ def catch_exceptions(func):
 
             if bot_instance:
                 await send_error_dm(
+                    bot_instance,
                     error_type=type(e).__name__,
                     error_message=str(e),
                     error_traceback=tb_string,
@@ -174,6 +175,7 @@ async def load_cogs():
                 )
                 try:
                     await send_error_dm(
+                        bot,
                         error_type=type(e).__name__,
                         error_message=str(e),
                         error_traceback=tb_string,
@@ -184,7 +186,7 @@ async def load_cogs():
 
 
 async def send_error_dm(
-    error_type, error_message, error_traceback=None, context_info=None
+    bot_instance, error_type, error_message, error_traceback=None, context_info=None
 ):
     try:
         error_content = f"**Error Type:** {error_type}\n"
@@ -199,10 +201,12 @@ async def send_error_dm(
             error_content += f"**Traceback:**\n```\n{error_traceback.strip()}\n```"
 
         if ERROR_NOTIFICATION_CHANNEL_ID:
-            channel = bot.get_channel(ERROR_NOTIFICATION_CHANNEL_ID)
+            channel = bot_instance.get_channel(ERROR_NOTIFICATION_CHANNEL_ID)
             if channel is None:
                 try:
-                    channel = await bot.fetch_channel(ERROR_NOTIFICATION_CHANNEL_ID)
+                    channel = await bot_instance.fetch_channel(
+                        ERROR_NOTIFICATION_CHANNEL_ID
+                    )
                 except Exception:
                     channel = None
             if not channel:
@@ -213,7 +217,7 @@ async def send_error_dm(
             await channel.send(error_content)
             return
 
-        user = await bot.fetch_user(ERROR_NOTIFICATION_USER_ID)
+        user = await bot_instance.fetch_user(ERROR_NOTIFICATION_USER_ID)
         if not user:
             print(
                 f"Could not find user with ID {ERROR_NOTIFICATION_USER_ID} to send error notification"
@@ -242,6 +246,7 @@ async def on_error(event, *args, **kwargs):
         context += f", Kwargs: {kwargs}"
 
     await send_error_dm(
+        bot,
         error_type=error_type.__name__,
         error_message=str(error_value),
         error_traceback=tb_string,
@@ -321,6 +326,7 @@ async def on_command_error(ctx, error):
         context = f"Command: {ctx.command.name}, Author: {ctx.author} ({ctx.author.id}), Guild: {ctx.guild.name if ctx.guild else 'DM'} ({ctx.guild.id if ctx.guild else 'N/A'}), Channel: {ctx.channel}"
 
         await send_error_dm(
+            ctx.bot,
             error_type=type(error).__name__,
             error_message=str(error),
             error_traceback=tb_string,
@@ -407,6 +413,7 @@ async def on_app_command_error(
         context = f"Command: {command_name}, Author: {interaction.user} ({interaction.user.id}), Guild: {interaction.guild.name if interaction.guild else 'DM'} ({interaction.guild.id if interaction.guild else 'N/A'}), Channel: {interaction.channel}"
 
         await send_error_dm(
+            interaction.client,
             error_type=type(error).__name__,
             error_message=str(error),
             error_traceback=tb_string,
@@ -424,6 +431,7 @@ async def on_ready():
 
         tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         await send_error_dm(
+            bot,
             error_type=type(e).__name__,
             error_message=str(e),
             error_traceback=tb_string,
