@@ -126,40 +126,6 @@ const GeneralSettings = ({ guildId }) => {
                 </FormDescription>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="bot-enabled" className="text-base">
-                    Bot Enabled
-                  </Label>
-                  <FormDescription>
-                    Enable or disable the bot completely in this server.
-                  </FormDescription>
-                </div>
-                <Switch
-                  id="bot-enabled"
-                  checked={config.bot_enabled || false}
-                  onCheckedChange={(value) =>
-                    handleInputChange("bot_enabled", value)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="test-mode" className="text-base">
-                    Test Mode
-                  </Label>
-                  <FormDescription>
-                    Enable test mode to restrict certain features to admins.
-                  </FormDescription>
-                </div>
-                <Switch
-                  id="test-mode"
-                  checked={config.test_mode || false}
-                  onCheckedChange={(value) => handleInputChange("test_mode", value)}
-                />
-              </div>
-            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={fetchConfig} disabled={loading}>
                 <RefreshCw className="h-4 w-4 mr-2" />
