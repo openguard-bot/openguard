@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+
+# pylint: disable=no-member,no-value-for-parameter
 from typing import Optional, List, Dict, Any
 import inspect
 

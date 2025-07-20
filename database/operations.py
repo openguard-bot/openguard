@@ -910,7 +910,9 @@ async def update_captcha_config_field(guild_id: int, field: str, value: Any) -> 
         await delete_cache(f"captcha_config:{guild_id}")
         return True
     except Exception as e:
-        log.error(f"Failed to update captcha config field {field} for guild {guild_id}: {e}")
+        log.error(
+            f"Failed to update captcha config field {field} for guild {guild_id}: {e}"
+        )
         return False
 
 
@@ -928,11 +930,15 @@ async def get_captcha_attempt(guild_id: int, user_id: int) -> Optional[CaptchaAt
         )
         return CaptchaAttempt(**dict(result)) if result else None
     except Exception as e:
-        log.error(f"Failed to get captcha attempt for user {user_id} in guild {guild_id}: {e}")
+        log.error(
+            f"Failed to get captcha attempt for user {user_id} in guild {guild_id}: {e}"
+        )
         return None
 
 
-async def update_captcha_attempt(guild_id: int, user_id: int, increment: bool = True, verified: bool = False) -> bool:
+async def update_captcha_attempt(
+    guild_id: int, user_id: int, increment: bool = True, verified: bool = False
+) -> bool:
     """Update or create captcha attempt record."""
     try:
         current_time = datetime.now(timezone.utc)
@@ -941,7 +947,9 @@ async def update_captcha_attempt(guild_id: int, user_id: int, increment: bool = 
         existing = await get_captcha_attempt(guild_id, user_id)
 
         if existing:
-            new_count = existing.attempt_count + 1 if increment else existing.attempt_count
+            new_count = (
+                existing.attempt_count + 1 if increment else existing.attempt_count
+            )
             await execute_query(
                 """UPDATE captcha_attempts
                    SET attempt_count = $1, last_attempt = $2, verified = $3
@@ -965,7 +973,9 @@ async def update_captcha_attempt(guild_id: int, user_id: int, increment: bool = 
             )
         return True
     except Exception as e:
-        log.error(f"Failed to update captcha attempt for user {user_id} in guild {guild_id}: {e}")
+        log.error(
+            f"Failed to update captcha attempt for user {user_id} in guild {guild_id}: {e}"
+        )
         return False
 
 
@@ -976,14 +986,18 @@ async def reset_captcha_attempts(guild_id: int, user_id: int) -> bool:
             "captcha_attempts", "guild_id = $1 AND user_id = $2", guild_id, user_id
         )
     except Exception as e:
-        log.error(f"Failed to reset captcha attempts for user {user_id} in guild {guild_id}: {e}")
+        log.error(
+            f"Failed to reset captcha attempts for user {user_id} in guild {guild_id}: {e}"
+        )
         return False
 
 
 # Verification Token Operations
 
 
-async def store_verification_token(guild_id: int, user_id: int, token: str, expires_at: datetime) -> bool:
+async def store_verification_token(
+    guild_id: int, user_id: int, token: str, expires_at: datetime
+) -> bool:
     """Store a verification token with expiration."""
     try:
         await execute_query(
@@ -998,7 +1012,9 @@ async def store_verification_token(guild_id: int, user_id: int, token: str, expi
         )
         return True
     except Exception as e:
-        log.error(f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}")
+        log.error(
+            f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}"
+        )
         return False
 
 
@@ -1014,7 +1030,9 @@ async def get_verification_token(guild_id: int, user_id: int) -> Optional[str]:
         )
         return result["token"] if result else None
     except Exception as e:
-        log.error(f"Failed to get verification token for user {user_id} in guild {guild_id}: {e}")
+        log.error(
+            f"Failed to get verification token for user {user_id} in guild {guild_id}: {e}"
+        )
         return None
 
 

@@ -1,6 +1,7 @@
 import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import astro from 'eslint-plugin-astro'
+import astroParser from 'astro-eslint-parser'
 import reactHooks from 'eslint-plugin-react-hooks'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
@@ -25,6 +26,7 @@ export default defineConfig([
         ecmaVersion: 'latest',
         sourceType: 'module',
         ecmaFeatures: { jsx: true },
+        extraFileExtensions: ['.astro'],
       },
     },
     plugins: { '@typescript-eslint': tseslint.plugin, 'react-hooks': reactHooks },
@@ -37,7 +39,13 @@ export default defineConfig([
   {
     files: ['**/*.astro'],
     plugins: { astro },
-    languageOptions: { parser: astro.parser },
+    languageOptions: {
+      parser: astroParser,
+      parserOptions: {
+        parser: tseslint.parser,
+        extraFileExtensions: ['.astro'],
+      },
+    },
     rules: {
       ...astro.configs.recommended.rules,
     },

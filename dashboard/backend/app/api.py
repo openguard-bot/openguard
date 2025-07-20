@@ -14,6 +14,8 @@ from typing import List, Optional
 from lists import config
 
 from . import schemas, crud
+
+# pylint: disable=no-member
 from .db import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import text  # type: ignore
@@ -1300,6 +1302,7 @@ async def delete_channel_rules(
 
 # Captcha Verification Endpoints
 
+
 @router.post("/captcha/verify", response_model=schemas.CaptchaVerificationResponse)
 async def verify_captcha(
     verification_request: schemas.CaptchaVerificationRequest,
@@ -1314,8 +1317,7 @@ async def verify_captcha(
         hcaptcha_secret = os.getenv("HCAPTCHA_SECRET_KEY")
         if not hcaptcha_secret:
             raise HTTPException(
-                status_code=500,
-                detail="hCaptcha secret key not configured"
+                status_code=500, detail="hCaptcha secret key not configured"
             )
 
         # Verify hCaptcha response
@@ -1326,11 +1328,12 @@ async def verify_captcha(
                 "remoteip": request.client.host if request.client else None,
             }
 
-            async with session.post("https://hcaptcha.com/siteverify", data=payload) as response:
+            async with session.post(
+                "https://hcaptcha.com/siteverify", data=payload
+            ) as response:
                 if response.status != 200:
                     raise HTTPException(
-                        status_code=500,
-                        detail="Failed to verify hCaptcha"
+                        status_code=500, detail="Failed to verify hCaptcha"
                     )
 
                 result = await response.json()
@@ -1416,7 +1419,9 @@ async def verify_captcha(
                 role_assigned = True
             except Exception as e:
                 role_error = str(e)
-                logger.error(f"Failed to assign role {config.verification_role_id} to user {user_id}: {e}")
+                logger.error(
+                    f"Failed to assign role {config.verification_role_id} to user {user_id}: {e}"
+                )
 
         # Prepare success message
         if role_assigned:
@@ -1438,8 +1443,7 @@ async def verify_captcha(
     except Exception as e:
         logger.error(f"Error in captcha verification: {e}")
         raise HTTPException(
-            status_code=500,
-            detail="Internal server error during verification"
+            status_code=500, detail="Internal server error during verification"
         )
 
 
@@ -1450,10 +1454,7 @@ async def get_captcha_site_key():
     """
     site_key = os.getenv("HCAPTCHA_SITE_KEY")
     if not site_key:
-        raise HTTPException(
-            status_code=500,
-            detail="hCaptcha site key not configured"
-        )
+        raise HTTPException(status_code=500, detail="hCaptcha site key not configured")
 
     return {"site_key": site_key}
 
@@ -1481,16 +1482,13 @@ async def verification_page(
 
         # Return HTML response
         from fastapi.responses import HTMLResponse
+
         return HTMLResponse(content=html_content)
 
     except FileNotFoundError:
         raise HTTPException(
-            status_code=404,
-            detail="Verification page template not found"
+            status_code=404, detail="Verification page template not found"
         )
     except Exception as e:
         logger.error(f"Error serving verification page: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Error loading verification page"
-        )
+        raise HTTPException(status_code=500, detail="Error loading verification page")
