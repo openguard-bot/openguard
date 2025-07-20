@@ -213,9 +213,7 @@ async def get_db_table_pk(table_name: str, db: Session = Depends(get_db)):
     response_model=List[dict],
     dependencies=[Depends(get_current_admin)],
 )
-async def get_db_table_data(
-    table_name: str, db: Session = Depends(get_db)
-):
+async def get_db_table_data(table_name: str, db: Session = Depends(get_db)):
     """
     Get data from a specific table.
     """
@@ -238,7 +236,9 @@ async def get_db_table_data_with_filter(
     """
     try:
         data = await crud.get_table_data(db, table_name, guild_id)
-        logger.info(f"admin.py: Retrieved data for table '{table_name}' with guild_id '{guild_id}': {data}")
+        logger.info(
+            f"admin.py: Retrieved data for table '{table_name}' with guild_id '{guild_id}': {data}"
+        )
         return data
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -309,7 +309,10 @@ async def delete_db_table_row(
                 try:
                     pk_values[key] = int(value)
                 except (ValueError, TypeError):
-                    raise HTTPException(status_code=400, detail=f"Invalid guild_id format: {value}. Must be an integer.")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid guild_id format: {value}. Must be an integer.",
+                    )
             elif isinstance(value, str):
                 if value.lower() == "true":
                     pk_values[key] = True
@@ -321,16 +324,22 @@ async def delete_db_table_row(
                     pk_values[key] = value
             else:
                 pk_values[key] = value
-        
-        logger.info(f"admin.py: Calling crud.delete_table_row with table_name='{table_name}' and pk_values={pk_values}")
+
+        logger.info(
+            f"admin.py: Calling crud.delete_table_row with table_name='{table_name}' and pk_values={pk_values}"
+        )
         success = await crud.delete_table_row(db, table_name, pk_values)
         if not success:
-            raise HTTPException(status_code=404, detail="Row not found or already deleted.")
+            raise HTTPException(
+                status_code=404, detail="Row not found or already deleted."
+            )
         return None
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.exception(f"admin.py: An unexpected error occurred during delete_db_table_row: {e}")
+        logger.exception(
+            f"admin.py: An unexpected error occurred during delete_db_table_row: {e}"
+        )
         raise HTTPException(
             status_code=500, detail=f"An unexpected error occurred: {e}"
         )

@@ -543,7 +543,9 @@ async def test_catch_exceptions_with_self_and_bot_attribute(mock_bot):
     mock_user_obj.send = AsyncMock()
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
-    with patch("bot.bot", new=mock_bot), patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
+    with patch("bot.bot", new=mock_bot), patch(
+        "bot.ERROR_NOTIFICATION_CHANNEL_ID", None
+    ):
         with pytest.raises(TypeError, match="Cog error"):
             await cog_instance.my_method()
 
@@ -573,7 +575,9 @@ async def test_catch_exceptions_with_bot_instance_as_arg(mock_bot):
     mock_user_obj.send = AsyncMock()
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
-    with patch("bot.bot", new=mock_bot), patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
+    with patch("bot.bot", new=mock_bot), patch(
+        "bot.ERROR_NOTIFICATION_CHANNEL_ID", None
+    ):
         with pytest.raises(IndexError, match="List out of bounds"):
             await my_function(mock_bot)
 
