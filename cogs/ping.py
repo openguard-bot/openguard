@@ -29,7 +29,7 @@ class Ping(commands.Cog):
     async def _sample_pg(self, samples: int = 3) -> float:
         latencies = []
         async with get_connection() as conn:
-            if not conn: # Check if connection was successfully acquired
+            if not conn:  # Check if connection was successfully acquired
                 return float("inf")
             for _ in range(samples):
                 start = time.perf_counter()

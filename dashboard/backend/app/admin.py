@@ -33,7 +33,9 @@ async def admin_health_check(db: Session = Depends(get_db)):
 
         # Test table access
         try:
-            table_result = await db.execute(text("SELECT COUNT(*) FROM user_infractions"))
+            table_result = await db.execute(
+                text("SELECT COUNT(*) FROM user_infractions")
+            )
             user_infractions_count = table_result.scalar_one()
         except Exception as table_error:
             logger.warning(f"Could not access user_infractions table: {table_error}")
@@ -42,7 +44,7 @@ async def admin_health_check(db: Session = Depends(get_db)):
         return {
             "status": "healthy",
             "database": "connected",
-            "user_infractions_count": user_infractions_count
+            "user_infractions_count": user_infractions_count,
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -225,7 +227,9 @@ async def get_db_tables(db: Session = Depends(get_db)):
         return await crud.get_table_names(db)
     except Exception as e:
         logger.error(f"Error fetching table names: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch table names: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch table names: {str(e)}"
+        )
 
 
 @router.get(
@@ -280,7 +284,9 @@ async def get_db_table_data_with_filter(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error in get_db_table_data: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch table data: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch table data: {str(e)}"
+        )
 
 
 @router.put(

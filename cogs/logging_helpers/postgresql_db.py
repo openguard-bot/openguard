@@ -3,6 +3,8 @@ PostgreSQL-based database abstraction layer for logging functionality.
 Replaces the JSON-based version with PostgreSQL operations.
 """
 
+# pylint: disable=no-member,function-redefined
+
 import logging
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, timezone
@@ -15,9 +17,9 @@ from database.operations import (
     update_mod_log_reason as db_update_mod_log_reason,
     get_guild_setting,
     set_guild_setting,
-    get_log_event_enabled,
-    set_log_event_enabled,
-    get_all_log_event_toggles,
+    get_log_event_enabled as db_get_log_event_enabled,
+    set_log_event_enabled as db_set_log_event_enabled,
+    get_all_log_event_toggles as db_get_all_log_event_toggles,
 )
 from database.connection import initialize_database
 
@@ -187,7 +189,7 @@ async def is_log_event_enabled(
 ) -> bool:
     """Checks if a specific log event is enabled for a guild."""
     try:
-        return await get_log_event_enabled(guild_id, event_key, default_enabled)
+        return await db_get_log_event_enabled(guild_id, event_key, default_enabled)
     except Exception as e:
         log.error(f"Error checking log event '{event_key}' for guild {guild_id}: {e}")
         return default_enabled  # Use the provided default
@@ -196,7 +198,7 @@ async def is_log_event_enabled(
 async def set_log_event_enabled(guild_id: int, event_key: str, enabled: bool) -> bool:
     """Sets the enabled status for a specific log event in a guild."""
     try:
-        return await set_log_event_enabled(guild_id, event_key, enabled)
+        return await db_set_log_event_enabled(guild_id, event_key, enabled)
     except Exception as e:
         log.error(f"Error setting log event '{event_key}' for guild {guild_id}: {e}")
         return False
@@ -205,7 +207,7 @@ async def set_log_event_enabled(guild_id: int, event_key: str, enabled: bool) ->
 async def get_all_log_event_toggles(guild_id: int) -> Dict[str, bool]:
     """Gets all log event toggles for a guild."""
     try:
-        return await get_all_log_event_toggles(guild_id)
+        return await db_get_all_log_event_toggles(guild_id)
     except Exception as e:
         log.error(f"Error getting log event toggles for guild {guild_id}: {e}")
         return {}

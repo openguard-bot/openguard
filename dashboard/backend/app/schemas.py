@@ -322,6 +322,7 @@ class BotDetectionSettingsUpdate(BaseModel):
 
 class CaptchaVerificationRequest(BaseModel):
     """Request model for captcha verification."""
+
     user_id: int
     guild_id: int
     verification_token: str
@@ -330,6 +331,7 @@ class CaptchaVerificationRequest(BaseModel):
 
 class CaptchaVerificationResponse(BaseModel):
     """Response model for captcha verification."""
+
     success: bool
     message: str
     user_id: Optional[int] = None
@@ -338,6 +340,7 @@ class CaptchaVerificationResponse(BaseModel):
 
 class CaptchaConfig(BaseModel):
     """Captcha configuration model."""
+
     guild_id: int
     enabled: bool = False
     verification_role_id: Optional[int] = None
@@ -351,6 +354,7 @@ class CaptchaConfig(BaseModel):
 
 class CaptchaAttempt(BaseModel):
     """Captcha attempt model."""
+
     id: Optional[int] = None
     guild_id: int
     user_id: int

@@ -4,6 +4,8 @@ from discord import app_commands
 import datetime
 import logging
 
+# pylint: disable=no-member
+
 import cogs.logging_helpers.settings_manager as sm
 
 
