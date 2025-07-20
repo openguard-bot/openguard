@@ -237,7 +237,7 @@ async def delete_record(table: str, where_clause: str, *args) -> bool:
     query = f"DELETE FROM {table} WHERE {where_clause}"
 
     try:
-        result = await execute_query(query, *args)
+        await execute_query(query, *args)
         return True
     except Exception as e:
         log.error(f"Failed to delete from {table}: {e}")

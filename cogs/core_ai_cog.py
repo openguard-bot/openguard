@@ -499,7 +499,6 @@ class CoreAICog(commands.Cog, name="Core AI"):
     ):
         """Analyze a message using LiteLLM and the provided rules."""
         guild_id = message.guild.id
-        user_id = message.author.id
 
         # Fetch guild's API key
         guild_api_key = await get_guild_api_key(guild_id)
@@ -574,7 +573,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     message.reference.message_id
                 )
                 replied_to_content = f"Replied-to Message: {replied_message.author.display_name}: {replied_message.content[:200]}"
-            except:
+            except Exception:
                 replied_to_content = "Replied-to Message: [Could not fetch]"
 
         recent_history = []
@@ -584,7 +583,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     recent_history.append(
                         f"{hist_message.author.display_name}: {hist_message.content[:100]}"
                     )
-        except:
+        except Exception:
             recent_history = ["[Could not fetch recent history]"]
 
         recent_history_text = (

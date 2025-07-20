@@ -1,16 +1,17 @@
-import sys
 import os
+import sys
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .app import api, admin  # Import the admin router
+from database.connection import initialize_database
 
 # Add project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, project_root)
-
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from .app import api, admin  # Import the admin router
-from database.connection import initialize_database
-import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
