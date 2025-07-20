@@ -69,4 +69,30 @@ describe('LoggingSettings', () => {
       expect(toast.success).toHaveBeenCalledWith('Logging settings saved successfully');
     });
   });
+
+  it('enables all events when "Enable All" is clicked but does not save', async () => {
+    render(<LoggingSettings guildId="123" />);
+    const enableAllButton = await screen.findByText(/Enable All/i);
+    fireEvent.click(enableAllButton);
+
+    const memberJoinSwitch = screen.getByLabelText('Member Join', { selector: '#member_join' });
+    const memberRemoveSwitch = screen.getByLabelText('Member Remove', { selector: '#member_remove' });
+
+    expect(memberJoinSwitch).toBeChecked();
+    expect(memberRemoveSwitch).toBeChecked();
+    expect(axios.put).not.toHaveBeenCalled();
+  });
+
+  it('disables all events when "Disable All" is clicked but does not save', async () => {
+    render(<LoggingSettings guildId="123" />);
+    const disableAllButton = await screen.findByText(/Disable All/i);
+    fireEvent.click(disableAllButton);
+
+    const memberJoinSwitch = screen.getByLabelText('Member Join', { selector: '#member_join' });
+    const memberRemoveSwitch = screen.getByLabelText('Member Remove', { selector: '#member_remove' });
+    
+    expect(memberJoinSwitch).not.toBeChecked();
+    expect(memberRemoveSwitch).not.toBeChecked();
+    expect(axios.put).not.toHaveBeenCalled();
+  });
 });

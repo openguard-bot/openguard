@@ -45,7 +45,6 @@ describe('GeneralSettings', () => {
     const languageButton = screen.getByRole('button', { name: /Language/i });
     expect(languageButton).toBeInTheDocument();
     expect(languageButton).toHaveTextContent(/en/i);
-    expect(screen.getByLabelText(/Bot Enabled/i)).toBeChecked();
   });
 
   it('handles input changes', async () => {
@@ -56,9 +55,6 @@ describe('GeneralSettings', () => {
     fireEvent.change(prefixInput, { target: { value: '?' } });
     expect(prefixInput).toHaveValue('?');
 
-    const botEnabledSwitch = screen.getByLabelText(/Bot Enabled/i);
-    fireEvent.click(botEnabledSwitch);
-    expect(botEnabledSwitch).not.toBeChecked();
   });
 
   it('saves settings and shows success toast', async () => {

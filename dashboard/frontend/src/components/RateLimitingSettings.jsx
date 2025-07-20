@@ -103,7 +103,7 @@ const RateLimitingSettings = ({ guildId }) => {
         <div className="flex items-center space-x-2">
           <Switch
             id="rate_limiting_enabled"
-            checked={config.enabled || false}
+            checked={config.enabled ?? false}
             onCheckedChange={(checked) => handleSwitchChange("enabled", checked)}
           />
           <Label htmlFor="rate_limiting_enabled">
@@ -119,7 +119,7 @@ const RateLimitingSettings = ({ guildId }) => {
                 <Input
                   id="high_rate_threshold"
                   type="number"
-                  value={config.high_rate_threshold || 10}
+                  value={config.high_rate_threshold ?? 10}
                   onChange={(e) =>
                     handleInputChange(
                       "high_rate_threshold",
@@ -133,7 +133,7 @@ const RateLimitingSettings = ({ guildId }) => {
                 <Input
                   id="low_rate_threshold"
                   type="number"
-                  value={config.low_rate_threshold || 3}
+                  value={config.low_rate_threshold ?? 3}
                   onChange={(e) =>
                     handleInputChange(
                       "low_rate_threshold",
@@ -149,7 +149,7 @@ const RateLimitingSettings = ({ guildId }) => {
                 <Input
                   id="high_rate_slowmode"
                   type="number"
-                  value={config.high_rate_slowmode || 5}
+                  value={config.high_rate_slowmode ?? 5}
                   onChange={(e) =>
                     handleInputChange(
                       "high_rate_slowmode",
@@ -165,7 +165,7 @@ const RateLimitingSettings = ({ guildId }) => {
                 <Input
                   id="low_rate_slowmode"
                   type="number"
-                  value={config.low_rate_slowmode || 2}
+                  value={config.low_rate_slowmode ?? 2}
                   onChange={(e) =>
                     handleInputChange(
                       "low_rate_slowmode",
@@ -182,7 +182,7 @@ const RateLimitingSettings = ({ guildId }) => {
                 <Input
                   id="check_interval"
                   type="number"
-                  value={config.check_interval || 30}
+                  value={config.check_interval ?? 30}
                   onChange={(e) =>
                     handleInputChange(
                       "check_interval",
@@ -196,7 +196,7 @@ const RateLimitingSettings = ({ guildId }) => {
                 <Input
                   id="analysis_window"
                   type="number"
-                  value={config.analysis_window || 60}
+                  value={config.analysis_window ?? 60}
                   onChange={(e) =>
                     handleInputChange(
                       "analysis_window",
@@ -211,7 +211,7 @@ const RateLimitingSettings = ({ guildId }) => {
                 </Label>
                 <Input
                   id="notification_channel"
-                  value={config.notification_channel || ""}
+                  value={config.notification_channel ?? ""}
                   onChange={(e) =>
                     handleInputChange("notification_channel", e.target.value)
                   }
@@ -223,7 +223,7 @@ const RateLimitingSettings = ({ guildId }) => {
             <div className="flex items-center space-x-2">
               <Switch
                 id="notifications_enabled"
-                checked={config.notifications_enabled || true}
+                checked={config.notifications_enabled ?? true}
                 onCheckedChange={(checked) =>
                   handleSwitchChange("notifications_enabled", checked)
                 }

@@ -155,6 +155,20 @@ class GuildAPIKey:
 
 
 @dataclass
+class AIDecision:
+    """AI moderation decision model."""
+
+    id: Optional[int] = None
+    guild_id: int = 0
+    message_id: int = 0
+    author_id: int = 0
+    author_name: Optional[str] = None
+    message_content_snippet: Optional[str] = None
+    decision: Dict[str, Any] | None = None
+    decision_timestamp: Optional[datetime] = None
+
+
+@dataclass
 class BlogPost:
     """Blog Post model."""
 
@@ -295,6 +309,18 @@ CREATE TABLE IF NOT EXISTS guild_api_keys (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- AI moderation decisions table
+CREATE TABLE IF NOT EXISTS ai_decisions (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    message_id BIGINT NOT NULL,
+    author_id BIGINT NOT NULL,
+    author_name VARCHAR(255),
+    message_content_snippet TEXT,
+    decision JSONB,
+    decision_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Index creation SQL
@@ -318,6 +344,7 @@ CREATE INDEX IF NOT EXISTS idx_guild_api_keys_guild_id ON guild_api_keys(guild_i
 CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON blog_posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_published ON blog_posts(published);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
+CREATE INDEX IF NOT EXISTS idx_ai_decisions_guild_timestamp ON ai_decisions(guild_id, decision_timestamp);
 """
 
 # Trigger creation SQL for automatic updated_at timestamps

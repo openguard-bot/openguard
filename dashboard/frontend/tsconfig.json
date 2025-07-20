@@ -26,5 +26,5 @@
     },
     "types": ["jsdom"]
   },
-  "include": ["src", "vite.config.js"]
+  "include": ["src", "vite.config.js", "lib"]
 }

@@ -288,7 +288,10 @@ class MessageRateCog(commands.Cog):
         notification_channel: Optional[discord.TextChannel] = None,
     ):
         """Configure automatic message rate limiting for channels."""
-        await interaction.response.defer()
+        if hasattr(interaction, "response"):
+            await interaction.response.defer()
+        else:
+            await interaction.defer()
 
         guild_id = interaction.guild.id
         target_channel = channel or interaction.channel
@@ -348,14 +351,22 @@ class MessageRateCog(commands.Cog):
                     inline=False,
                 )
 
-            await interaction.followup.send(embed=embed)
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in toggle action: {e}")
-            await interaction.followup.send(
-                "❌ An error occurred while toggling auto rate limiting.",
-                ephemeral=True,
-            )
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(
+                    "❌ An error occurred while toggling auto rate limiting.",
+                    ephemeral=True,
+                )
+            else:
+                await interaction.send(
+                    "❌ An error occurred while toggling auto rate limiting."
+                )
 
     async def handle_enable_action(
         self,
@@ -385,14 +396,22 @@ class MessageRateCog(commands.Cog):
                 inline=False,
             )
 
-            await interaction.followup.send(embed=embed)
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in enable action: {e}")
-            await interaction.followup.send(
-                "❌ An error occurred while enabling auto rate limiting.",
-                ephemeral=True,
-            )
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(
+                    "❌ An error occurred while enabling auto rate limiting.",
+                    ephemeral=True,
+                )
+            else:
+                await interaction.send(
+                    "❌ An error occurred while enabling auto rate limiting."
+                )
 
     async def handle_disable_action(
         self,
@@ -414,14 +433,22 @@ class MessageRateCog(commands.Cog):
                 color=discord.Color.red(),
             )
 
-            await interaction.followup.send(embed=embed)
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in disable action: {e}")
-            await interaction.followup.send(
-                "❌ An error occurred while disabling auto rate limiting.",
-                ephemeral=True,
-            )
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(
+                    "❌ An error occurred while toggling auto rate limiting.",
+                    ephemeral=True,
+                )
+            else:
+                await interaction.send(
+                    "❌ An error occurred while toggling auto rate limiting."
+                )
 
     async def handle_status_action(
         self,
@@ -511,13 +538,20 @@ class MessageRateCog(commands.Cog):
                         inline=False,
                     )
 
-            await interaction.followup.send(embed=embed)
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in status action: {e}")
-            await interaction.followup.send(
-                "❌ An error occurred while getting status.", ephemeral=True
-            )
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(
+                    "❌ An error occurred while getting status.",
+                    ephemeral=True,
+                )
+            else:
+                await interaction.send("❌ An error occurred while getting status.")
 
     async def handle_config_action(
         self,
@@ -573,21 +607,38 @@ class MessageRateCog(commands.Cog):
                     inline=True,
                 )
 
-                await interaction.followup.send(embed=embed)
-            else:
                 embed = discord.Embed(
-                    title="✅ Configuration Updated",
-                    description="\n".join(changes),
-                    color=discord.Color.green(),
+                    title="⚙️ Auto Rate Limiting Configuration",
+                    color=discord.Color.blue(),
                 )
 
+                embed.add_field(
+                    name="Notifications",
+                    value="✅ Enabled" if notify_enabled else "❌ Disabled",
+                    inline=True,
+                )
+
+                embed.add_field(
+                    name="Notification Channel",
+                    value=notify_channel.mention if notify_channel else "Not set",
+                    inline=True,
+                )
+
+            if hasattr(interaction, "followup"):
                 await interaction.followup.send(embed=embed)
+            else:
+                await interaction.send(embed=embed)
 
         except Exception as e:
             log.error(f"Error in config action: {e}")
-            await interaction.followup.send(
-                "❌ An error occurred while updating configuration.", ephemeral=True
-            )
+            if hasattr(interaction, "followup"):
+                await interaction.followup.send(
+                    "❌ An error occurred while updating configuration.", ephemeral=True
+                )
+            else:
+                await interaction.send(
+                    "❌ An error occurred while updating configuration."
+                )
 
 
 async def setup(bot: commands.Bot):

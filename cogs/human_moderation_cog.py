@@ -50,27 +50,27 @@ class HumanModerationCog(commands.Cog):
             return None
 
         import re
-        
-        regex = re.compile(r'(\d+)([wdhms])')
+
+        regex = re.compile(r"(\d+)([wdhms])")
         matches = regex.findall(duration_str.lower())
-        
+
         if not matches:
             return None
 
         total_seconds = 0
         for amount, unit in matches:
             amount = int(amount)
-            if unit == 'w':
+            if unit == "w":
                 total_seconds += amount * 604800
-            elif unit == 'd':
+            elif unit == "d":
                 total_seconds += amount * 86400
-            elif unit == 'h':
+            elif unit == "h":
                 total_seconds += amount * 3600
-            elif unit == 'm':
+            elif unit == "m":
                 total_seconds += amount * 60
-            elif unit == 's':
+            elif unit == "s":
                 total_seconds += amount
-        
+
         return datetime.timedelta(seconds=total_seconds)
 
     # --- Command Callbacks ---
@@ -226,9 +226,13 @@ class HumanModerationCog(commands.Cog):
                         color=discord.Color.red(),
                     )
                     embed.add_field(
-                        name="Reason", value=reason or "No reason provided", inline=False
+                        name="Reason",
+                        value=reason or "No reason provided",
+                        inline=False,
                     )
-                    embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
+                    embed.add_field(
+                        name="Moderator", value=ctx.author.name, inline=False
+                    )
                     embed.set_footer(
                         text=f"Server ID: {ctx.guild.id} • {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC • Use the button or send !banappeal to appeal"
                     )
@@ -264,7 +268,11 @@ class HumanModerationCog(commands.Cog):
                 )
 
             # --- Confirmation Message ---
-            target_text = self._user_display(log_target) if full_user_object else f"User ID `{target.id}`"
+            target_text = (
+                self._user_display(log_target)
+                if full_user_object
+                else f"User ID `{target.id}`"
+            )
             dm_status = ""
             if send_dm:
                 dm_status = (
@@ -280,9 +288,7 @@ class HumanModerationCog(commands.Cog):
                 response_message += f"\n{dm_status}"
 
             if ctx.interaction:
-                await ctx.interaction.followup.send(
-                    response_message, ephemeral=False
-                )
+                await ctx.interaction.followup.send(response_message, ephemeral=False)
             else:
                 await ctx.send(response_message)
 
@@ -290,7 +296,8 @@ class HumanModerationCog(commands.Cog):
             # This is raised by guild.ban if the user_id is invalid
             if ctx.interaction:
                 await ctx.interaction.followup.send(
-                    f"❌ Could not find a user with the ID `{target.id}`.", ephemeral=True
+                    f"❌ Could not find a user with the ID `{target.id}`.",
+                    ephemeral=True,
                 )
             else:
                 await ctx.send(f"❌ Could not find a user with the ID `{target.id}`.")
@@ -306,12 +313,13 @@ class HumanModerationCog(commands.Cog):
                 )
         except discord.HTTPException as e:
             # Check for "already banned" error string, as there's no specific exception
-            if 'already banned' in str(e).lower():
-                 if ctx.interaction:
+            if "already banned" in str(e).lower():
+                if ctx.interaction:
                     await ctx.interaction.followup.send(
-                        f"❌ User with ID `{target.id}` is already banned.", ephemeral=True
+                        f"❌ User with ID `{target.id}` is already banned.",
+                        ephemeral=True,
                     )
-                 else:
+                else:
                     await ctx.send(f"❌ User with ID `{target.id}` is already banned.")
             elif ctx.interaction:
                 await ctx.interaction.followup.send(

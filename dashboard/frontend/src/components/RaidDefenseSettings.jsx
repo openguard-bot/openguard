@@ -110,7 +110,7 @@ const RaidDefenseSettings = ({ guildId }) => {
         <div className="flex items-center space-x-2">
           <Switch
             id="raid_defense_enabled"
-            checked={config.enabled || false}
+            checked={config.enabled ?? false}
             onCheckedChange={(checked) => handleSwitchChange("enabled", checked)}
           />
           <Label htmlFor="raid_defense_enabled">Enable Raid Defense</Label>
@@ -124,7 +124,7 @@ const RaidDefenseSettings = ({ guildId }) => {
                 <Input
                   id="raid_threshold"
                   type="number"
-                  value={config.threshold || 10}
+                  value={config.threshold ?? 10}
                   onChange={(e) =>
                     handleInputChange("threshold", parseInt(e.target.value))
                   }
@@ -135,7 +135,7 @@ const RaidDefenseSettings = ({ guildId }) => {
                 <Input
                   id="raid_timeframe"
                   type="number"
-                  value={config.timeframe || 60}
+                  value={config.timeframe ?? 60}
                   onChange={(e) =>
                     handleInputChange("timeframe", parseInt(e.target.value))
                   }
@@ -145,7 +145,7 @@ const RaidDefenseSettings = ({ guildId }) => {
                 <Label htmlFor="alert_channel">Alert Channel ID</Label>
                 <Input
                   id="alert_channel"
-                  value={config.alert_channel || ""}
+                  value={config.alert_channel ?? ""}
                   onChange={(e) =>
                     handleInputChange("alert_channel", e.target.value)
                   }
@@ -157,7 +157,7 @@ const RaidDefenseSettings = ({ guildId }) => {
             <div className="space-y-2">
               <Label htmlFor="auto_action">Automatic Action</Label>
               <Select
-                value={config.auto_action || "none"}
+                value={config.auto_action ?? "none"}
                 onValueChange={(value) =>
                   handleInputChange("auto_action", value)
                 }

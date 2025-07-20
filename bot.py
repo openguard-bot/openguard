@@ -22,6 +22,7 @@ from lists import config
 
 prefix_cache = TTLCache(maxsize=1000, ttl=3600)
 
+
 class DualStream:
     def __init__(self, original_stream, log_file):
         self.original_stream = original_stream
@@ -112,6 +113,7 @@ bot = MyBot(command_prefix=get_prefix, intents=intents, help_command=None)
 bot.launch_time = discord.utils.utcnow()
 
 ERROR_NOTIFICATION_USER_ID = config.Owners.ILIKEPANCAKES
+ERROR_NOTIFICATION_CHANNEL_ID = getattr(config, "ERROR_NOTIFICATION_CHANNEL_ID", None)
 
 
 def catch_exceptions(func):
@@ -120,7 +122,9 @@ def catch_exceptions(func):
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__)).strip()
+            tb_string = "".join(
+                traceback.format_exception(type(e), e, e.__traceback__)
+            ).strip()
 
             print(f"Uncaught exception in {func.__name__}:")
             print(tb_string)
@@ -138,18 +142,13 @@ def catch_exceptions(func):
                 bot_instance = bot
 
             if bot_instance:
-                user = await bot_instance.fetch_user(ERROR_NOTIFICATION_USER_ID)
-                if user:
-                    error_content = f"**Error Type:** {type(e).__name__}\n"
-                    error_content += f"**Error Message:** {str(e)}\n"
-                    error_content += f"**Context:** {context}\n"
-
-                    if tb_string:
-                        if len(tb_string) > 1500:
-                            tb_string = tb_string[:1500] + "...(truncated)"
-                        error_content += f"**Traceback:**\n```\n{tb_string.strip()}\n```"
-
-                    await user.send(error_content)
+                await send_error_dm(
+                    bot_instance,
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    error_traceback=tb_string,
+                    context_info=context,
+                )
 
             raise
 
@@ -176,6 +175,7 @@ async def load_cogs():
                 )
                 try:
                     await send_error_dm(
+                        bot,
                         error_type=type(e).__name__,
                         error_message=str(e),
                         error_traceback=tb_string,
@@ -186,16 +186,9 @@ async def load_cogs():
 
 
 async def send_error_dm(
-    error_type, error_message, error_traceback=None, context_info=None
+    bot_instance, error_type, error_message, error_traceback=None, context_info=None
 ):
     try:
-        user = await bot.fetch_user(ERROR_NOTIFICATION_USER_ID)
-        if not user:
-            print(
-                f"Could not find user with ID {ERROR_NOTIFICATION_USER_ID} to send error notification"
-            )
-            return
-
         error_content = f"**Error Type:** {error_type}\n"
         error_content += f"**Error Message:** {error_message}\n"
 
@@ -206,6 +199,30 @@ async def send_error_dm(
             if len(error_traceback) > 1500:
                 error_traceback = error_traceback[:1500] + "...(truncated)"
             error_content += f"**Traceback:**\n```\n{error_traceback.strip()}\n```"
+
+        if ERROR_NOTIFICATION_CHANNEL_ID:
+            channel = bot_instance.get_channel(ERROR_NOTIFICATION_CHANNEL_ID)
+            if channel is None:
+                try:
+                    channel = await bot_instance.fetch_channel(
+                        ERROR_NOTIFICATION_CHANNEL_ID
+                    )
+                except Exception:
+                    channel = None
+            if not channel:
+                print(
+                    f"Could not find channel with ID {ERROR_NOTIFICATION_CHANNEL_ID} to send error notification"
+                )
+                return
+            await channel.send(error_content)
+            return
+
+        user = await bot_instance.fetch_user(ERROR_NOTIFICATION_USER_ID)
+        if not user:
+            print(
+                f"Could not find user with ID {ERROR_NOTIFICATION_USER_ID} to send error notification"
+            )
+            return
 
         await user.send(error_content)
     except Exception as e:
@@ -229,6 +246,7 @@ async def on_error(event, *args, **kwargs):
         context += f", Kwargs: {kwargs}"
 
     await send_error_dm(
+        bot,
         error_type=error_type.__name__,
         error_message=str(error_value),
         error_traceback=tb_string,
@@ -308,6 +326,7 @@ async def on_command_error(ctx, error):
         context = f"Command: {ctx.command.name}, Author: {ctx.author} ({ctx.author.id}), Guild: {ctx.guild.name if ctx.guild else 'DM'} ({ctx.guild.id if ctx.guild else 'N/A'}), Channel: {ctx.channel}"
 
         await send_error_dm(
+            ctx.bot,
             error_type=type(error).__name__,
             error_message=str(error),
             error_traceback=tb_string,
@@ -330,7 +349,9 @@ async def on_app_command_error(
         should_notify_owner = False
     elif isinstance(error, app_commands.MissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
-        user_message = f"❌ You are missing the following required permissions: {missing_perms}"
+        user_message = (
+            f"❌ You are missing the following required permissions: {missing_perms}"
+        )
         should_notify_owner = False
     elif isinstance(error, app_commands.BotMissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
@@ -340,9 +361,7 @@ async def on_app_command_error(
         user_message = "❌ This command cannot be used in private messages."
         should_notify_owner = False
     elif isinstance(error, app_commands.CommandOnCooldown):
-        user_message = (
-            f"❌ This command is on cooldown. Try again in {error.retry_after:.2f} seconds."
-        )
+        user_message = f"❌ This command is on cooldown. Try again in {error.retry_after:.2f} seconds."
         should_notify_owner = False
     elif isinstance(error, app_commands.CheckFailure):
         user_message = "❌ You don't have permission to use this command."
@@ -394,6 +413,7 @@ async def on_app_command_error(
         context = f"Command: {command_name}, Author: {interaction.user} ({interaction.user.id}), Guild: {interaction.guild.name if interaction.guild else 'DM'} ({interaction.guild.id if interaction.guild else 'N/A'}), Channel: {interaction.channel}"
 
         await send_error_dm(
+            interaction.client,
             error_type=type(error).__name__,
             error_message=str(error),
             error_traceback=tb_string,
@@ -411,6 +431,7 @@ async def on_ready():
 
         tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         await send_error_dm(
+            bot,
             error_type=type(e).__name__,
             error_message=str(e),
             error_traceback=tb_string,
@@ -493,9 +514,13 @@ async def update_guild_member_cache(guild):
         if member_ids:
             pipe.sadd(key, *member_ids)
         await pipe.execute()
-        print(f"Updated member cache for guild {guild.name} ({guild.id}) with {len(member_ids)} members.")
+        print(
+            f"Updated member cache for guild {guild.name} ({guild.id}) with {len(member_ids)} members."
+        )
     except discord.Forbidden:
-        print(f"Missing permissions to fetch members for guild {guild.name} ({guild.id}).")
+        print(
+            f"Missing permissions to fetch members for guild {guild.name} ({guild.id})."
+        )
     except Exception as e:
         print(f"Error caching members for guild {guild.name} ({guild.id}): {e}")
 

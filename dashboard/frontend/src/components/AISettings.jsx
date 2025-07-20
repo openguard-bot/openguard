@@ -20,12 +20,25 @@ const AISettings = ({ guildId }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [rules, setRules] = useState([]);
 
     const fetchConfig = useCallback(async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/guilds/${guildId}/config/ai`);
-        setConfig(response.data);
+        const [aiRes, generalRes] = await Promise.all([
+          axios.get(`/api/guilds/${guildId}/config/ai`),
+          axios.get(`/api/guilds/${guildId}/config/general`),
+        ]);
+        setConfig({
+          ...aiRes.data,
+          ...generalRes.data,
+        });
+        const initialRules = (aiRes.data.keyword_rules ?? []).map((r) => ({
+          keywords: (r.keywords ?? []).join(", "),
+          regex: (r.regex ?? []).join(", "),
+          instructions: r.instructions ?? "",
+        }));
+        setRules(initialRules);
       } catch (error) {
         toast.error("Failed to load AI settings");
         console.error("Error fetching AI config:", error);
@@ -47,17 +60,49 @@ const AISettings = ({ guildId }) => {
     }));
   };
 
-  const handleSwitchChange = (field, checked) => {
-    setConfig((prev) => ({
+  const handleRuleChange = (index, field, value) => {
+    setRules((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const handleAddRule = () => {
+    setRules((prev) => [
       ...prev,
-      [field]: checked,
-    }));
+      { keywords: "", regex: "", instructions: "" },
+    ]);
+  };
+
+  const handleRemoveRule = (index) => {
+    setRules((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.put(`/api/guilds/${guildId}/config/ai`, config);
+      const formattedRules = rules.map((r) => ({
+        keywords: r.keywords
+          .split(",")
+          .map((k) => k.trim())
+          .filter((k) => k),
+        regex: r.regex
+          .split(",")
+          .map((p) => p.trim())
+          .filter((p) => p),
+        instructions: r.instructions,
+      }));
+      await Promise.all([
+        axios.put(`/api/guilds/${guildId}/config/ai`, {
+          channel_exclusions: config.channel_exclusions,
+          channel_rules: config.channel_rules,
+          analysis_mode: config.analysis_mode,
+          keyword_rules: formattedRules,
+        }),
+        axios.put(`/api/guilds/${guildId}/config/general`, {
+          bot_enabled: config.bot_enabled,
+          test_mode: config.test_mode,
+        }),
+      ]);
       toast.success("AI settings saved successfully");
     } catch (error) {
       toast.error("Failed to save AI settings");
@@ -75,9 +120,6 @@ const AISettings = ({ guildId }) => {
       );
       toast.success("Rules synced successfully from #rules channel.");
       // Optionally, update a field in the config if the backend returns it
-      if (response.data.ai_system_prompt) {
-        handleInputChange("ai_system_prompt", response.data.ai_system_prompt);
-      }
     } catch (error) {
       toast.error("Failed to sync rules.");
       console.error("Error pulling rules:", error);
@@ -116,66 +158,103 @@ const AISettings = ({ guildId }) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="ai_enabled"
-            checked={config.ai_enabled || false}
-            onCheckedChange={(checked) =>
-              handleSwitchChange("ai_enabled", checked)
-            }
-          />
-          <Label htmlFor="ai_enabled">Enable AI Features</Label>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="ai-moderation-enabled" className="text-base">
+                AI Moderation Enabled
+              </Label>
+              <CardDescription>
+                Toggle automated actions from the AI moderation system.
+              </CardDescription>
+            </div>
+            <Switch
+              id="ai-moderation-enabled"
+              checked={config.bot_enabled ?? false}
+              onCheckedChange={(value) => handleInputChange("bot_enabled", value)}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="ai-test-mode" className="text-base">
+                AI Test Mode
+              </Label>
+              <CardDescription>
+                Analyze messages but require manual approval for actions.
+              </CardDescription>
+            </div>
+            <Switch
+              id="ai-test-mode"
+              checked={config.test_mode ?? false}
+              onCheckedChange={(value) => handleInputChange("test_mode", value)}
+            />
+          </div>
         </div>
-
-        {config.ai_enabled && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="ai_model">AI Model</Label>
-              <Input
-                id="ai_model"
-                value={config.ai_model || ""}
-                onChange={(e) => handleInputChange("ai_model", e.target.value)}
-                placeholder="e.g., gpt-4-turbo"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ai_temperature">AI Temperature</Label>
-              <Input
-                id="ai_temperature"
-                type="number"
-                step="0.1"
-                min="0"
-                max="1"
-                value={config.ai_temperature || 0.7}
-                onChange={(e) =>
-                  handleInputChange("ai_temperature", parseFloat(e.target.value))
-                }
-                placeholder="0.7"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ai_system_prompt">AI System Prompt</Label>
-              <Textarea
-                id="ai_system_prompt"
-                value={config.ai_system_prompt || ""}
-                onChange={(e) =>
-                  handleInputChange("ai_system_prompt", e.target.value)
-                }
-                placeholder="You are a helpful assistant."
-                className="resize-y"
-              />
+        <div className="space-y-2">
+          <Label htmlFor="analysis_mode">Analysis Mode</Label>
+          <select
+            id="analysis_mode"
+            value={config.analysis_mode ?? "all"}
+            onChange={(e) =>
+              handleInputChange("analysis_mode", e.target.value)
+            }
+            className="w-full border rounded p-2"
+          >
+            <option value="all">Analyze All Messages</option>
+            <option value="rules_only">Only When Rules Match</option>
+            <option value="override">Override With Rules</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label>Keyword/Regex Rules</Label>
+          {rules.map((rule, idx) => (
+            <div key={idx} className="border p-4 rounded space-y-2">
+              <div className="space-y-1">
+                <Label>Keywords (comma separated)</Label>
+                <Input
+                  value={rule.keywords}
+                  onChange={(e) =>
+                    handleRuleChange(idx, "keywords", e.target.value)
+                  }
+                  placeholder="keyword1, keyword2"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Regex Patterns (comma separated)</Label>
+                <Input
+                  value={rule.regex}
+                  onChange={(e) =>
+                    handleRuleChange(idx, "regex", e.target.value)
+                  }
+                  placeholder="^pattern$"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Instructions</Label>
+                <Textarea
+                  value={rule.instructions}
+                  onChange={(e) =>
+                    handleRuleChange(idx, "instructions", e.target.value)
+                  }
+                  className="resize-y"
+                />
+              </div>
               <Button
-                onClick={handlePullRules}
-                disabled={isSyncing}
-                variant="outline"
-                className="w-full"
+                variant="destructive"
+                onClick={() => handleRemoveRule(idx)}
               >
-                <Download className="h-4 w-4 mr-2" />
-                {isSyncing ? "Syncing..." : "Sync Rules from #rules Channel"}
+                Remove Rule
               </Button>
             </div>
-          </>
-        )}
+          ))}
+          <Button
+            variant="outline"
+            onClick={handleAddRule}
+            className="w-full"
+          >
+            Add Rule
+          </Button>
+        </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={fetchConfig} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-2" />

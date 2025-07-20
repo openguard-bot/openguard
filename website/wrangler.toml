@@ -1,0 +1,21 @@
+name = "openguard-website"
+compatibility_flags = ["nodejs_compat"]
+account_id = "f97093bac8d84a0eb995c9c7f40bf984"
+workers_dev = false
+compatibility_date = "2025-07-18"
+main = "dist/_worker.js"
+
+routes = [
+  "openguard.lol/",
+  "openguard.lol/about",
+  "openguard.lol/terms-of-service*",
+  "openguard.lol/privacy-policy*",
+  "openguard.lol/blog*",
+  "openguard.lol/_astro*",
+  "openguard.lol/_image*"
+]
+
+[assets]
+directory = "./dist/"   # whatever Astro wrote your static files to
+binding   = "ASSETS"          # optional – “ASSETS” is the default
+run_worker_first = true       # optional; keeps SSR working on 404s

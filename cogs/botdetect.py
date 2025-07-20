@@ -86,19 +86,9 @@ DEFAULT_SCAM_KEYWORDS = [
     "bit.ly",
     "tinyurl",
     "discord-nitro",
-    "discrod",
-    "discordapp",
     "steam-community",
     "steamcommunlty",
     "steampowered",
-    # Social engineering
-    "dm me",
-    "message me privately",
-    "add me on discord",
-    "contact me urgent",
-    "help me please urgent",
-    "can you help me",
-    "i need help urgent",
 ]
 
 # Legacy variables (now use database)
@@ -541,13 +531,6 @@ class BotDetectCog(commands.Cog):
                 if any(
                     word in kw
                     for word in ["bit.ly", "tinyurl", "discrod", "steampowered"]
-                )
-            ],
-            "Social Engineering": [
-                kw
-                for kw in DEFAULT_SCAM_KEYWORDS
-                if any(
-                    word in kw for word in ["dm me", "message me", "add me", "help me"]
                 )
             ],
         }

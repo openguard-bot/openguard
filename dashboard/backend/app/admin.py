@@ -18,6 +18,7 @@ from database.cache import get_cache, get_redis
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/health", dependencies=[Depends(get_current_admin)])
@@ -228,18 +229,52 @@ async def get_db_tables(db: Session = Depends(get_db)):
 
 
 @router.get(
+    "/db/tables/{table_name}/pk",
+    response_model=List[str],
+    dependencies=[Depends(get_current_admin)],
+)
+async def get_db_table_pk(table_name: str, db: Session = Depends(get_db)):
+    """
+    Get the primary key column(s) for a specific table.
+    """
+    try:
+        return await crud.get_primary_key_columns(db, table_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
     "/db/tables/{table_name}",
     response_model=List[dict],
     dependencies=[Depends(get_current_admin)],
 )
-async def get_db_table_data(
+async def get_db_table_data(table_name: str, db: Session = Depends(get_db)):
+    """
+    Get data from a specific table.
+    """
+    try:
+        return await crud.get_table_data(db, table_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/db/tables/{table_name}/data_with_filter",
+    response_model=List[dict],
+    dependencies=[Depends(get_current_admin)],
+)
+async def get_db_table_data_with_filter(
     table_name: str, guild_id: Optional[int] = None, db: Session = Depends(get_db)
 ):
     """
     Get data from a specific table, optionally filtered by guild_id.
     """
     try:
-        return await crud.get_table_data(db, table_name, guild_id)
+        data = await crud.get_table_data(db, table_name, guild_id)
+        logger.info(
+            f"admin.py: Retrieved data for table '{table_name}' with guild_id '{guild_id}': {data}"
+        )
+        return data
     except ValueError as e:
         logger.error(f"ValueError in get_db_table_data: {e}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -249,32 +284,101 @@ async def get_db_table_data(
 
 
 @router.put(
-    "/db/tables/{table_name}/{pk_value}",
+    "/db/tables/{table_name}/row",
     response_model=dict,
     dependencies=[Depends(get_current_admin)],
 )
 async def update_db_table_row(
     table_name: str,
-    pk_value: Any,
     update_data: schemas.RawTableRowUpdate,
     db: Session = Depends(get_db),
 ):
     """
-    Update a row in a specific table.
+    Update a row in a specific table, handling composite keys via request body.
     """
     try:
-        # The pk_value from the URL can be a string, int, etc.
-        # We try to convert it to an int if it looks like one.
-        try:
-            pk_value_int = int(pk_value)
-            pk_value = pk_value_int
-        except ValueError:
-            pass  # Keep it as a string if conversion fails
+        # Smartly convert PK values to their likely types
+        pk_values = {}
+        for key, value in update_data.pk_values.items():
+            if isinstance(value, str):
+                if value.lower() == "true":
+                    pk_values[key] = True
+                elif value.lower() == "false":
+                    pk_values[key] = False
+                elif value.isdigit():
+                    pk_values[key] = int(value)
+                else:
+                    pk_values[key] = value
+            else:
+                pk_values[key] = value
 
         return await crud.update_table_row(
-            db, table_name, pk_value, update_data.row_data
+            db, table_name, pk_values, update_data.row_data
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+        # Catch specific exceptions if needed, e.g., for not found
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {e}"
+        )
+
+
+@router.delete(
+    "/db/tables/{table_name}/row",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(get_current_admin)],
+)
+async def delete_db_table_row(
+    table_name: str,
+    delete_data: schemas.RawTableRowDelete,
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a row from a specific table, handling composite keys via request body.
+    """
+    try:
+        # Smartly convert PK values to their likely types
+        pk_values = {}
+        for key, value in delete_data.pk_values.items():
+            if key == "guild_id":
+                # Ensure guild_id is an integer, as expected by the database BIGINT type
+                try:
+                    pk_values[key] = int(value)
+                except (ValueError, TypeError):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid guild_id format: {value}. Must be an integer.",
+                    )
+            elif isinstance(value, str):
+                if value.lower() == "true":
+                    pk_values[key] = True
+                elif value.lower() == "false":
+                    pk_values[key] = False
+                elif value.isdigit():
+                    pk_values[key] = int(value)
+                else:
+                    pk_values[key] = value
+            else:
+                pk_values[key] = value
+
+        logger.info(
+            f"admin.py: Calling crud.delete_table_row with table_name='{table_name}' and pk_values={pk_values}"
+        )
+        success = await crud.delete_table_row(db, table_name, pk_values)
+        if not success:
+            raise HTTPException(
+                status_code=404, detail="Row not found or already deleted."
+            )
+        return None
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(
+            f"admin.py: An unexpected error occurred during delete_db_table_row: {e}"
+        )
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {e}"
+        )

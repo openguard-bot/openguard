@@ -224,7 +224,10 @@ async def has_admin_permissions(guild_id: int, request: Request):
 def is_blog_admin(user: schemas.User) -> bool:
     """Check if the user is authorized to manage blog posts."""
     authorized_user_ids = config.OwnersTuple
-    return user.id in authorized_user_ids
+    try:
+        return int(user.id) in authorized_user_ids
+    except (ValueError, TypeError):
+        return False
 
 
 def is_bot_admin(user: schemas.User) -> bool:
@@ -318,8 +321,9 @@ async def callback(code: str, db: Session = Depends(get_db)):
     }
     jwt_token = create_access_token(data=jwt_data)
 
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
     response = RedirectResponse(
-        url="/dashboard/"
+        url=f"{frontend_url}/dashboard/"
     )  # Redirect to frontend dashboard with trailing slash
     response.set_cookie(
         key="access_token",
@@ -584,9 +588,7 @@ async def get_system_health(request: Request):
 
     launch_time_timestamp = await get_cache("bot_launch_time")
     uptime_seconds = (
-        int(time.time() - float(launch_time_timestamp))
-        if launch_time_timestamp
-        else 0
+        int(time.time() - float(launch_time_timestamp)) if launch_time_timestamp else 0
     )
 
     return schemas.SystemHealth(
@@ -712,22 +714,6 @@ async def delete_blog_post(
     return {"message": "Blog post deleted successfully"}
 
 
-# --- Debug Endpoints ---
-
-
-@router.get("/debug/db-test")
-async def debug_db_test(db: Session = Depends(get_db)):
-    """Test database connection."""
-    try:
-        result = await db.execute(text("SELECT 1 as test"))
-        test_value = result.scalar_one()
-        return {"status": "success", "test_value": test_value}
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
-
-
-
-
 @router.get("/guilds/{guild_id}/users", response_model=List[schemas.GuildUser])
 async def get_guild_users(
     guild_id: int,
@@ -835,12 +821,6 @@ async def create_moderation_action(
 # Enhanced Configuration Endpoints
 
 
-
-
-
-
-
-
 @router.get(
     "/guilds/{guild_id}/config/security",
     response_model=schemas.SecuritySettings,
@@ -872,6 +852,68 @@ async def update_security_settings(
     """
     if has_admin:
         return await crud.update_security_settings(
+            db=db, guild_id=guild_id, settings=settings
+        )
+
+
+@router.get(
+    "/guilds/{guild_id}/config/bot-detection",
+    response_model=schemas.BotDetectionSettings,
+)
+async def get_bot_detection_settings(
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Get bot detection settings for a guild."""
+    if has_admin:
+        return await crud.get_bot_detection_config(db=db, guild_id=guild_id)
+
+
+@router.put(
+    "/guilds/{guild_id}/config/bot-detection",
+    response_model=schemas.BotDetectionSettings,
+)
+async def update_bot_detection_settings(
+    guild_id: int,
+    settings: schemas.BotDetectionSettingsUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Update bot detection settings for a guild."""
+    if has_admin:
+        return await crud.update_bot_detection_config(
+            db=db, guild_id=guild_id, settings=settings
+        )
+
+
+@router.get(
+    "/guilds/{guild_id}/config/vanity",
+    response_model=schemas.VanityURLSettings,
+)
+async def get_vanity_settings(
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Get vanity URL settings for a guild."""
+    if has_admin:
+        return await crud.get_vanity_settings(db=db, guild_id=guild_id)
+
+
+@router.put(
+    "/guilds/{guild_id}/config/vanity",
+    response_model=schemas.VanityURLSettings,
+)
+async def update_vanity_settings(
+    guild_id: int,
+    settings: schemas.VanityURLSettingsUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Update vanity URL settings for a guild."""
+    if has_admin:
+        return await crud.update_vanity_settings(
             db=db, guild_id=guild_id, settings=settings
         )
 
@@ -982,6 +1024,37 @@ async def update_rate_limiting_settings(
 
 
 @router.get(
+    "/guilds/{guild_id}/config/message-rate",
+    response_model=schemas.RateLimitingSettings,
+)
+async def get_message_rate_settings(
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Get message rate settings for a guild."""
+    if has_admin:
+        return await crud.get_rate_limiting_settings(db=db, guild_id=guild_id)
+
+
+@router.put(
+    "/guilds/{guild_id}/config/message-rate",
+    response_model=schemas.RateLimitingSettings,
+)
+async def update_message_rate_settings(
+    guild_id: int,
+    settings: schemas.RateLimitingSettingsUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Update message rate settings for a guild."""
+    if has_admin:
+        return await crud.update_rate_limiting_settings(
+            db=db, guild_id=guild_id, settings=settings
+        )
+
+
+@router.get(
     "/guilds/{guild_id}/config/raid-defense",
     response_model=schemas.RaidDefenseSettings,
 )
@@ -1029,9 +1102,7 @@ async def get_general_config(
         return await crud.get_general_settings(db=db, guild_id=guild_id)
 
 
-@router.put(
-    "/guilds/{guild_id}/config/general", response_model=schemas.GeneralSettings
-)
+@router.put("/guilds/{guild_id}/config/general", response_model=schemas.GeneralSettings)
 async def update_general_settings(
     guild_id: int,
     settings_data: schemas.GeneralSettingsUpdate,
@@ -1080,7 +1151,10 @@ async def update_moderation_settings(
         )
 
 
-@router.get("/guilds/{guild_id}/config/logging", response_model=schemas.LoggingSettings)
+@router.get(
+    "/guilds/{guild_id}/config/logging",
+    response_model=schemas.EventLoggingSettings,
+)
 async def get_logging_config(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -1094,11 +1168,12 @@ async def get_logging_config(
 
 
 @router.put(
-    "/guilds/{guild_id}/config/logging", response_model=schemas.LoggingSettings
+    "/guilds/{guild_id}/config/logging",
+    response_model=schemas.EventLoggingSettings,
 )
 async def update_logging_settings(
     guild_id: int,
-    settings_data: schemas.LoggingSettingsUpdate,
+    settings_data: schemas.EventLoggingSettingsUpdate,
     db: Session = Depends(get_db),
     has_admin: bool = Depends(has_admin_permissions),
 ):

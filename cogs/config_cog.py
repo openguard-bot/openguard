@@ -8,6 +8,7 @@ from .aimod_helpers.config_manager import (
     set_guild_config,
     GUILD_LANGUAGE_KEY,
 )
+from .logging_helpers import settings_manager
 
 
 class ConfigCog(commands.Cog, name="Configuration"):
@@ -52,26 +53,82 @@ class ConfigCog(commands.Cog, name="Configuration"):
     ):
         """Sets the channel for a specific log type."""
         guild_id = ctx.guild.id
-        key_map = {
-            "moderation": "moderation_log_channel_id",
-            "server_events": "server_events_log_channel_id",
-            "ai_actions": "ai_actions_log_channel_id",
-        }
-        key = key_map[log_type.value]
-        channel_id = channel.id if channel else None
-
-        await set_guild_config(guild_id, key, channel_id)
-
         response_func = (
             ctx.interaction.response.send_message if ctx.interaction else ctx.send
         )
-        if channel:
-            await response_func(
-                f"{log_type.name} will now be sent to {channel.mention}.",
-                ephemeral=True,
-            )
+
+        if log_type.value == "server_events":
+            if channel:
+                # Check for existing webhooks in the channel
+                existing_webhook = None
+                try:
+                    for wh in await channel.webhooks():
+                        if wh.name == f"{ctx.guild.name}-server-events-log":
+                            existing_webhook = wh
+                            break
+                except discord.Forbidden:
+                    await response_func(
+                        "I don't have permissions to manage webhooks in that channel. Please grant 'Manage Webhooks' permission.",
+                        ephemeral=True,
+                    )
+                    return
+                except Exception as e:
+                    await response_func(
+                        f"An error occurred while checking webhooks: {e}",
+                        ephemeral=True,
+                    )
+                    return
+
+                if existing_webhook:
+                    webhook_url = existing_webhook.url
+                    message = f"Server Event Logs will now be sent to {channel.mention} using the existing webhook."
+                else:
+                    try:
+                        webhook = await channel.create_webhook(
+                            name=f"{ctx.guild.name}-server-events-log"
+                        )
+                        webhook_url = webhook.url
+                        message = f"Server Event Logs will now be sent to {channel.mention} via a new webhook."
+                    except discord.Forbidden:
+                        await response_func(
+                            "I don't have permissions to create webhooks in that channel. Please grant 'Manage Webhooks' permission.",
+                            ephemeral=True,
+                        )
+                        return
+                    except Exception as e:
+                        await response_func(
+                            f"An error occurred while creating webhook: {e}",
+                            ephemeral=True,
+                        )
+                        return
+
+                await settings_manager.set_logging_webhook(guild_id, webhook_url)
+                await response_func(message, ephemeral=True)
+            else:
+                # Disable server event logging by clearing the webhook URL
+                await settings_manager.set_logging_webhook(guild_id, None)
+                await response_func(
+                    f"{log_type.name} have been disabled.", ephemeral=True
+                )
         else:
-            await response_func(f"{log_type.name} have been disabled.", ephemeral=True)
+            # Existing logic for other log types (moderation, ai_actions)
+            key_map = {
+                "moderation": "moderation_log_channel_id",
+                "ai_actions": "ai_actions_log_channel_id",
+            }
+            key = key_map[log_type.value]
+            channel_id = channel.id if channel else None
+            await set_guild_config(guild_id, key, channel_id)
+
+            if channel:
+                await response_func(
+                    f"{log_type.name} will now be sent to {channel.mention}.",
+                    ephemeral=True,
+                )
+            else:
+                await response_func(
+                    f"{log_type.name} have been disabled.", ephemeral=True
+                )
 
     @config.command(
         name="setlang", description="Set the language for bot responses in this guild."
@@ -365,10 +422,10 @@ class ConfigCog(commands.Cog, name="Configuration"):
         )
 
     @config.command(
-        name="enable",
-        description="Enable or disable moderation for this guild (admin only).",
+        name="ai_enabled",
+        description="Enable or disable AI moderation for this guild (admin only).",
     )
-    @app_commands.describe(enabled="Enable moderation (true/false)")
+    @app_commands.describe(enabled="Enable AI moderation (true/false)")
     @app_commands.checks.has_permissions(administrator=True)
     async def modenable(self, ctx: commands.Context, enabled: bool):
         await set_guild_config(ctx.guild.id, "ENABLED", enabled)
@@ -376,15 +433,15 @@ class ConfigCog(commands.Cog, name="Configuration"):
             ctx.interaction.response.send_message if ctx.interaction else ctx.send
         )
         await response_func(
-            f"Moderation is now {'enabled' if enabled else 'disabled'} for this guild.",
+            f"AI moderation is now {'enabled' if enabled else 'disabled'} for this guild.",
             ephemeral=False if ctx.interaction else False,
         )
 
     @config.command(
-        name="testmode",
-        description="Enable or disable AI moderation test mode for this guild (admin only).",
+        name="ai_testmode",
+        description="Enable or disable AI moderation test mode. Actions will only be logged.",
     )
-    @app_commands.describe(enabled="Enable test mode (true/false)")
+    @app_commands.describe(enabled="Enable AI test mode (true/false)")
     @app_commands.checks.has_permissions(administrator=True)
     async def config_testmode(self, ctx: commands.Context, enabled: bool):
         """Enables or disables AI moderation test mode."""
@@ -495,6 +552,20 @@ class ConfigCog(commands.Cog, name="Configuration"):
                 ephemeral=True if ctx.interaction else False,
             )
             return
+
+    @config.command(
+        name="set_rules",
+        description="Manually set the AI moderation rules for this guild.",
+    )
+    @app_commands.describe(rules="The rules text for AI moderation")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def set_rules(self, ctx: commands.Context, *, rules: str):
+        """Manually set server rules used for AI moderation."""
+        await set_guild_config(ctx.guild.id, "SERVER_RULES", rules)
+        response_func = (
+            ctx.interaction.response.send_message if ctx.interaction else ctx.send
+        )
+        await response_func("Server rules have been updated.", ephemeral=False)
 
 
 async def setup(bot: commands.Bot):

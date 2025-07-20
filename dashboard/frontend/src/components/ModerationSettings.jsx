@@ -6,11 +6,13 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { Shield, Save, RefreshCw, AlertTriangle } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { FormDescription } from "./ui/form";
+import { Form, FormDescription } from "./ui/form";
 import DiscordSelector from "./DiscordSelector";
 
 const ModerationSettings = ({ guildId }) => {
+  const form = useForm();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,77 +95,168 @@ const ModerationSettings = ({ guildId }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Action Confirmations</h3>
-          <FormDescription>
-            Require a confirmation step before performing moderation actions.
-          </FormDescription>
-          <div className="space-y-4">
-            {[
-              { id: "warn", label: "Warn Confirmation" },
-              { id: "timeout", label: "Timeout Confirmation" },
-              { id: "kick", label: "Kick Confirmation" },
-              { id: "ban", label: "Ban Confirmation" },
-            ].map(({ id, label }) => (
-              <div
-                key={id}
-                className="flex items-center justify-between rounded-lg border p-4"
-              >
-                <Label htmlFor={`${id}-confirmation`} className="text-base">
-                  {label}
-                </Label>
-                <Switch
-                  id={`${id}-confirmation`}
-                  checked={config.action_confirmations?.[id] || false}
-                  onCheckedChange={(value) =>
-                    handleActionConfirmationChange(id, value)
-                  }
-                />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Action Confirmations</h3>
+              <FormDescription>
+                Require a confirmation step before performing moderation actions.
+              </FormDescription>
+              <div className="space-y-4">
+                {[
+                  { id: "warn", label: "Warn Confirmation" },
+                  { id: "timeout", label: "Timeout Confirmation" },
+                  { id: "kick", label: "Kick Confirmation" },
+                  { id: "ban", label: "Ban Confirmation" },
+                ].map(({ id, label }) => (
+                  <div
+                    key={id}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
+                    <Label htmlFor={`${id}-confirmation`} className="text-base">
+                      {label}
+                    </Label>
+                    <Switch
+                      id={`${id}-confirmation`}
+                    checked={config.action_confirmations?.[id] ?? false}
+                      onCheckedChange={(value) =>
+                        handleActionConfirmationChange(id, value)
+                      }
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Role Settings</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Suicidal Content Ping Role</Label>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Role Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Suicidal Content Ping Role</Label>
+                  <DiscordSelector
+                    guildId={guildId}
+                    type="roles"
+                    value={config.suicidal_content_ping_role_id ?? ""}
+                    onValueChange={(value) =>
+                      handleInputChange("suicidal_content_ping_role_id", value)
+                    }
+                    placeholder="Select a role for suicidal content pings..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Confirmation Ping Role</Label>
+                  <DiscordSelector
+                    guildId={guildId}
+                    type="roles"
+                    value={config.confirmation_ping_role_id ?? ""}
+                    onValueChange={(value) =>
+                      handleInputChange("confirmation_ping_role_id", value)
+                    }
+                    placeholder="Select a role for confirmation pings..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Auto-Moderation</h3>
+              <FormDescription>
+                Automatically moderate messages based on predefined rules.
+              </FormDescription>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="anti-spam" className="text-base">
+                      Anti-Spam
+                    </Label>
+                    <FormDescription>
+                      Detect and delete spam messages.
+                    </FormDescription>
+                  </div>
+                  <Switch
+                    id="anti-spam"
+                    checked={config.anti_spam ?? false}
+                    onCheckedChange={(value) =>
+                      handleInputChange("anti_spam", value)
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="anti-raid" className="text-base">
+                      Anti-Raid
+                    </Label>
+                    <FormDescription>
+                      Detect and mitigate raid attempts.
+                    </FormDescription>
+                  </div>
+                  <Switch
+                    id="anti-raid"
+                    checked={config.anti_raid ?? false}
+                    onCheckedChange={(value) =>
+                      handleInputChange("anti_raid", value)
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="link-detection" className="text-base">
+                      Link Detection
+                    </Label>
+                    <FormDescription>
+                      Detect and delete messages containing suspicious links.
+                    </FormDescription>
+                  </div>
+                  <Switch
+                    id="link-detection"
+                    checked={config.link_detection ?? false}
+                    onCheckedChange={(value) =>
+                      handleInputChange("link_detection", value)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Ignored Roles</h3>
+              <FormDescription>
+                Select roles that will be ignored by auto-moderation.
+              </FormDescription>
               <DiscordSelector
-                guildId={guildId}
                 type="roles"
-                value={config.suicidal_content_ping_role_id}
-                onValueChange={(value) =>
-                  handleInputChange("suicidal_content_ping_role_id", value)
+                guildId={guildId}
+                selected={config.ignored_roles ?? []}
+                onSelectionChange={(roles) =>
+                  handleInputChange("ignored_roles", roles)
                 }
-                placeholder="Select a role for suicidal content pings..."
               />
             </div>
-            <div className="space-y-2">
-              <Label>Confirmation Ping Role</Label>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Ignored Channels</h3>
+              <FormDescription>
+                Select channels that will be ignored by auto-moderation.
+              </FormDescription>
               <DiscordSelector
+                type="channels"
                 guildId={guildId}
-                type="roles"
-                value={config.confirmation_ping_role_id}
-                onValueChange={(value) =>
-                  handleInputChange("confirmation_ping_role_id", value)
+                selected={config.ignored_channels ?? []}
+                onSelectionChange={(channels) =>
+                  handleInputChange("ignored_channels", channels)
                 }
-                placeholder="Select a role for confirmation pings..."
               />
             </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={fetchConfig} disabled={loading}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Reset
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={fetchConfig} disabled={loading}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reset
+              </Button>
+              <Button type="submit" disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );
