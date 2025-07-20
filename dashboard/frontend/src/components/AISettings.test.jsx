@@ -13,6 +13,8 @@ const mockConfig = {
   ai_model: 'gpt-4-turbo',
   ai_temperature: 0.7,
   ai_system_prompt: 'You are a helpful assistant.',
+  analysis_mode: 'all',
+  keyword_rules: [],
   bot_enabled: true,
   test_mode: false,
 };

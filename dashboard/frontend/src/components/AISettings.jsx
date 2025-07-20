@@ -12,7 +12,6 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { Textarea } from "./ui/textarea";
-import { FormDescription } from "./ui/form";
 import { Bot, Save, RefreshCw, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,7 +28,11 @@ const AISettings = ({ guildId }) => {
           axios.get(`/api/guilds/${guildId}/config/ai`),
           axios.get(`/api/guilds/${guildId}/config/general`),
         ]);
-        setConfig({ ...aiRes.data, ...generalRes.data });
+        setConfig({
+          ...aiRes.data,
+          ...generalRes.data,
+          keyword_rules_raw: JSON.stringify(aiRes.data.keyword_rules || [], null, 2),
+        });
       } catch (error) {
         toast.error("Failed to load AI settings");
         console.error("Error fetching AI config:", error);
@@ -61,8 +64,21 @@ const AISettings = ({ guildId }) => {
   const handleSave = async () => {
     try {
       setSaving(true);
+      let rules = [];
+      try {
+        rules = JSON.parse(config.keyword_rules_raw || "[]");
+      } catch {
+        toast.error("Invalid keyword rules JSON");
+        setSaving(false);
+        return;
+      }
       await Promise.all([
-        axios.put(`/api/guilds/${guildId}/config/ai`, config),
+        axios.put(`/api/guilds/${guildId}/config/ai`, {
+          channel_exclusions: config.channel_exclusions,
+          channel_rules: config.channel_rules,
+          analysis_mode: config.analysis_mode,
+          keyword_rules: rules,
+        }),
         axios.put(`/api/guilds/${guildId}/config/general`, {
           bot_enabled: config.bot_enabled,
           test_mode: config.test_mode,
@@ -85,9 +101,6 @@ const AISettings = ({ guildId }) => {
       );
       toast.success("Rules synced successfully from #rules channel.");
       // Optionally, update a field in the config if the backend returns it
-      if (response.data.ai_system_prompt) {
-        handleInputChange("ai_system_prompt", response.data.ai_system_prompt);
-      }
     } catch (error) {
       toast.error("Failed to sync rules.");
       console.error("Error pulling rules:", error);
@@ -132,9 +145,9 @@ const AISettings = ({ guildId }) => {
               <Label htmlFor="ai-moderation-enabled" className="text-base">
                 AI Moderation Enabled
               </Label>
-              <FormDescription>
+              <CardDescription>
                 Toggle automated actions from the AI moderation system.
-              </FormDescription>
+              </CardDescription>
             </div>
             <Switch
               id="ai-moderation-enabled"
@@ -147,9 +160,9 @@ const AISettings = ({ guildId }) => {
               <Label htmlFor="ai-test-mode" className="text-base">
                 AI Test Mode
               </Label>
-              <FormDescription>
+              <CardDescription>
                 Analyze messages but require manual approval for actions.
-              </FormDescription>
+              </CardDescription>
             </div>
             <Switch
               id="ai-test-mode"
@@ -158,66 +171,28 @@ const AISettings = ({ guildId }) => {
             />
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="ai_enabled"
-            checked={config.ai_enabled || false}
-            onCheckedChange={(checked) =>
-              handleSwitchChange("ai_enabled", checked)
-            }
-          />
-          <Label htmlFor="ai_enabled">Enable AI Features</Label>
-        </div>
-
-        {config.ai_enabled && (
-          <>
             <div className="space-y-2">
-              <Label htmlFor="ai_model">AI Model</Label>
-              <Input
-                id="ai_model"
-                value={config.ai_model || ""}
-                onChange={(e) => handleInputChange("ai_model", e.target.value)}
-                placeholder="e.g., gpt-4-turbo"
-              />
+              <Label htmlFor="analysis_mode">Analysis Mode</Label>
+              <select
+                id="analysis_mode"
+                value={config.analysis_mode || "all"}
+                onChange={(e) => handleInputChange("analysis_mode", e.target.value)}
+                className="w-full border rounded p-2"
+              >
+                <option value="all">Analyze All Messages</option>
+                <option value="rules_only">Only When Rules Match</option>
+                <option value="override">Override With Rules</option>
+              </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ai_temperature">AI Temperature</Label>
-              <Input
-                id="ai_temperature"
-                type="number"
-                step="0.1"
-                min="0"
-                max="1"
-                value={config.ai_temperature || 0.7}
-                onChange={(e) =>
-                  handleInputChange("ai_temperature", parseFloat(e.target.value))
-                }
-                placeholder="0.7"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ai_system_prompt">AI System Prompt</Label>
+              <Label htmlFor="keyword_rules">Keyword/Regex Rules (JSON)</Label>
               <Textarea
-                id="ai_system_prompt"
-                value={config.ai_system_prompt || ""}
-                onChange={(e) =>
-                  handleInputChange("ai_system_prompt", e.target.value)
-                }
-                placeholder="You are a helpful assistant."
+                id="keyword_rules"
+                value={config.keyword_rules_raw || "[]"}
+                onChange={(e) => handleInputChange("keyword_rules_raw", e.target.value)}
                 className="resize-y"
               />
-              <Button
-                onClick={handlePullRules}
-                disabled={isSyncing}
-                variant="outline"
-                className="w-full"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {isSyncing ? "Syncing..." : "Sync Rules from #rules Channel"}
-              </Button>
             </div>
-          </>
-        )}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={fetchConfig} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-2" />
