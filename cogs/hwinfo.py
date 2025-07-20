@@ -113,7 +113,7 @@ class HwInfo(commands.Cog):
                                 break
                         else:
                             cpu_name_base = "Unknown CPU"
-                except:
+                except Exception:
                     cpu_name_base = platform.processor() or "Unknown CPU"
             else:
                 cpu_name_base = platform.processor() or "Unknown CPU"

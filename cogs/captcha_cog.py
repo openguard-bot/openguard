@@ -9,11 +9,10 @@ from discord import app_commands
 
 # pylint: disable=no-member
 import aiohttp
-import asyncio
 import logging
 import traceback
 import os
-from typing import Optional, Dict, Any
+from typing import Optional
 from datetime import datetime, timezone, timedelta
 
 from database.operations import (
@@ -22,9 +21,8 @@ from database.operations import (
     update_captcha_config_field,
     get_captcha_attempt,
     update_captcha_attempt,
-    reset_captcha_attempts,
 )
-from database.models import CaptchaConfig, CaptchaAttempt
+from database.models import CaptchaConfig
 
 log = logging.getLogger(__name__)
 
@@ -896,7 +894,7 @@ class CaptchaCog(commands.Cog):
 
             try:
                 await interaction.followup.send(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 pass  # User might be kicked/banned already
 
         except discord.Forbidden:

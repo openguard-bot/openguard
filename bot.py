@@ -311,7 +311,7 @@ async def on_command_error(ctx, error):
             await ctx.send(
                 "❌ An error occurred while executing the command. The bot owner has been notified."
             )
-    except:
+    except Exception:
         pass
 
     # Only notify owner for unexpected errors
@@ -397,7 +397,7 @@ async def on_app_command_error(
                     "❌ An error occurred while executing the command. The bot owner has been notified.",
                     ephemeral=True,
                 )
-    except:
+    except Exception:
         pass
 
     # Only notify owner for unexpected errors
