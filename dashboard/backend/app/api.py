@@ -14,7 +14,8 @@ from lists import config
 
 from . import schemas, crud
 from .db import get_db
-from sqlalchemy.orm import Session  # type: ignore
+from sqlalchemy.orm import Session
+from sqlalchemy import text  # type: ignore
 from database.cache import get_cache
 from cachetools import TTLCache
 import redis.asyncio as redis
@@ -709,6 +710,20 @@ async def delete_blog_post(
         raise HTTPException(status_code=404, detail="Blog post not found")
 
     return {"message": "Blog post deleted successfully"}
+
+
+# --- Debug Endpoints ---
+
+
+@router.get("/debug/db-test")
+async def debug_db_test(db: Session = Depends(get_db)):
+    """Test database connection."""
+    try:
+        result = await db.execute(text("SELECT 1 as test"))
+        test_value = result.scalar_one()
+        return {"status": "success", "test_value": test_value}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 

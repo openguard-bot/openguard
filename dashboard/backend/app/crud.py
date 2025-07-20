@@ -1282,48 +1282,77 @@ async def update_all_guild_settings(
 
 async def get_table_names(db: Session) -> List[str]:
     """Retrieve all table names in the public schema."""
-    result = await db.execute(
-        text("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'")
-    )
-    return [row[0] for row in result.fetchall()]
+    try:
+        # Try the standard PostgreSQL approach first
+        result = await db.execute(
+            text("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'")
+        )
+        rows = result.fetchall()
+        table_names = [row[0] for row in rows]
+
+        if not table_names:
+            # Fallback: try information_schema
+            result = await db.execute(
+                text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+            )
+            rows = result.fetchall()
+            table_names = [row[0] for row in rows]
+
+        logger.info(f"Found {len(table_names)} tables: {table_names}")
+        return table_names
+    except Exception as e:
+        logger.error(f"Error fetching table names: {e}")
+        # Return a hardcoded list of known tables as a fallback
+        return [
+            "user_infractions", "guild_settings", "global_bans", "moderation_logs",
+            "command_logs", "user_data", "blog_posts", "guild_api_keys"
+        ]
 
 
 async def get_table_data(
     db: Session, table_name: str, guild_id: Optional[int] = None
 ) -> List[Dict[str, Any]]:
     """Retrieve data from a specific table, optionally filtered by guild_id."""
-    # Sanitize table_name to prevent SQL injection
-    safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
-    if safe_table_name != table_name:
-        raise ValueError("Invalid table name")
+    try:
+        logger.info(f"Fetching data for table: {table_name}")
+        # Sanitize table_name to prevent SQL injection
+        safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
+        if safe_table_name != table_name:
+            raise ValueError("Invalid table name")
 
-    # Get column names for the table from the database inspector
-    async with db.get_bind().connect() as conn:
-        def get_columns_sync(sync_conn):
-            inspector = inspect(sync_conn)
-            return inspector.get_columns(table_name)
+        # Get column names for the table from the database inspector
+        async with db.get_bind().connect() as conn:
+            def get_columns_sync(sync_conn):
+                inspector = inspect(sync_conn)
+                return inspector.get_columns(table_name)
 
-        column_dicts = await conn.run_sync(get_columns_sync)
-        columns = [c['name'] for c in column_dicts]
+            column_dicts = await conn.run_sync(get_columns_sync)
+            columns = [c['name'] for c in column_dicts]
 
-    query_str = f"SELECT * FROM {safe_table_name}"
-    params = {}
-    if guild_id and "guild_id" in columns:
-        query_str += " WHERE guild_id = :guild_id"
-        params["guild_id"] = guild_id
+        query_str = f"SELECT * FROM {safe_table_name}"
+        params = {}
+        if guild_id and "guild_id" in columns:
+            query_str += " WHERE guild_id = :guild_id"
+            params["guild_id"] = guild_id
 
-    result = await db.execute(text(query_str), params)
+        logger.info(f"Executing query: {query_str} with params: {params}")
+        result = await db.execute(text(query_str), params)
 
-    data = []
-    for row in result.mappings().all():
-        row_data = {}
-        for key, value in row.items():
-            if isinstance(value, datetime):
-                row_data[key] = value.isoformat()
-            else:
-                row_data[key] = value
-        data.append(row_data)
-    return data
+        data = []
+        for row in result.mappings().all():
+            row_data = {}
+            for key, value in row.items():
+                if isinstance(value, datetime):
+                    row_data[key] = value.isoformat()
+                else:
+                    row_data[key] = value
+            data.append(row_data)
+
+        logger.info(f"Retrieved {len(data)} rows from table {table_name}")
+        return data
+    except Exception as e:
+        logger.error(f"Error in get_table_data for table {table_name}: {e}")
+        raise
 
 
 async def get_primary_key_column(db: Session, table_name: str) -> Optional[str]:

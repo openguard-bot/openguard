@@ -1,11 +1,13 @@
 import asyncio
 import json
+import logging
 from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 import redis.asyncio as redis
 from . import schemas, crud
 from .db import get_db
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from .api import (
     _fetch_from_discord_api,
     get_current_admin,
@@ -13,7 +15,37 @@ from .api import (
 )
 from database.cache import get_cache, get_redis
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+@router.get("/health", dependencies=[Depends(get_current_admin)])
+async def admin_health_check(db: Session = Depends(get_db)):
+    """
+    Simple health check for admin endpoints.
+    """
+    try:
+        # Test database connection
+        result = await db.execute(text("SELECT 1"))
+        result.scalar_one()
+
+        # Test table access
+        try:
+            table_result = await db.execute(text("SELECT COUNT(*) FROM user_infractions"))
+            user_infractions_count = table_result.scalar_one()
+        except Exception as table_error:
+            logger.warning(f"Could not access user_infractions table: {table_error}")
+            user_infractions_count = "error"
+
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "user_infractions_count": user_infractions_count
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
 
 
 async def get_guild_details(guild_id: int):
@@ -188,7 +220,11 @@ async def get_db_tables(db: Session = Depends(get_db)):
     """
     Get a list of all table names in the database.
     """
-    return await crud.get_table_names(db)
+    try:
+        return await crud.get_table_names(db)
+    except Exception as e:
+        logger.error(f"Error fetching table names: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch table names: {str(e)}")
 
 
 @router.get(
@@ -205,7 +241,11 @@ async def get_db_table_data(
     try:
         return await crud.get_table_data(db, table_name, guild_id)
     except ValueError as e:
+        logger.error(f"ValueError in get_db_table_data: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in get_db_table_data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch table data: {str(e)}")
 
 
 @router.put(
