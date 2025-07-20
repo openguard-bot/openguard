@@ -10,6 +10,7 @@ import aiohttp
 import asyncio
 import logging
 import traceback
+import os
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 
@@ -20,6 +21,10 @@ from database.operations import (
     get_captcha_attempt,
     update_captcha_attempt,
     reset_captcha_attempts,
+    store_verification_token,
+    get_verification_token,
+    validate_verification_token,
+    cleanup_expired_tokens,
 )
 from database.models import CaptchaConfig, CaptchaAttempt
 
@@ -49,8 +54,9 @@ class HCaptchaVerificationView(discord.ui.View):
             await interaction.response.send_message("This verification is not for you!", ephemeral=True)
             return
 
-        # Create verification URL (you'll need to implement a web interface)
-        verification_url = f"https://your-domain.com/verify?token={self.verification_token}&user={self.user.id}&guild={interaction.guild.id}"
+        # Create verification URL using the backend endpoint
+        base_url = os.getenv("BACKEND_URL", "https://openguard.lol")
+        verification_url = f"{base_url}/api/verify?token={self.verification_token}&user={self.user.id}&guild={interaction.guild.id}"
 
         embed = discord.Embed(
             title="🔐 Complete Verification",
@@ -136,10 +142,25 @@ class CaptchaCog(commands.Cog):
         if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession()
 
+        # Start cleanup task
+        self.cleanup_task.start()
+
     async def cog_unload(self):
         """Clean up HTTP session when cog unloads."""
         if self.session and not self.session.closed:
             await self.session.close()
+
+        # Stop cleanup task
+        self.cleanup_task.cancel()
+
+    @commands.loop(minutes=30)
+    async def cleanup_task(self):
+        """Periodic cleanup of expired verification tokens."""
+        try:
+            await cleanup_expired_tokens()
+            log.info("Cleaned up expired verification tokens")
+        except Exception as e:
+            log.error(f"Error cleaning up expired tokens: {e}")
 
     async def _ensure_session(self) -> aiohttp.ClientSession:
         """Ensure HTTP session is available."""
@@ -793,8 +814,18 @@ class VerificationStartView(discord.ui.View):
         import uuid
         verification_token = str(uuid.uuid4())
 
-        # Store the verification token temporarily (you might want to use Redis or database)
-        # For now, we'll just create the verification interface
+        # Store the verification token in database with 10 minute expiration
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        success = await store_verification_token(guild_id, user.id, verification_token, expires_at)
+
+        if not success:
+            embed = discord.Embed(
+                title="❌ Error",
+                description="Failed to create verification session. Please try again.",
+                color=discord.Color.red(),
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
 
         # Create hCaptcha embed and view
         embed = self.cog.create_hcaptcha_embed(verification_token)

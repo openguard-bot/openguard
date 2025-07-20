@@ -220,21 +220,54 @@
             showStatus('Captcha completed! You can now submit or copy the token for manual entry.', 'info');
         }
         
-        function submitVerification() {
+        async function submitVerification() {
             if (!hcaptchaResponse) {
                 showStatus('Please complete the captcha first.', 'error');
                 return;
             }
-            
+
             showStatus('Submitting verification...', 'info');
-            
-            // Here you would normally send the response to your backend
-            // For now, we'll just show success
-            setTimeout(() => {
-                showStatus('Verification completed! You can now return to Discord. Your role should be assigned automatically.', 'success');
-                document.getElementById('submitBtn').textContent = 'Verification Complete';
+
+            try {
+                // Send verification request to backend
+                const response = await fetch('/api/captcha/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        guild_id: parseInt(guildId),
+                        verification_token: token,
+                        hcaptcha_response: hcaptchaResponse
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus(result.message || 'Verification completed! You can now return to Discord.', 'success');
+                    document.getElementById('submitBtn').textContent = 'Verification Complete';
+                    document.getElementById('submitBtn').disabled = true;
+                } else {
+                    showStatus(result.message || 'Verification failed. Please try again.', 'error');
+                    // Reset captcha on failure
+                    hcaptcha.reset();
+                    hcaptchaResponse = null;
+                    document.getElementById('submitBtn').disabled = true;
+                    document.getElementById('submitBtn').textContent = 'Complete Verification';
+                    document.getElementById('responseToken').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                showStatus('Network error. Please try again or use manual token entry.', 'error');
+                // Reset captcha on error
+                hcaptcha.reset();
+                hcaptchaResponse = null;
                 document.getElementById('submitBtn').disabled = true;
-            }, 1000);
+                document.getElementById('submitBtn').textContent = 'Complete Verification';
+                document.getElementById('responseToken').style.display = 'none';
+            }
         }
         
         function showStatus(message, type) {

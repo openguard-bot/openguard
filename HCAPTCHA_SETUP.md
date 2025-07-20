@@ -20,6 +20,7 @@ Add these to your `.env` file:
 ```env
 HCAPTCHA_SITE_KEY=your_site_key_here
 HCAPTCHA_SECRET_KEY=your_secret_key_here
+BACKEND_URL=https://openguard.lol
 ```
 
 ## Step 3: Set Up Web Verification (Optional)
@@ -83,7 +84,7 @@ Users can complete hCaptcha on any website and manually enter the response token
 
 ### Method 1: Web Interface
 1. User clicks "Complete Verification"
-2. Opens web page with embedded hCaptcha
+2. Opens https://openguard.lol/api/verify with embedded hCaptcha
 3. User solves captcha
 4. Returns to Discord with automatic role assignment
 
