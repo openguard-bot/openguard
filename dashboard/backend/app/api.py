@@ -1349,27 +1349,42 @@ async def verify_captcha(
         from database.operations import (
             get_captcha_config,
             update_captcha_attempt,
-            validate_verification_token,
         )
+        from database.connection import execute_query
 
         guild_id = verification_request.guild_id
         user_id = verification_request.user_id
 
         # Validate verification token
-        token_validation = await validate_verification_token(verification_request.verification_token)
-        if not token_validation:
-            return schemas.CaptchaVerificationResponse(
-                success=False,
-                message="Invalid or expired verification token",
-                user_id=user_id,
-                guild_id=guild_id,
+        try:
+            result = await execute_query(
+                """SELECT guild_id, user_id FROM verification_tokens
+                   WHERE token = $1 AND expires_at > CURRENT_TIMESTAMP""",
+                verification_request.verification_token,
+                fetch_one=True,
             )
 
-        token_guild_id, token_user_id = token_validation
-        if token_guild_id != guild_id or token_user_id != user_id:
+            if not result:
+                return schemas.CaptchaVerificationResponse(
+                    success=False,
+                    message="Invalid or expired verification token",
+                    user_id=user_id,
+                    guild_id=guild_id,
+                )
+
+            token_guild_id, token_user_id = result["guild_id"], result["user_id"]
+            if token_guild_id != guild_id or token_user_id != user_id:
+                return schemas.CaptchaVerificationResponse(
+                    success=False,
+                    message="Verification token does not match user or guild",
+                    user_id=user_id,
+                    guild_id=guild_id,
+                )
+        except Exception as e:
+            logger.error(f"Error validating verification token: {e}")
             return schemas.CaptchaVerificationResponse(
                 success=False,
-                message="Verification token does not match user or guild",
+                message="Error validating verification token",
                 user_id=user_id,
                 guild_id=guild_id,
             )
