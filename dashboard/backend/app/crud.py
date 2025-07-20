@@ -1463,9 +1463,9 @@ async def get_table_data(
     """Retrieve data from a specific table, optionally filtered by guild_id."""
     try:
         logger.info(f"Fetching data for table: {table_name}")
-        # Sanitize table_name to prevent SQL injection
-        safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
-        if safe_table_name != table_name:
+        # Only allow table names from the allowlist of actual tables
+        allowed_tables = await get_table_names(db)
+        if table_name not in allowed_tables:
             raise ValueError("Invalid table name")
 
         # Get column names for the table from the database inspector
