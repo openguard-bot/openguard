@@ -21,10 +21,6 @@ from database.operations import (
     get_captcha_attempt,
     update_captcha_attempt,
     reset_captcha_attempts,
-    store_verification_token,
-    get_verification_token,
-    validate_verification_token,
-    cleanup_expired_tokens,
 )
 from database.models import CaptchaConfig, CaptchaAttempt
 
@@ -157,10 +153,41 @@ class CaptchaCog(commands.Cog):
     async def cleanup_task(self):
         """Periodic cleanup of expired verification tokens."""
         try:
-            await cleanup_expired_tokens()
+            await self._cleanup_expired_tokens()
             log.info("Cleaned up expired verification tokens")
         except Exception as e:
             log.error(f"Error cleaning up expired tokens: {e}")
+
+    async def _store_verification_token(self, guild_id: int, user_id: int, token: str, expires_at: datetime) -> bool:
+        """Store a verification token with expiration."""
+        try:
+            from database.connection import execute_query
+            await execute_query(
+                """INSERT INTO verification_tokens (guild_id, user_id, token, expires_at)
+                   VALUES ($1, $2, $3, $4)
+                   ON CONFLICT (guild_id, user_id)
+                   DO UPDATE SET token = $3, expires_at = $4, created_at = CURRENT_TIMESTAMP""",
+                guild_id,
+                user_id,
+                token,
+                expires_at,
+            )
+            return True
+        except Exception as e:
+            log.error(f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}")
+            return False
+
+    async def _cleanup_expired_tokens(self) -> bool:
+        """Clean up expired verification tokens."""
+        try:
+            from database.connection import execute_query
+            await execute_query(
+                "DELETE FROM verification_tokens WHERE expires_at <= CURRENT_TIMESTAMP"
+            )
+            return True
+        except Exception as e:
+            log.error(f"Failed to cleanup expired tokens: {e}")
+            return False
 
     async def _ensure_session(self) -> aiohttp.ClientSession:
         """Ensure HTTP session is available."""
@@ -816,7 +843,7 @@ class VerificationStartView(discord.ui.View):
 
         # Store the verification token in database with 10 minute expiration
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-        success = await store_verification_token(guild_id, user.id, verification_token, expires_at)
+        success = await self._store_verification_token(guild_id, user.id, verification_token, expires_at)
 
         if not success:
             embed = discord.Embed(
