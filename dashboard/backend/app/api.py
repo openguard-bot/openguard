@@ -887,6 +887,37 @@ async def update_bot_detection_settings(
 
 
 @router.get(
+    "/guilds/{guild_id}/config/vanity",
+    response_model=schemas.VanityURLSettings,
+)
+async def get_vanity_settings(
+    guild_id: int,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Get vanity URL settings for a guild."""
+    if has_admin:
+        return await crud.get_vanity_settings(db=db, guild_id=guild_id)
+
+
+@router.put(
+    "/guilds/{guild_id}/config/vanity",
+    response_model=schemas.VanityURLSettings,
+)
+async def update_vanity_settings(
+    guild_id: int,
+    settings: schemas.VanityURLSettingsUpdate,
+    db: Session = Depends(get_db),
+    has_admin: bool = Depends(has_admin_permissions),
+):
+    """Update vanity URL settings for a guild."""
+    if has_admin:
+        return await crud.update_vanity_settings(
+            db=db, guild_id=guild_id, settings=settings
+        )
+
+
+@router.get(
     "/guilds/{guild_id}/config/ai",
     response_model=schemas.AISettings,
 )

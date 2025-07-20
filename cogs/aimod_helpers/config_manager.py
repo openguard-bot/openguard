@@ -1,5 +1,6 @@
 import os
 import asyncio
+from typing import Optional
 
 # Import database operations
 from database.operations import (
@@ -25,6 +26,9 @@ CHANNEL_EXCLUSIONS_KEY = "AI_EXCLUDED_CHANNELS"
 CHANNEL_RULES_KEY = "AI_CHANNEL_RULES"
 ANALYSIS_MODE_KEY = "AI_ANALYSIS_MODE"
 MESSAGE_RULES_KEY = "AI_KEYWORD_RULES"
+VANITY_LOCK_KEY = "VANITY_URL_LOCK"
+VANITY_NOTIFY_CHANNEL_KEY = "VANITY_URL_NOTIFY_CHANNEL"
+VANITY_NOTIFY_TARGET_KEY = "VANITY_URL_NOTIFY_TARGET"
 
 # Legacy paths (kept for compatibility but not used)
 GUILD_CONFIG_DIR = os.path.join(os.getcwd(), "wdiscordbot-json-data")
@@ -256,6 +260,36 @@ async def get_message_rules(guild_id: int) -> list:
 async def set_message_rules(guild_id: int, rules: list) -> bool:
     """Set keyword/regex-based message rules."""
     return await set_guild_config(guild_id, MESSAGE_RULES_KEY, rules)
+
+
+async def get_vanity_lock(guild_id: int) -> Optional[str]:
+    """Get the locked vanity URL code for a guild."""
+    return await get_guild_config_async(guild_id, VANITY_LOCK_KEY)
+
+
+async def set_vanity_lock(guild_id: int, code: Optional[str]) -> bool:
+    """Set or clear the locked vanity URL code for a guild."""
+    return await set_guild_config(guild_id, VANITY_LOCK_KEY, code)
+
+
+async def get_vanity_notify_channel(guild_id: int) -> Optional[int]:
+    """Get the notification channel ID for vanity changes."""
+    return await get_guild_config_async(guild_id, VANITY_NOTIFY_CHANNEL_KEY)
+
+
+async def set_vanity_notify_channel(guild_id: int, channel_id: Optional[int]) -> bool:
+    """Set the notification channel ID for vanity changes."""
+    return await set_guild_config(guild_id, VANITY_NOTIFY_CHANNEL_KEY, channel_id)
+
+
+async def get_vanity_notify_target(guild_id: int) -> Optional[int]:
+    """Get the role or member ID to mention for vanity change alerts."""
+    return await get_guild_config_async(guild_id, VANITY_NOTIFY_TARGET_KEY)
+
+
+async def set_vanity_notify_target(guild_id: int, target_id: Optional[int]) -> bool:
+    """Set the role or member ID to mention for vanity change alerts."""
+    return await set_guild_config(guild_id, VANITY_NOTIFY_TARGET_KEY, target_id)
 
 
 async def t_async(guild_id: int, key: str) -> str:
