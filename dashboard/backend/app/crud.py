@@ -1160,6 +1160,63 @@ async def update_rate_limiting_settings(
     return await get_rate_limiting_settings(db, guild_id)
 
 
+async def get_vanity_settings(db: Session, guild_id: int) -> schemas.VanityURLSettings:
+    """Get vanity URL settings for a guild."""
+    result = await db.execute(
+        text(
+            "SELECT key, value FROM guild_settings WHERE guild_id = :guild_id AND key IN ('VANITY_URL_LOCK', 'VANITY_URL_NOTIFY_CHANNEL', 'VANITY_URL_NOTIFY_TARGET')"
+        ),
+        {"guild_id": guild_id},
+    )
+    data: Dict[str, Any] = {
+        "lock_code": None,
+        "notify_channel_id": None,
+        "notify_target_id": None,
+    }
+    for key, value in result.fetchall():
+        if key == "VANITY_URL_LOCK":
+            data["lock_code"] = value
+        elif key == "VANITY_URL_NOTIFY_CHANNEL":
+            data["notify_channel_id"] = value
+        elif key == "VANITY_URL_NOTIFY_TARGET":
+            data["notify_target_id"] = value
+    return schemas.VanityURLSettings(**data)
+
+
+async def update_vanity_settings(
+    db: Session, guild_id: int, settings: schemas.VanityURLSettingsUpdate
+) -> schemas.VanityURLSettings:
+    """Update vanity URL settings for a guild."""
+    for key, value in settings.model_dump(exclude_unset=True).items():
+        if key == "lock_code":
+            db_key = "VANITY_URL_LOCK"
+        elif key == "notify_channel_id":
+            db_key = "VANITY_URL_NOTIFY_CHANNEL"
+        elif key == "notify_target_id":
+            db_key = "VANITY_URL_NOTIFY_TARGET"
+        else:
+            continue
+        await db.execute(
+            text(
+                """
+                INSERT INTO guild_settings (guild_id, key, value)
+                VALUES (:guild_id, :key, :value)
+                ON CONFLICT (guild_id, key)
+                DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {
+                "guild_id": guild_id,
+                "key": db_key,
+                "value": (
+                    json.dumps(value) if isinstance(value, (dict, list)) else value
+                ),
+            },
+        )
+    await db.commit()
+    return await get_vanity_settings(db, guild_id)
+
+
 async def get_security_settings(db: Session, guild_id: int) -> schemas.SecuritySettings:
     """Get security settings for a guild."""
     bot_detection = await get_bot_detection_config(db, guild_id)

@@ -356,6 +356,28 @@ class SecuritySettingsUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class VanityURLSettings(BaseModel):
+    lock_code: Optional[str] = Field(
+        None, description="The vanity URL code to enforce for this guild."
+    )
+    notify_channel_id: Optional[str] = Field(
+        None, description="Channel ID to send vanity change alerts."
+    )
+    notify_target_id: Optional[str] = Field(
+        None, description="Role or member ID to mention in alerts."
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class VanityURLSettingsUpdate(BaseModel):
+    lock_code: Optional[str] = None
+    notify_channel_id: Optional[str] = None
+    notify_target_id: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AISettings(BaseModel):
     channel_exclusions: ChannelExclusionSettings
     channel_rules: ChannelRulesUpdate
