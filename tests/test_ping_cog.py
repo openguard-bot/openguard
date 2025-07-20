@@ -65,7 +65,7 @@ async def test_sample_pg(mock_bot):
     # Mock time.perf_counter to control latency calculation
     with patch("time.perf_counter", side_effect=[0, 0.001]):  # 1ms
         with patch(
-            "cogs.ping.get_connection", new_callable=AsyncMock, return_value=mock_get_connection_context
+            "cogs.ping.get_connection", return_value=mock_get_connection_context
         ):
             latency = await cog._sample_pg(samples=1)
             assert latency == pytest.approx(1.0)  # Should be in ms
@@ -79,7 +79,7 @@ async def test_sample_pg_no_connection(mock_bot):
     mock_get_connection_context.__aenter__.return_value = None
     mock_get_connection_context.__aexit__.return_value = None
 
-    with patch("cogs.ping.get_connection", new_callable=AsyncMock, return_value=mock_get_connection_context):
+    with patch("cogs.ping.get_connection", return_value=mock_get_connection_context):
         latency = await cog._sample_pg(samples=1)
         assert latency == float("inf")
 
