@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 120
+exclude = [
+  "node_modules",
+  "website",
+  "dashboard/frontend"
+]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501"]

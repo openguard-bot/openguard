@@ -1468,6 +1468,8 @@ async def get_table_data(
         if table_name not in allowed_tables:
             raise ValueError("Invalid table name")
 
+        safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
+
         # Get column names for the table from the database inspector
         async with db.get_bind().connect() as conn:
 
