@@ -49,6 +49,18 @@ describe('AISettings', () => {
     expect(testModeSwitch).toBeChecked();
   });
 
+  it('allows adding a keyword rule', async () => {
+    render(<AISettings guildId="123" />);
+    await waitFor(() => screen.getByText(/Add Rule/i));
+
+    const addButton = screen.getByText(/Add Rule/i);
+    fireEvent.click(addButton);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Remove Rule/i).length).toBe(1);
+    });
+  });
+
   it('saves settings and shows success toast', async () => {
     render(<AISettings guildId="123" />);
     await waitFor(() => screen.getByText(/Save Changes/i));
