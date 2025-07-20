@@ -57,13 +57,15 @@ async def test_ping_cog_initialize_redis_fail(mock_bot):
 async def test_sample_pg(mock_bot):
     cog = Ping(mock_bot)
     mock_conn = AsyncMock()
-    mock_pool = AsyncMock()
-    mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
+    # Create a mock for the async context manager
+    mock_get_connection_context = AsyncMock()
+    mock_get_connection_context.__aenter__.return_value = mock_conn
+    mock_get_connection_context.__aexit__.return_value = None
 
     # Mock time.perf_counter to control latency calculation
     with patch("time.perf_counter", side_effect=[0, 0.001]):  # 1ms
         with patch(
-            "cogs.ping.get_connection", new_callable=AsyncMock, return_value=mock_pool
+            "cogs.ping.get_connection", new_callable=AsyncMock, return_value=mock_get_connection_context
         ):
             latency = await cog._sample_pg(samples=1)
             assert latency == pytest.approx(1.0)  # Should be in ms
@@ -72,7 +74,12 @@ async def test_sample_pg(mock_bot):
 @pytest.mark.asyncio
 async def test_sample_pg_no_connection(mock_bot):
     cog = Ping(mock_bot)
-    with patch("cogs.ping.get_connection", new_callable=AsyncMock, return_value=None):
+    # Create a mock for the async context manager that returns None on __aenter__
+    mock_get_connection_context = AsyncMock()
+    mock_get_connection_context.__aenter__.return_value = None
+    mock_get_connection_context.__aexit__.return_value = None
+
+    with patch("cogs.ping.get_connection", new_callable=AsyncMock, return_value=mock_get_connection_context):
         latency = await cog._sample_pg(samples=1)
         assert latency == float("inf")
 
