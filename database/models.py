@@ -182,6 +182,34 @@ class BlogPost:
     updated_at: Optional[datetime] = None
 
 
+@dataclass
+class CaptchaConfig:
+    """Captcha configuration model."""
+
+    guild_id: int
+    enabled: bool = False
+    verification_role_id: Optional[int] = None
+    max_attempts: int = 3
+    fail_action: str = "kick"  # kick, ban, timeout
+    timeout_duration: Optional[int] = None  # seconds for timeout action
+    verification_channel_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+@dataclass
+class CaptchaAttempt:
+    """Captcha attempt tracking model."""
+
+    id: Optional[int] = None
+    guild_id: int = 0
+    user_id: int = 0
+    attempt_count: int = 0
+    last_attempt: Optional[datetime] = None
+    verified: bool = False
+    created_at: Optional[datetime] = None
+
+
 # SQL Schema definitions for reference
 SCHEMA_SQL = """
 -- Guild configuration table
@@ -320,6 +348,31 @@ CREATE TABLE IF NOT EXISTS ai_decisions (
     message_content_snippet TEXT,
     decision JSONB,
     decision_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Captcha configuration table
+CREATE TABLE IF NOT EXISTS captcha_config (
+    guild_id BIGINT PRIMARY KEY,
+    enabled BOOLEAN DEFAULT FALSE,
+    verification_role_id BIGINT,
+    max_attempts INTEGER DEFAULT 3,
+    fail_action VARCHAR(50) DEFAULT 'kick',
+    timeout_duration INTEGER,
+    verification_channel_id BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Captcha attempts tracking table
+CREATE TABLE IF NOT EXISTS captcha_attempts (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    attempt_count INTEGER DEFAULT 0,
+    last_attempt TIMESTAMP WITH TIME ZONE,
+    verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(guild_id, user_id)
 );
 """
 
