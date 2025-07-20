@@ -216,6 +216,29 @@ const AISettings = ({ guildId }) => {
                 {isSyncing ? "Syncing..." : "Sync Rules from #rules Channel"}
               </Button>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="analysis_mode">Analysis Mode</Label>
+              <select
+                id="analysis_mode"
+                value={config.analysis_mode || "all"}
+                onChange={(e) => handleInputChange("analysis_mode", e.target.value)}
+                className="w-full border rounded p-2"
+              >
+                <option value="all">Analyze All Messages</option>
+                <option value="keywords">Keyword Rules Only</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="keyword_rules">Keyword Rules (JSON)</Label>
+              <Textarea
+                id="keyword_rules"
+                value={JSON.stringify(config.keyword_rules || {}, null, 2)}
+                onChange={(e) =>
+                  handleInputChange("keyword_rules", JSON.parse(e.target.value || '{}'))
+                }
+                className="resize-y"
+              />
+            </div>
           </>
         )}
         <div className="flex justify-end gap-2">

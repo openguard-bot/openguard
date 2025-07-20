@@ -357,6 +357,11 @@ class SecuritySettingsUpdate(BaseModel):
 
 
 class AISettings(BaseModel):
+    analysis_mode: str = Field("all", description="Analysis mode for AI")
+    keyword_rules: Dict[str, Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Keyword or regex based rules with instructions",
+    )
     channel_exclusions: ChannelExclusionSettings
     channel_rules: ChannelRulesUpdate
 
@@ -364,6 +369,8 @@ class AISettings(BaseModel):
 
 
 class AISettingsUpdate(BaseModel):
+    analysis_mode: Optional[str] = None
+    keyword_rules: Optional[Dict[str, Dict[str, Any]]] = None
     channel_exclusions: Optional[ChannelExclusionSettings] = None
     channel_rules: Optional[ChannelRulesUpdate] = None
 

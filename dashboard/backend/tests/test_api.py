@@ -341,6 +341,8 @@ def test_get_ai_settings(async_client: TestClient, monkeypatch):
         return {
             "channel_exclusions": {"excluded_channels": ["123"]},
             "channel_rules": {"channel_rules": {"456": "Be nice"}},
+            "analysis_mode": "all",
+            "keyword_rules": {},
         }
 
     monkeypatch.setattr(
@@ -351,6 +353,7 @@ def test_get_ai_settings(async_client: TestClient, monkeypatch):
     assert response.status_code == 200
     settings = response.json()
     assert settings["channel_exclusions"]["excluded_channels"] == ["123"]
+    assert settings["analysis_mode"] == "all"
 
 
 def test_get_channels_settings(async_client: TestClient, monkeypatch):
@@ -524,6 +527,8 @@ def test_update_ai_settings(async_client: TestClient, monkeypatch):
                 "excluded_channels": settings.channel_exclusions.excluded_channels
             },
             "channel_rules": {"channel_rules": settings.channel_rules.channel_rules},
+            "analysis_mode": settings.analysis_mode or "all",
+            "keyword_rules": settings.keyword_rules or {},
         }
 
     monkeypatch.setattr(
@@ -533,11 +538,17 @@ def test_update_ai_settings(async_client: TestClient, monkeypatch):
     update_data = {
         "channel_exclusions": {"excluded_channels": ["456"]},
         "channel_rules": {"channel_rules": {"789": "No spam"}},
+        "analysis_mode": "keywords",
+        "keyword_rules": {
+            "r1": {"keywords": ["test"], "regex": [], "instructions": "hi"}
+        },
     }
     response = async_client.put("/api/guilds/123/config/ai", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["channel_exclusions"]["excluded_channels"] == ["456"]
+    assert settings["analysis_mode"] == "keywords"
+    assert "r1" in settings["keyword_rules"]
 
 
 def test_update_channels_settings(async_client: TestClient, monkeypatch):

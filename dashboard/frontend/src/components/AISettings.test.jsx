@@ -15,6 +15,8 @@ const mockConfig = {
   ai_system_prompt: 'You are a helpful assistant.',
   bot_enabled: true,
   test_mode: false,
+  analysis_mode: 'all',
+  keyword_rules: {},
 };
 
 describe('AISettings', () => {

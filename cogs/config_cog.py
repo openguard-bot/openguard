@@ -7,6 +7,9 @@ from .aimod_helpers.config_manager import (
     get_guild_config_async,
     set_guild_config,
     GUILD_LANGUAGE_KEY,
+    ANALYSIS_MODE_KEY,
+    update_keyword_rule,
+    delete_keyword_rule,
 )
 from .logging_helpers import settings_manager
 
@@ -552,6 +555,64 @@ class ConfigCog(commands.Cog, name="Configuration"):
                 ephemeral=True if ctx.interaction else False,
             )
             return
+
+    @config.command(
+        name="ai_analysis_mode",
+        description="Set how the AI selects messages to analyze.",
+    )
+    @app_commands.describe(
+        mode="'all' to analyze every message or 'keywords' to use keyword rules"
+    )
+    @app_commands.choices(
+        mode=[
+            app_commands.Choice(name="All Messages", value="all"),
+            app_commands.Choice(name="Keyword Rules", value="keywords"),
+        ]
+    )
+    @app_commands.checks.has_permissions(administrator=True)
+    async def set_ai_analysis_mode(
+        self, ctx: commands.Context, mode: app_commands.Choice[str]
+    ):
+        """Configure whether the AI analyzes all messages or only keyword matches."""
+        await set_guild_config(ctx.guild.id, ANALYSIS_MODE_KEY, mode.value)
+        await ctx.reply(f"AI analysis mode set to `{mode.value}`.", ephemeral=False)
+
+    @config.command(
+        name="ai_add_rule",
+        description="Add or update an AI keyword rule.",
+    )
+    @app_commands.describe(
+        name="Rule name",
+        keywords="Comma separated keywords",
+        regex="Comma separated regex patterns",
+        instructions="Instructions for the AI when this rule matches",
+    )
+    @app_commands.checks.has_permissions(administrator=True)
+    async def ai_add_rule(
+        self,
+        ctx: commands.Context,
+        name: str,
+        keywords: str,
+        regex: str,
+        instructions: str,
+    ):
+        rule = {
+            "keywords": [k.strip() for k in keywords.split(",") if k.strip()],
+            "regex": [r.strip() for r in regex.split(",") if r.strip()],
+            "instructions": instructions,
+        }
+        await update_keyword_rule(ctx.guild.id, name, rule)
+        await ctx.reply(f"Rule '{name}' saved.", ephemeral=False)
+
+    @config.command(
+        name="ai_delete_rule",
+        description="Delete an AI keyword rule by name.",
+    )
+    @app_commands.describe(name="Rule name")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def ai_delete_rule(self, ctx: commands.Context, name: str):
+        await delete_keyword_rule(ctx.guild.id, name)
+        await ctx.reply(f"Rule '{name}' deleted.", ephemeral=False)
 
 
 async def setup(bot: commands.Bot):

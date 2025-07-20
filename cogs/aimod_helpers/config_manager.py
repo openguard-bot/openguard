@@ -23,6 +23,8 @@ MOD_LOG_API_SECRET_ENV_VAR = "MOD_LOG_API_SECRET"
 # Channel-specific configuration keys
 CHANNEL_EXCLUSIONS_KEY = "AI_EXCLUDED_CHANNELS"
 CHANNEL_RULES_KEY = "AI_CHANNEL_RULES"
+ANALYSIS_MODE_KEY = "AI_ANALYSIS_MODE"
+KEYWORD_RULES_KEY = "AI_KEYWORD_RULES"
 
 # Legacy paths (kept for compatibility but not used)
 GUILD_CONFIG_DIR = os.path.join(os.getcwd(), "wdiscordbot-json-data")
@@ -234,6 +236,42 @@ async def remove_channel_rules(guild_id: int, channel_id: int) -> bool:
 async def get_all_channel_rules(guild_id: int) -> dict:
     """Get all channel-specific rules for a guild."""
     return await get_guild_config_async(guild_id, CHANNEL_RULES_KEY, {})
+
+
+async def get_analysis_mode(guild_id: int) -> str:
+    """Return the AI analysis mode for the guild (all or keywords)."""
+    return await get_guild_config_async(guild_id, ANALYSIS_MODE_KEY, "all")
+
+
+async def set_analysis_mode(guild_id: int, mode: str) -> bool:
+    """Set the AI analysis mode for the guild."""
+    return await set_guild_config(guild_id, ANALYSIS_MODE_KEY, mode)
+
+
+async def get_keyword_rules(guild_id: int) -> dict:
+    """Get keyword/regex rules for the guild."""
+    return await get_guild_config_async(guild_id, KEYWORD_RULES_KEY, {})
+
+
+async def set_keyword_rules(guild_id: int, rules: dict) -> bool:
+    """Replace all keyword rules for the guild."""
+    return await set_guild_config(guild_id, KEYWORD_RULES_KEY, rules)
+
+
+async def update_keyword_rule(guild_id: int, name: str, rule: dict) -> bool:
+    """Add or update a single keyword rule."""
+    rules = await get_keyword_rules(guild_id)
+    rules[name] = rule
+    return await set_keyword_rules(guild_id, rules)
+
+
+async def delete_keyword_rule(guild_id: int, name: str) -> bool:
+    """Delete a keyword rule by name."""
+    rules = await get_keyword_rules(guild_id)
+    if name in rules:
+        del rules[name]
+        return await set_keyword_rules(guild_id, rules)
+    return True
 
 
 async def t_async(guild_id: int, key: str) -> str:
