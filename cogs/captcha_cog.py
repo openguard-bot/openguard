@@ -9,6 +9,7 @@ from discord import app_commands
 import aiohttp
 import asyncio
 import logging
+import traceback
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 
@@ -23,6 +24,13 @@ from database.operations import (
 from database.models import CaptchaConfig, CaptchaAttempt
 
 log = logging.getLogger(__name__)
+
+
+async def send_error_dm(bot_instance, error_type, error_message, error_traceback=None, context_info=None):
+    """Import the send_error_dm function from bot.py for error reporting."""
+    # Import here to avoid circular imports
+    from bot import send_error_dm as _send_error_dm
+    await _send_error_dm(bot_instance, error_type, error_message, error_traceback, context_info)
 
 
 class CaptchaView(discord.ui.View):
@@ -59,11 +67,15 @@ class CaptchaView(discord.ui.View):
         if new_captcha_data:
             self.captcha_data = new_captcha_data
             self.captcha_id = new_captcha_data.get("id")
-            
+
             embed = self.cog.create_captcha_embed(new_captcha_data)
             await interaction.edit_original_response(embed=embed, view=self)
         else:
-            await interaction.followup.send("Failed to generate new captcha. Please try again.", ephemeral=True)
+            # Error already reported in generate_captcha method
+            await interaction.followup.send(
+                "Failed to generate new captcha. The error has been reported to administrators. Please try again later.",
+                ephemeral=True
+            )
 
 
 class CaptchaModal(discord.ui.Modal):
@@ -343,10 +355,58 @@ class CaptchaCog(commands.Cog):
                     data = await response.json()
                     return data
                 else:
-                    log.error(f"OpenCaptcha API error: {response.status}")
+                    # Detailed error reporting for API errors
+                    error_text = await response.text()
+                    error_context = (
+                        f"OpenCaptcha API Error - Status: {response.status}, "
+                        f"URL: {self.opencaptcha_base_url}/generate, "
+                        f"Response: {error_text[:500]}..."
+                    )
+
+                    await send_error_dm(
+                        self.bot,
+                        error_type="OpenCaptchaAPIError",
+                        error_message=f"Failed to generate captcha - HTTP {response.status}",
+                        error_traceback=None,
+                        context_info=error_context,
+                    )
+
+                    log.error(f"OpenCaptcha API error: {response.status} - {error_text}")
                     return None
+        except aiohttp.ClientError as e:
+            # Network/connection errors
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_context = (
+                f"OpenCaptcha Network Error - URL: {self.opencaptcha_base_url}/generate, "
+                f"Error Type: {type(e).__name__}"
+            )
+
+            await send_error_dm(
+                self.bot,
+                error_type="OpenCaptchaNetworkError",
+                error_message=str(e),
+                error_traceback=tb_string,
+                context_info=error_context,
+            )
+
+            log.error(f"Network error generating captcha: {e}")
+            return None
         except Exception as e:
-            log.error(f"Failed to generate captcha: {e}")
+            # Unexpected errors
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_context = (
+                f"Unexpected error in captcha generation - URL: {self.opencaptcha_base_url}/generate"
+            )
+
+            await send_error_dm(
+                self.bot,
+                error_type=type(e).__name__,
+                error_message=str(e),
+                error_traceback=tb_string,
+                context_info=error_context,
+            )
+
+            log.error(f"Unexpected error generating captcha: {e}")
             return None
 
     async def verify_captcha(self, captcha_id: str, solution: str) -> bool:
@@ -364,10 +424,61 @@ class CaptchaCog(commands.Cog):
                     data = await response.json()
                     return data.get("success", False)
                 else:
-                    log.error(f"OpenCaptcha verify API error: {response.status}")
+                    # Detailed error reporting for verification API errors
+                    error_text = await response.text()
+                    error_context = (
+                        f"OpenCaptcha Verify API Error - Status: {response.status}, "
+                        f"URL: {self.opencaptcha_base_url}/verify, "
+                        f"Captcha ID: {captcha_id}, "
+                        f"Response: {error_text[:500]}..."
+                    )
+
+                    await send_error_dm(
+                        self.bot,
+                        error_type="OpenCaptchaVerifyAPIError",
+                        error_message=f"Failed to verify captcha - HTTP {response.status}",
+                        error_traceback=None,
+                        context_info=error_context,
+                    )
+
+                    log.error(f"OpenCaptcha verify API error: {response.status} - {error_text}")
                     return False
+        except aiohttp.ClientError as e:
+            # Network/connection errors
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_context = (
+                f"OpenCaptcha Verify Network Error - URL: {self.opencaptcha_base_url}/verify, "
+                f"Captcha ID: {captcha_id}, "
+                f"Error Type: {type(e).__name__}"
+            )
+
+            await send_error_dm(
+                self.bot,
+                error_type="OpenCaptchaVerifyNetworkError",
+                error_message=str(e),
+                error_traceback=tb_string,
+                context_info=error_context,
+            )
+
+            log.error(f"Network error verifying captcha: {e}")
+            return False
         except Exception as e:
-            log.error(f"Failed to verify captcha: {e}")
+            # Unexpected errors
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_context = (
+                f"Unexpected error in captcha verification - URL: {self.opencaptcha_base_url}/verify, "
+                f"Captcha ID: {captcha_id}"
+            )
+
+            await send_error_dm(
+                self.bot,
+                error_type=type(e).__name__,
+                error_message=str(e),
+                error_traceback=tb_string,
+                context_info=error_context,
+            )
+
+            log.error(f"Unexpected error verifying captcha: {e}")
             return False
 
     def create_captcha_embed(self, captcha_data: Dict[str, Any]) -> discord.Embed:
@@ -395,7 +506,25 @@ class CaptchaCog(commands.Cog):
         guild_id = interaction.guild.id
 
         # Mark as verified in database
-        await update_captcha_attempt(guild_id, user.id, increment=False, verified=True)
+        try:
+            await update_captcha_attempt(guild_id, user.id, increment=False, verified=True)
+        except Exception as e:
+            # Report database error but continue with role assignment
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_context = (
+                f"Database error marking user as verified - Guild: {guild_id}, "
+                f"User: {user.id} ({user})"
+            )
+
+            await send_error_dm(
+                self.bot,
+                error_type=type(e).__name__,
+                error_message=str(e),
+                error_traceback=tb_string,
+                context_info=error_context,
+            )
+
+            log.error(f"Database error marking user {user.id} as verified: {e}")
 
         # Get config to assign role
         config = await get_captcha_config(guild_id)
@@ -437,11 +566,56 @@ class CaptchaCog(commands.Cog):
         guild_id = interaction.guild.id
 
         # Update attempt count
-        await update_captcha_attempt(guild_id, user.id, increment=True, verified=False)
+        try:
+            await update_captcha_attempt(guild_id, user.id, increment=True, verified=False)
+        except Exception as e:
+            # Report database error
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_context = (
+                f"Database error updating failed attempt - Guild: {guild_id}, "
+                f"User: {user.id} ({user})"
+            )
+
+            await send_error_dm(
+                self.bot,
+                error_type=type(e).__name__,
+                error_message=str(e),
+                error_traceback=tb_string,
+                context_info=error_context,
+            )
+
+            log.error(f"Database error updating failed attempt for user {user.id}: {e}")
 
         # Get current attempt count and config
-        attempt_record = await get_captcha_attempt(guild_id, user.id)
-        config = await get_captcha_config(guild_id)
+        try:
+            attempt_record = await get_captcha_attempt(guild_id, user.id)
+            config = await get_captcha_config(guild_id)
+        except Exception as e:
+            # Report database error
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_context = (
+                f"Database error retrieving captcha data - Guild: {guild_id}, "
+                f"User: {user.id} ({user})"
+            )
+
+            await send_error_dm(
+                self.bot,
+                error_type=type(e).__name__,
+                error_message=str(e),
+                error_traceback=tb_string,
+                context_info=error_context,
+            )
+
+            log.error(f"Database error retrieving captcha data for user {user.id}: {e}")
+
+            # Fallback response
+            embed = discord.Embed(
+                title="❌ Verification Failed",
+                description="Incorrect solution and database error occurred. Please contact administrators.",
+                color=discord.Color.red(),
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
 
         if not attempt_record or not config:
             embed = discord.Embed(
@@ -546,7 +720,7 @@ class VerificationStartView(discord.ui.View):
         if not captcha_data:
             embed = discord.Embed(
                 title="❌ Error",
-                description="Failed to generate captcha. Please try again later.",
+                description="Failed to generate captcha. The error has been reported to administrators. Please try again later.",
                 color=discord.Color.red(),
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
