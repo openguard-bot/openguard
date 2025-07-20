@@ -1,7 +1,6 @@
 {
   "name": "openguard",
   "version": "1.0.0",
-  "main": "index.js",
   "repository": "https://github.com/discordaimod/openguard.git",
   "author": "Slipstream <me@slipstreamm.dev>",
   "license": "MIT",
