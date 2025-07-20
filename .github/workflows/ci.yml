@@ -26,16 +26,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: website/node_modules
-          key: ${{ runner.os }}-node-website-${{ hashFiles('website/package-lock.json') }}
+          key: ${{ runner.os }}-node-website-${{ hashFiles('yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-node-website-
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --frozen-lockfile
         working-directory: ./website
 
       - name: Build Astro site
-        run: npm run build
+        run: yarn build
         working-directory: ./website
 
   dashboard-frontend:
@@ -54,24 +54,24 @@ jobs:
         uses: actions/cache@v4
         with:
           path: dashboard/frontend/node_modules
-          key: ${{ runner.os }}-node-frontend-${{ hashFiles('dashboard/frontend/package-lock.json') }}
+          key: ${{ runner.os }}-node-frontend-${{ hashFiles('yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-node-frontend-
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --frozen-lockfile
         working-directory: ./dashboard/frontend
 
       - name: Run ESLint
-        run: npm run lint
+        run: yarn lint
         working-directory: ./dashboard/frontend
 
       - name: Run frontend tests
-        run: npm test
+        run: yarn test
         working-directory: ./dashboard/frontend
 
       - name: Build dashboard
-        run: npm run build
+        run: yarn build
         working-directory: ./dashboard/frontend
 
   python:

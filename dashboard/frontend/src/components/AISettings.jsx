@@ -12,7 +12,6 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { Textarea } from "./ui/textarea";
-import { FormDescription } from "./ui/form";
 import { Bot, Save, RefreshCw, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 
@@ -128,9 +127,6 @@ const AISettings = ({ guildId }) => {
       );
       toast.success("Rules synced successfully from #rules channel.");
       // Optionally, update a field in the config if the backend returns it
-      if (response.data.ai_system_prompt) {
-        handleInputChange("ai_system_prompt", response.data.ai_system_prompt);
-      }
     } catch (error) {
       toast.error("Failed to sync rules.");
       console.error("Error pulling rules:", error);
@@ -175,9 +171,9 @@ const AISettings = ({ guildId }) => {
               <Label htmlFor="ai-moderation-enabled" className="text-base">
                 AI Moderation Enabled
               </Label>
-              <FormDescription>
+              <CardDescription>
                 Toggle automated actions from the AI moderation system.
-              </FormDescription>
+              </CardDescription>
             </div>
             <Switch
               id="ai-moderation-enabled"
@@ -190,9 +186,9 @@ const AISettings = ({ guildId }) => {
               <Label htmlFor="ai-test-mode" className="text-base">
                 AI Test Mode
               </Label>
-              <FormDescription>
+              <CardDescription>
                 Analyze messages but require manual approval for actions.
-              </FormDescription>
+              </CardDescription>
             </div>
             <Switch
               id="ai-test-mode"
@@ -228,49 +224,26 @@ const AISettings = ({ guildId }) => {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ai_model">AI Model</Label>
-              <Input
-                id="ai_model"
-                value={config.ai_model || ""}
-                onChange={(e) => handleInputChange("ai_model", e.target.value)}
-                placeholder="e.g., gpt-4-turbo"
-              />
+              <Label htmlFor="analysis_mode">Analysis Mode</Label>
+              <select
+                id="analysis_mode"
+                value={config.analysis_mode || "all"}
+                onChange={(e) => handleInputChange("analysis_mode", e.target.value)}
+                className="w-full border rounded p-2"
+              >
+                <option value="all">Analyze All Messages</option>
+                <option value="rules_only">Only When Rules Match</option>
+                <option value="override">Override With Rules</option>
+              </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ai_temperature">AI Temperature</Label>
-              <Input
-                id="ai_temperature"
-                type="number"
-                step="0.1"
-                min="0"
-                max="1"
-                value={config.ai_temperature || 0.7}
-                onChange={(e) =>
-                  handleInputChange("ai_temperature", parseFloat(e.target.value))
-                }
-                placeholder="0.7"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ai_system_prompt">AI System Prompt</Label>
+              <Label htmlFor="keyword_rules">Keyword/Regex Rules (JSON)</Label>
               <Textarea
-                id="ai_system_prompt"
-                value={config.ai_system_prompt || ""}
-                onChange={(e) =>
-                  handleInputChange("ai_system_prompt", e.target.value)
-                }
-                placeholder="You are a helpful assistant."
+                id="keyword_rules"
+                value={config.keyword_rules_raw || "[]"}
+                onChange={(e) => handleInputChange("keyword_rules_raw", e.target.value)}
                 className="resize-y"
               />
-              <Button
-                onClick={handlePullRules}
-                disabled={isSyncing}
-                variant="outline"
-                className="w-full"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {isSyncing ? "Syncing..." : "Sync Rules from #rules Channel"}
-              </Button>
             </div>
             <div className="space-y-2">
               <Label>Keyword/Regex Rules</Label>
