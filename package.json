@@ -1,12 +1,17 @@
 {
   "name": "openguard",
   "version": "1.0.0",
-  "repository": "https://github.com/discordaimod/openguard.git",
-  "author": "Slipstream <me@slipstreamm.dev>",
-  "license": "MIT",
   "private": true,
   "workspaces": [
     "website",
     "dashboard/frontend"
-  ]
+  ],
+  "repository": "https://github.com/discordaimod/openguard.git",
+  "author": "Slipstream <me@slipstreamm.dev>",
+  "license": "MIT",
+  "scripts": {
+    "build": "yarn workspaces run build",
+    "test": "yarn workspaces run test",
+    "lint": "yarn workspaces run lint"
+  }
 }
