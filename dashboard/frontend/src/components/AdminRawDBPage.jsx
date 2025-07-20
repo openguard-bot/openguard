@@ -40,6 +40,7 @@ const AdminRawDBPage = () => {
   const [editingRow, setEditingRow] = useState(null);
   const [deletingRow, setDeletingRow] = useState(null);
   const [pkColumns, setPkColumns] = useState([]);
+  const [healthStatus, setHealthStatus] = useState(null);
 
   useEffect(() => {
     const fetchTables = async () => {
