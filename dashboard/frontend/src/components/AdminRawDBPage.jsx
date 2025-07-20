@@ -28,6 +28,7 @@ const AdminRawDBPage = () => {
   const [loading, setLoading] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [pkColumn, setPkColumn] = useState(null);
+  const [healthStatus, setHealthStatus] = useState(null);
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -36,7 +37,8 @@ const AdminRawDBPage = () => {
         setTables(response.data);
       } catch (error) {
         console.error("Failed to fetch tables:", error);
-        toast.error("Failed to fetch tables.");
+        const errorMessage = error.response?.data?.detail || error.message || "Failed to fetch tables";
+        toast.error(`Error: ${errorMessage}`);
       }
     };
     fetchTables();
@@ -57,7 +59,8 @@ const AdminRawDBPage = () => {
       }
     } catch (error) {
       console.error(`Failed to fetch data for table ${tableName}:`, error);
-      toast.error(`Failed to fetch data for table ${tableName}.`);
+      const errorMessage = error.response?.data?.detail || error.message || `Failed to fetch data for table ${tableName}`;
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -86,14 +89,44 @@ const AdminRawDBPage = () => {
     }
   };
 
+  const testHealthCheck = async () => {
+    try {
+      const response = await axios.get("/api/admin/health");
+      setHealthStatus(response.data);
+      toast.success("Health check passed!");
+    } catch (error) {
+      console.error("Health check failed:", error);
+      const errorMessage = error.response?.data?.detail || error.message || "Health check failed";
+      toast.error(`Health check failed: ${errorMessage}`);
+      setHealthStatus({ status: "error", error: errorMessage });
+    }
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Raw Database Access</h1>
+
+      {/* Health Check Section */}
+      <div className="mb-4 p-4 border rounded">
+        <div className="flex items-center gap-4 mb-2">
+          <Button onClick={testHealthCheck} variant="outline">
+            Test Database Connection
+          </Button>
+          {healthStatus && (
+            <span className={`text-sm ${healthStatus.status === 'healthy' ? 'text-green-600' : 'text-red-600'}`}>
+              Status: {healthStatus.status}
+              {healthStatus.database && ` | DB: ${healthStatus.database}`}
+              {healthStatus.user_infractions_count !== undefined && ` | User Infractions: ${healthStatus.user_infractions_count}`}
+            </span>
+          )}
+        </div>
+      </div>
+
       <div className="flex space-x-2 mb-4">
         {tables.map((table) => (
           <Button
             key={table}
-            variant={selectedTable === table ? "solid" : "outline"}
+            variant={selectedTable === table ? "default" : "outline"}
             onClick={() => fetchTableData(table)}
           >
             {table}
