@@ -1,30 +1,98 @@
-name: Deploy to Production
+name: CI/CD
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-
-permissions:
-  contents: read
-  deployments: write
-  statuses: write
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  changes:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+  build_and_test:
+    name: "Build & Test"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn cache
+        uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install Node.js dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint Node.js projects
+        run: yarn lint
+
+      - name: Run Node.js tests
+        run: yarn test
+
+      - name: Build Node.js projects
+        run: yarn build
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r dashboard/backend/requirements.txt
+          pip install pyright pytest
+
+      - name: Run Pyright
+        run: pyright
+
+      - name: Run Bot Tests
+        run: pytest tests/
+
+      - name: Run Backend Tests
+        run: pytest dashboard/backend/tests/
+
+  changes:
+    name: "Detect Changes"
+    needs: build_and_test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       website: ${{ steps.filter.outputs.website }}
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       bot: ${{ steps.filter.outputs.bot }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
           fetch-depth: 2
-      - uses: dorny/paths-filter@v2
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v2
         id: filter
         with:
           filters: |
@@ -41,9 +109,14 @@ jobs:
               - 'requirements.txt'
 
   deploy-website:
+    name: "Deploy Website"
     needs: changes
-    if: ${{ needs.changes.outputs.website == 'true' }}
+    if: needs.changes.outputs.website == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      statuses: write
     steps:
       - name: Create GitHub Deployment
         uses: bobheadxi/deployments@v1
@@ -54,33 +127,35 @@ jobs:
           env: production
           ref: ${{ github.sha }}
 
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Cache node modules
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn cache
         uses: actions/cache@v4
+        id: yarn-cache
         with:
-          path: website/node_modules
-          key: ${{ runner.os }}-node-website-${{ hashFiles('yarn.lock') }}
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-node-website-
+            ${{ runner.os }}-yarn-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-        working-directory: ./website
 
       - name: Build Website
         run: yarn build
-        working-directory: ./website
 
       - name: Install Wrangler
-        run: yarn global add wrangler
+        run: npm install -g wrangler
 
       - name: Deploy Website
         run: wrangler deploy
@@ -88,30 +163,25 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      - name: Mark Deployment as Successful
-        if: success()
+      - name: Update deployment status
         uses: bobheadxi/deployments@v1
+        if: always()
         with:
           step: finish
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: production
-          status: success
+          status: ${{ job.status }}
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-
-      - name: Mark Deployment as Failed
-        if: failure()
-        uses: bobheadxi/deployments@v1
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
           env: production
-          status: failure
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
 
   deploy-dashboard-frontend:
+    name: "Deploy Dashboard Frontend"
     needs: changes
-    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      statuses: write
     steps:
       - name: Create GitHub Deployment
         uses: bobheadxi/deployments@v1
@@ -122,35 +192,37 @@ jobs:
           env: frontend-prod
           ref: ${{ github.sha }}
 
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Cache node modules
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn cache
         uses: actions/cache@v4
+        id: yarn-cache
         with:
-          path: dashboard/frontend/node_modules
-          key: ${{ runner.os }}-node-frontend-${{ hashFiles('yarn.lock') }}
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-node-frontend-
+            ${{ runner.os }}-yarn-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-        working-directory: ./dashboard/frontend
 
       - name: Build Dashboard Frontend
         run: yarn build
-        working-directory: ./dashboard/frontend
         env:
           VITE_DISCORD_CLIENT_ID: ${{ vars.VITE_DISCORD_CLIENT_ID }}
 
       - name: Install Wrangler
-        run: yarn global add wrangler
+        run: npm install -g wrangler
 
       - name: Deploy Dashboard Frontend
         run: wrangler deploy
@@ -158,30 +230,24 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      - name: Mark Deployment as Successful
-        if: success()
+      - name: Update deployment status
         uses: bobheadxi/deployments@v1
+        if: always()
         with:
           step: finish
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: frontend-prod
-          status: success
+          status: ${{ job.status }}
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-
-      - name: Mark Deployment as Failed
-        if: failure()
-        uses: bobheadxi/deployments@v1
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
           env: frontend-prod
-          status: failure
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
 
   deploy-dashboard-backend:
+    name: "Deploy Dashboard Backend"
     needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' }}
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+      statuses: write
     steps:
       - name: Create GitHub Deployment
         uses: bobheadxi/deployments@v1
@@ -203,20 +269,24 @@ jobs:
             git pull origin main
             sudo /home/discordbot/openguard/scripts/deploy_backend.sh
 
-      - name: Mark Deployment as Successful
-        if: success()
+      - name: Update deployment status
         uses: bobheadxi/deployments@v1
+        if: always()
         with:
           step: finish
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: backend-prod
-          status: success
+          status: ${{ job.status }}
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          env: backend-prod
 
   deploy-bot:
+    name: "Deploy Bot"
     needs: changes
-    if: ${{ needs.changes.outputs.bot == 'true' }}
+    if: needs.changes.outputs.bot == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+      statuses: write
     steps:
       - name: Create GitHub Deployment
         uses: bobheadxi/deployments@v1
@@ -239,22 +309,12 @@ jobs:
             /home/discordbot/.pyenv/versions/3.11.2/bin/python -m pip install -r requirements.txt
             sudo systemctl restart openguard-bot.service
 
-      - name: Mark Deployment as Successful
-        if: success()
+      - name: Update deployment status
         uses: bobheadxi/deployments@v1
+        if: always()
         with:
           step: finish
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: bot-prod
-          status: success
+          status: ${{ job.status }}
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-
-      - name: Mark Deployment as Failed
-        if: failure()
-        uses: bobheadxi/deployments@v1
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
           env: bot-prod
-          status: failure
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
