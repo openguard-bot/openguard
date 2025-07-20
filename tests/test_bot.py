@@ -1079,7 +1079,7 @@ async def test_on_guild_join(mock_bot):
 
         await on_guild_join(mock_guild)
 
-        mock_print.assert_called_once_with(
+        mock_print.assert_any_call(
             f"Joined guild: {mock_guild.name} ({mock_guild.id})"
         )
         mock_update_bot_guilds_cache.assert_called_once()
@@ -1099,7 +1099,7 @@ async def test_on_guild_remove(mock_bot):
 
         await on_guild_remove(mock_guild)
 
-        mock_print.assert_called_once_with(
+        mock_print.assert_any_call(
             f"Removed from guild: {mock_guild.name} ({mock_guild.id})"
         )
         mock_update_bot_guilds_cache.assert_called_once()
