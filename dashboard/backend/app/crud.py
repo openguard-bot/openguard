@@ -1458,33 +1458,36 @@ async def get_table_data(
         if safe_table_name != table_name:
             raise ValueError("Invalid table name")
 
-    # Get column names for the table from the database inspector
-    async with db.get_bind().connect() as conn:
-        def get_columns_sync(sync_conn):
-            inspector = inspect(sync_conn)
-            return inspector.get_columns(table_name)
+        # Get column names for the table from the database inspector
+        async with db.get_bind().connect() as conn:
+            def get_columns_sync(sync_conn):
+                inspector = inspect(sync_conn)
+                return inspector.get_columns(table_name)
 
-        column_dicts = await conn.run_sync(get_columns_sync)
-        columns = [c['name'] for c in column_dicts]
+            column_dicts = await conn.run_sync(get_columns_sync)
+            columns = [c['name'] for c in column_dicts]
 
-    query_str = f"SELECT * FROM {safe_table_name}"
-    params = {}
-    if guild_id and "guild_id" in columns:
-        query_str += " WHERE guild_id = :guild_id"
-        params["guild_id"] = guild_id
+        query_str = f"SELECT * FROM {safe_table_name}"
+        params = {}
+        if guild_id and "guild_id" in columns:
+            query_str += " WHERE guild_id = :guild_id"
+            params["guild_id"] = guild_id
 
-    result = await db.execute(text(query_str), params)
+        result = await db.execute(text(query_str), params)
 
-    data = []
-    for row in result.mappings().all():
-        row_data = {}
-        for key, value in row.items():
-            if isinstance(value, datetime):
-                row_data[key] = value.isoformat()
-            else:
-                row_data[key] = value
-        data.append(row_data)
-    return data
+        data = []
+        for row in result.mappings().all():
+            row_data = {}
+            for key, value in row.items():
+                if isinstance(value, datetime):
+                    row_data[key] = value.isoformat()
+                else:
+                    row_data[key] = value
+            data.append(row_data)
+        return data
+    except Exception as e:
+        logger.error(f"Error fetching data from table {table_name}: {str(e)}")
+        raise
 
 
 async def get_primary_key_columns(db: Session, table_name: str) -> List[str]:
