@@ -8,6 +8,7 @@ This document outlines project-specific guidelines for developing the OpenGuard 
 - The public-facing website is located in `website/`.
 - Configuration files are found in `configs/`.
 - Utility scripts are in `scripts/`.
+- The project uses yarn, with workspaces for the frontend and website.
 
 ## Backend Development (Python)
 - **Frameworks**: Utilize `discord.py` for bot functionality and `FastAPI` for the dashboard API.
