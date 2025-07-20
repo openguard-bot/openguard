@@ -82,7 +82,7 @@ const AdminGuildSettings = ({ guildId }) => {
         <Input
           type="text"
           id={key}
-          value={value || ""}
+          value={value ?? ""}
           onChange={(e) => handleInputChange(key, e.target.value)}
         />
       </div>

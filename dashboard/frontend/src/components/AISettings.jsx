@@ -33,10 +33,10 @@ const AISettings = ({ guildId }) => {
           ...aiRes.data,
           ...generalRes.data,
         });
-        const initialRules = (aiRes.data.keyword_rules || []).map((r) => ({
-          keywords: (r.keywords || []).join(", "),
-          regex: (r.regex || []).join(", "),
-          instructions: r.instructions || "",
+        const initialRules = (aiRes.data.keyword_rules ?? []).map((r) => ({
+          keywords: (r.keywords ?? []).join(", "),
+          regex: (r.regex ?? []).join(", "),
+          instructions: r.instructions ?? "",
         }));
         setRules(initialRules);
       } catch (error) {
@@ -170,7 +170,7 @@ const AISettings = ({ guildId }) => {
             </div>
             <Switch
               id="ai-moderation-enabled"
-              checked={config.bot_enabled || false}
+              checked={config.bot_enabled ?? false}
               onCheckedChange={(value) => handleInputChange("bot_enabled", value)}
             />
           </div>
@@ -185,7 +185,7 @@ const AISettings = ({ guildId }) => {
             </div>
             <Switch
               id="ai-test-mode"
-              checked={config.test_mode || false}
+              checked={config.test_mode ?? false}
               onCheckedChange={(value) => handleInputChange("test_mode", value)}
             />
           </div>
@@ -194,7 +194,7 @@ const AISettings = ({ guildId }) => {
           <Label htmlFor="analysis_mode">Analysis Mode</Label>
           <select
             id="analysis_mode"
-            value={config.analysis_mode || "all"}
+            value={config.analysis_mode ?? "all"}
             onChange={(e) =>
               handleInputChange("analysis_mode", e.target.value)
             }

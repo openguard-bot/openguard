@@ -194,9 +194,9 @@ class RaidDefenceCog(commands.Cog):
             {
                 "user_id": member.id,
                 "timestamp": current_time,
-"account_age": (
-    datetime.datetime.now(datetime.timezone.utc) - member.created_at
-).total_seconds(),
+                "account_age": (
+                    datetime.datetime.now(datetime.timezone.utc) - member.created_at
+                ).total_seconds(),
             }
         )
 
