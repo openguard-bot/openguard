@@ -41,7 +41,7 @@ class CaptchaView(discord.ui.View):
         self.cog = cog
         self.user = user
         self.captcha_data = captcha_data
-        self.captcha_id = captcha_data.get("id")
+        self.expected_text = captcha_data.get("text", "")
 
     @discord.ui.button(label="Solve Captcha", style=discord.ButtonStyle.primary, emoji="🔐")
     async def solve_captcha(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -50,7 +50,7 @@ class CaptchaView(discord.ui.View):
             await interaction.response.send_message("This captcha is not for you!", ephemeral=True)
             return
 
-        modal = CaptchaModal(self.cog, self.user, self.captcha_id)
+        modal = CaptchaModal(self.cog, self.user, self.expected_text)
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Get New Captcha", style=discord.ButtonStyle.secondary, emoji="🔄")
@@ -66,7 +66,7 @@ class CaptchaView(discord.ui.View):
         new_captcha_data = await self.cog.generate_captcha()
         if new_captcha_data:
             self.captcha_data = new_captcha_data
-            self.captcha_id = new_captcha_data.get("id")
+            self.expected_text = new_captcha_data.get("text", "")
 
             embed = self.cog.create_captcha_embed(new_captcha_data)
             await interaction.edit_original_response(embed=embed, view=self)
@@ -81,11 +81,11 @@ class CaptchaView(discord.ui.View):
 class CaptchaModal(discord.ui.Modal):
     """Modal for captcha solution input."""
 
-    def __init__(self, cog, user: discord.Member, captcha_id: str):
+    def __init__(self, cog, user: discord.Member, expected_text: str):
         super().__init__(title="Solve Captcha")
         self.cog = cog
         self.user = user
-        self.captcha_id = captcha_id
+        self.expected_text = expected_text
 
         self.solution = discord.ui.TextInput(
             label="Enter the text you see in the image:",
@@ -98,10 +98,10 @@ class CaptchaModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         """Handle captcha solution submission."""
         await interaction.response.defer(ephemeral=True)
-        
+
         solution = self.solution.value.strip()
-        result = await self.cog.verify_captcha(self.captcha_id, solution)
-        
+        result = self.cog.verify_captcha_solution(self.expected_text, solution)
+
         if result:
             await self.cog.handle_successful_verification(interaction, self.user)
         else:
@@ -114,7 +114,7 @@ class CaptchaCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.session: Optional[aiohttp.ClientSession] = None
-        self.opencaptcha_base_url = "https://api.opencaptcha.com/v1"
+        self.opencaptcha_base_url = "https://api.opencaptcha.com"
         print("CaptchaCog initialized.")
 
     async def cog_load(self):
@@ -345,12 +345,20 @@ class CaptchaCog(commands.Cog):
         response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=success_embed, ephemeral=False)
 
-    async def generate_captcha(self) -> Optional[Dict[str, Any]]:
+    async def generate_captcha(self, text: Optional[str] = None, width: Optional[int] = None, height: Optional[int] = None, difficulty: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """Generate a new captcha using OpenCaptcha API."""
         session = await self._ensure_session()
 
+        # Prepare request payload
+        payload = {
+            "text": text,  # Can be None for random text
+            "width": width,  # Can be None for default
+            "height": height,  # Can be None for default
+            "difficulty": difficulty  # Can be None for default
+        }
+
         try:
-            async with session.post(f"{self.opencaptcha_base_url}/generate") as response:
+            async with session.post(f"{self.opencaptcha_base_url}/captcha", json=payload) as response:
                 if response.status == 200:
                     data = await response.json()
                     return data
@@ -359,7 +367,8 @@ class CaptchaCog(commands.Cog):
                     error_text = await response.text()
                     error_context = (
                         f"OpenCaptcha API Error - Status: {response.status}, "
-                        f"URL: {self.opencaptcha_base_url}/generate, "
+                        f"URL: {self.opencaptcha_base_url}/captcha, "
+                        f"Payload: {payload}, "
                         f"Response: {error_text[:500]}..."
                     )
 
@@ -377,7 +386,8 @@ class CaptchaCog(commands.Cog):
             # Network/connection errors
             tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             error_context = (
-                f"OpenCaptcha Network Error - URL: {self.opencaptcha_base_url}/generate, "
+                f"OpenCaptcha Network Error - URL: {self.opencaptcha_base_url}/captcha, "
+                f"Payload: {payload}, "
                 f"Error Type: {type(e).__name__}"
             )
 
@@ -395,7 +405,8 @@ class CaptchaCog(commands.Cog):
             # Unexpected errors
             tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             error_context = (
-                f"Unexpected error in captcha generation - URL: {self.opencaptcha_base_url}/generate"
+                f"Unexpected error in captcha generation - URL: {self.opencaptcha_base_url}/captcha, "
+                f"Payload: {payload}"
             )
 
             await send_error_dm(
@@ -409,77 +420,16 @@ class CaptchaCog(commands.Cog):
             log.error(f"Unexpected error generating captcha: {e}")
             return None
 
-    async def verify_captcha(self, captcha_id: str, solution: str) -> bool:
-        """Verify captcha solution using OpenCaptcha API."""
-        session = await self._ensure_session()
-
-        try:
-            payload = {
-                "id": captcha_id,
-                "solution": solution
-            }
-
-            async with session.post(f"{self.opencaptcha_base_url}/verify", json=payload) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return data.get("success", False)
-                else:
-                    # Detailed error reporting for verification API errors
-                    error_text = await response.text()
-                    error_context = (
-                        f"OpenCaptcha Verify API Error - Status: {response.status}, "
-                        f"URL: {self.opencaptcha_base_url}/verify, "
-                        f"Captcha ID: {captcha_id}, "
-                        f"Response: {error_text[:500]}..."
-                    )
-
-                    await send_error_dm(
-                        self.bot,
-                        error_type="OpenCaptchaVerifyAPIError",
-                        error_message=f"Failed to verify captcha - HTTP {response.status}",
-                        error_traceback=None,
-                        context_info=error_context,
-                    )
-
-                    log.error(f"OpenCaptcha verify API error: {response.status} - {error_text}")
-                    return False
-        except aiohttp.ClientError as e:
-            # Network/connection errors
-            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_context = (
-                f"OpenCaptcha Verify Network Error - URL: {self.opencaptcha_base_url}/verify, "
-                f"Captcha ID: {captcha_id}, "
-                f"Error Type: {type(e).__name__}"
-            )
-
-            await send_error_dm(
-                self.bot,
-                error_type="OpenCaptchaVerifyNetworkError",
-                error_message=str(e),
-                error_traceback=tb_string,
-                context_info=error_context,
-            )
-
-            log.error(f"Network error verifying captcha: {e}")
+    def verify_captcha_solution(self, expected_text: str, user_solution: str) -> bool:
+        """Verify captcha solution by comparing with expected text."""
+        if not expected_text or not user_solution:
             return False
-        except Exception as e:
-            # Unexpected errors
-            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_context = (
-                f"Unexpected error in captcha verification - URL: {self.opencaptcha_base_url}/verify, "
-                f"Captcha ID: {captcha_id}"
-            )
 
-            await send_error_dm(
-                self.bot,
-                error_type=type(e).__name__,
-                error_message=str(e),
-                error_traceback=tb_string,
-                context_info=error_context,
-            )
+        # Case-insensitive comparison, strip whitespace
+        expected = expected_text.strip().lower()
+        solution = user_solution.strip().lower()
 
-            log.error(f"Unexpected error verifying captcha: {e}")
-            return False
+        return expected == solution
 
     def create_captcha_embed(self, captcha_data: Dict[str, Any]) -> discord.Embed:
         """Create embed for captcha challenge."""
@@ -489,8 +439,28 @@ class CaptchaCog(commands.Cog):
             color=discord.Color.blue(),
         )
 
-        if "image_url" in captcha_data:
-            embed.set_image(url=captcha_data["image_url"])
+        # The OpenCaptcha API should return image data or URL
+        # Check for common response fields
+        if "image" in captcha_data:
+            # If it's a base64 image, we might need to handle it differently
+            if isinstance(captcha_data["image"], str) and captcha_data["image"].startswith("data:image"):
+                embed.add_field(
+                    name="⚠️ Image Display Issue",
+                    value="The captcha image couldn't be displayed directly. Please contact administrators.",
+                    inline=False,
+                )
+            else:
+                embed.set_image(url=captcha_data["image"])
+        elif "imageUrl" in captcha_data:
+            embed.set_image(url=captcha_data["imageUrl"])
+        elif "url" in captcha_data:
+            embed.set_image(url=captcha_data["url"])
+        else:
+            embed.add_field(
+                name="⚠️ No Image",
+                value="Captcha image not found in response. Please contact administrators.",
+                inline=False,
+            )
 
         embed.add_field(
             name="Instructions",
