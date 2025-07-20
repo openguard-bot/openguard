@@ -1,0 +1,265 @@
+name: Manual Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      website:
+        description: 'Deploy Website'
+        required: false
+        type: boolean
+        default: false
+      frontend:
+        description: 'Deploy Dashboard Frontend'
+        required: false
+        type: boolean
+        default: false
+      backend:
+        description: 'Deploy Dashboard Backend'
+        required: false
+        type: boolean
+        default: false
+      bot:
+        description: 'Deploy Bot'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  deployments: write
+  statuses: write
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      website: ${{ steps.set_outputs.outputs.website }}
+      frontend: ${{ steps.set_outputs.outputs.frontend }}
+      backend: ${{ steps.set_outputs.outputs.backend }}
+      bot: ${{ steps.set_outputs.outputs.bot }}
+    steps:
+      - id: set_outputs
+        run: |
+          echo "website=${{ github.event.inputs.website }}" >> $GITHUB_OUTPUT
+          echo "frontend=${{ github.event.inputs.frontend }}" >> $GITHUB_OUTPUT
+          echo "backend=${{ github.event.inputs.backend }}" >> $GITHUB_OUTPUT
+          echo "bot=${{ github.event.inputs.bot }}" >> $GITHUB_OUTPUT
+
+  deploy-website:
+    needs: changes
+    if: ${{ needs.changes.outputs.website == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production
+          ref: ${{ github.sha }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: website/node_modules
+          key: ${{ runner.os }}-node-website-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-website-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: ./website
+
+      - name: Build Website
+        run: yarn build
+        working-directory: ./website
+
+      - name: Install Wrangler
+        run: yarn global add wrangler
+
+      - name: Deploy Website
+        run: wrangler deploy
+        working-directory: ./website
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Mark Deployment as Successful
+        if: success()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production
+          status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Mark Deployment as Failed
+        if: failure()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production
+          status: failure
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+  deploy-dashboard-frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: frontend-prod
+          ref: ${{ github.sha }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: dashboard/frontend/node_modules
+          key: ${{ runner.os }}-node-frontend-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-frontend-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: ./dashboard/frontend
+
+      - name: Build Dashboard Frontend
+        run: yarn build
+        working-directory: ./dashboard/frontend
+        env:
+          VITE_DISCORD_CLIENT_ID: ${{ vars.VITE_DISCORD_CLIENT_ID }}
+
+      - name: Install Wrangler
+        run: yarn global add wrangler
+
+      - name: Deploy Dashboard Frontend
+        run: wrangler deploy
+        working-directory: ./dashboard/frontend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Mark Deployment as Successful
+        if: success()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: frontend-prod
+          status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Mark Deployment as Failed
+        if: failure()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: frontend-prod
+          status: failure
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+  deploy-dashboard-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: backend-prod
+          ref: ${{ github.sha }}
+
+      - name: Deploy Dashboard Backend
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ vars.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/discordbot/openguard
+            git pull origin main
+            sudo /home/discordbot/openguard/scripts/deploy_backend.sh
+
+      - name: Mark Deployment as Successful
+        if: success()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: backend-prod
+          status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+  deploy-bot:
+    needs: changes
+    if: ${{ needs.changes.outputs.bot == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: bot-prod
+          ref: ${{ github.sha }}
+
+      - name: Deploy Discord Bot
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ vars.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/discordbot/openguard
+            git pull origin main
+            /home/discordbot/.pyenv/versions/3.11.2/bin/python -m pip install -r requirements.txt
+            sudo systemctl restart openguard-bot.service
+
+      - name: Mark Deployment as Successful
+        if: success()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: bot-prod
+          status: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Mark Deployment as Failed
+        if: failure()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: bot-prod
+          status: failure
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}

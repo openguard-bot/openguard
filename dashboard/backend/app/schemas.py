@@ -24,7 +24,7 @@ class User(BaseModel):
 
 class CommandLog(BaseModel):
     id: Optional[int] = None
-    guild_id: int
+    guild_id: str
     user_id: int
     command_name: str
     timestamp: Optional[datetime] = None
@@ -114,6 +114,20 @@ class LoggingSettingsUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class EventLoggingSettings(BaseModel):
+    webhook_url: Optional[str] = None
+    enabled_events: Dict[str, bool] = Field(default_factory=dict)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EventLoggingSettingsUpdate(BaseModel):
+    webhook_url: Optional[str] = None
+    enabled_events: Optional[Dict[str, bool]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ChannelExclusionSettings(BaseModel):
     excluded_channels: List[str] = Field(
         default_factory=list,
@@ -169,7 +183,7 @@ class Stats(BaseModel):
 
 
 class GuildAPIKey(BaseModel):
-    guild_id: int
+    guild_id: str
     api_provider: Optional[str] = None
     # The 'api_key' and 'github_auth_info' are not included here
     # because we should not be sending them back to the client.
@@ -245,7 +259,7 @@ class GuildUser(BaseModel):
 
 class UserInfraction(BaseModel):
     id: int
-    guild_id: int
+    guild_id: str
     user_id: int
     timestamp: datetime
     rule_violated: Optional[str]
@@ -342,9 +356,33 @@ class SecuritySettingsUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class VanityURLSettings(BaseModel):
+    lock_code: Optional[str] = Field(
+        None, description="The vanity URL code to enforce for this guild."
+    )
+    notify_channel_id: Optional[str] = Field(
+        None, description="Channel ID to send vanity change alerts."
+    )
+    notify_target_id: Optional[str] = Field(
+        None, description="Role or member ID to mention in alerts."
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class VanityURLSettingsUpdate(BaseModel):
+    lock_code: Optional[str] = None
+    notify_channel_id: Optional[str] = None
+    notify_target_id: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AISettings(BaseModel):
     channel_exclusions: ChannelExclusionSettings
     channel_rules: ChannelRulesUpdate
+    analysis_mode: str
+    keyword_rules: List[Dict[str, Any]] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -352,6 +390,8 @@ class AISettings(BaseModel):
 class AISettingsUpdate(BaseModel):
     channel_exclusions: Optional[ChannelExclusionSettings] = None
     channel_rules: Optional[ChannelRulesUpdate] = None
+    analysis_mode: Optional[str] = None
+    keyword_rules: Optional[List[Dict[str, Any]]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -475,4 +515,9 @@ class AdminMessage(BaseModel):
 
 
 class RawTableRowUpdate(BaseModel):
+    pk_values: Dict[str, Any]
     row_data: Dict[str, Any]
+
+
+class RawTableRowDelete(BaseModel):
+    pk_values: Dict[str, Any]

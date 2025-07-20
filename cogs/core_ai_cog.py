@@ -17,6 +17,8 @@ from .aimod_helpers.config_manager import (
     set_guild_config,
     is_channel_excluded,
     get_channel_rules,
+    get_analysis_mode,
+    get_message_rules,
 )
 from .aimod_helpers.utils import (
     truncate_text,
@@ -27,7 +29,11 @@ from .aimod_helpers.media_processor import MediaProcessor
 from .aimod_helpers.system_prompt import SUICIDAL_HELP_RESOURCES, SYSTEM_PROMPT_TEMPLATE
 from .aimod_helpers.litellm_config import get_litellm_client
 from .aimod_helpers.ui import ActionConfirmationView
-from database.operations import get_guild_api_key
+from database.operations import (
+    get_guild_api_key,
+    add_ai_decision,
+    get_ai_decisions,
+)
 
 DEV_AIMODTEST_USER_IDS = config.OwnersTuple
 DEV_AIMODTEST_ENABLED = False
@@ -35,6 +41,37 @@ DEV_AIMODTEST_ENABLED = False
 
 def is_dev_aimodtest_user(interaction: discord.Interaction) -> bool:
     return interaction.user.id in DEV_AIMODTEST_USER_IDS
+
+
+class DecisionPaginator(discord.ui.View):
+    def __init__(self, decisions: list[dict], author_id: int):
+        super().__init__(timeout=3600)  # 1 hour
+        self.decisions = decisions
+        self.author_id = author_id
+        self.index = 0
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.author_id
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+    async def previous(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if self.index > 0:
+            self.index -= 1
+        await self.update_message(interaction)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.index < len(self.decisions) - 1:
+            self.index += 1
+        await self.update_message(interaction)
+
+    async def update_message(self, interaction: discord.Interaction):
+        embed = CoreAICog.build_decision_embed(
+            self.decisions[self.index], self.index + 1, len(self.decisions)
+        )
+        await interaction.response.edit_message(embed=embed, view=self)
 
 
 class CoreAICog(commands.Cog, name="Core AI"):
@@ -143,11 +180,9 @@ class CoreAICog(commands.Cog, name="Core AI"):
         """Manage global bans."""
         await ctx.send_help(ctx.command)
 
-    @commands.hybrid_group(
-        name="debug", description="Debugging commands for AI moderation."
-    )
-    async def debug(self, ctx: commands.Context):
-        """Debugging commands for AI moderation."""
+    @commands.hybrid_group(name="ai", description="AI moderation commands.")
+    async def ai(self, ctx: commands.Context):
+        """AI moderation commands."""
         await ctx.send_help(ctx.command)
 
     @globalban.command(
@@ -460,10 +495,9 @@ class CoreAICog(commands.Cog, name="Core AI"):
         message_content: str,
         user_history: str,
         image_data_list=None,
+        custom_rules_text: str | None = None,
     ):
-        """
-        Sends the message content, user history, and additional context to the LiteLLM API for analysis.
-        """
+        """Analyze a message using LiteLLM and the provided rules."""
         guild_id = message.guild.id
         user_id = message.author.id
 
@@ -487,18 +521,25 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL
                 )
 
-        # Check for channel-specific rules first, fallback to server rules
-        channel_rules = await get_channel_rules(guild_id, message.channel.id)
-        if channel_rules:
-            rules_text = channel_rules
-            print(
-                f"Using channel-specific rules for channel {message.channel.name} (ID: {message.channel.id})"
-            )
+        if custom_rules_text is not None:
+            rules_text = custom_rules_text
+            print("Using custom rule instructions for analysis.")
         else:
-            rules_text = await self.get_server_rules(guild_id)
-            print(
-                f"Using server default rules for channel {message.channel.name} (ID: {message.channel.id})"
-            )
+            # Check for channel-specific rules first, fallback to server rules
+            channel_rules = await get_channel_rules(guild_id, message.channel.id)
+            if channel_rules:
+                rules_text = channel_rules
+                print(
+                    f"Using channel-specific rules for channel {message.channel.name} (ID: {message.channel.id})"
+                )
+            else:
+                rules_text = await self.get_server_rules(guild_id)
+                if rules_text == "No rules set.":
+                    print("No server rules set; skipping analysis.")
+                    return None
+                print(
+                    f"Using server default rules for channel {message.channel.name} (ID: {message.channel.id})"
+                )
 
         system_prompt_text = SYSTEM_PROMPT_TEMPLATE.format(rules_text=rules_text)
 
@@ -955,6 +996,23 @@ class CoreAICog(commands.Cog, name="Core AI"):
         """Checks if a user ID is in the global ban list."""
         return user_id in GLOBAL_BANS
 
+    @staticmethod
+    def match_keyword_rule(content: str, rules: list[dict]):
+        """Return the first matching keyword/regex rule."""
+        import re
+
+        for rule in rules:
+            for kw in rule.get("keywords", []):
+                if kw.lower() in content.lower():
+                    return rule
+            for pattern in rule.get("regex", []):
+                try:
+                    if re.search(pattern, content, re.IGNORECASE):
+                        return rule
+                except re.error:
+                    continue
+        return None
+
     @commands.Cog.listener(name="on_member_join")
     async def member_join_listener(self, member: discord.Member):
         """Checks if a joining member is globally banned and bans them if so."""
@@ -1145,6 +1203,18 @@ class CoreAICog(commands.Cog, name="Core AI"):
                         )
             return
 
+        analysis_mode = await get_analysis_mode(message.guild.id)
+        message_rules = await get_message_rules(message.guild.id)
+        matched_rule = self.match_keyword_rule(message.content, message_rules)
+        custom_rules_text = None
+        if analysis_mode == "rules_only":
+            if not matched_rule:
+                print("No rule matched; skipping analysis in rules_only mode.")
+                return
+            custom_rules_text = matched_rule.get("instructions", "")
+        elif analysis_mode == "override":
+            if matched_rule:
+                custom_rules_text = matched_rule.get("instructions", "")
         message_content = message.content
         image_data_list = []
         if message.attachments:
@@ -1203,7 +1273,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 f"Including {len(image_data_list)} attachments in analysis: {', '.join(attachment_types)}"
             )
         ai_decision = await self.query_vertex_ai(
-            message, message_content, user_history_summary, image_data_list
+            message,
+            message_content,
+            user_history_summary,
+            image_data_list,
+            custom_rules_text,
         )
 
         if not ai_decision:
@@ -1227,6 +1301,18 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     },
                 }
             )
+            await add_ai_decision(
+                message.guild.id,
+                message.id,
+                message.author.id,
+                str(message.author),
+                (
+                    message.content[:100] + "..."
+                    if len(message.content) > 100
+                    else message.content
+                ),
+                {"error": "Failed to get valid AI decision", "raw_response": None},
+            )
             return
 
         self.last_ai_decisions.append(
@@ -1243,6 +1329,18 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 "ai_decision": ai_decision,
             }
         )
+        await add_ai_decision(
+            message.guild.id,
+            message.id,
+            message.author.id,
+            str(message.author),
+            (
+                message.content[:100] + "..."
+                if len(message.content) > 100
+                else message.content
+            ),
+            ai_decision,
+        )
 
         if ai_decision.get("violation"):
             notify_mods_message = (
@@ -1256,64 +1354,23 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 f"AI analysis complete for message {message.id}. No violation detected."
             )
 
-    @debug.command(
-        name="last_decisions",
-        description="View the last 5 AI moderation decisions (admin only).",
-    )
+    @ai.command(name="decisions", description="View recent AI moderation decisions")
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
-    async def aidebug_last_decisions(self, ctx: commands.Context):
-        if not self.last_ai_decisions:
+    async def ai_last_decisions(self, ctx: commands.Context):
+        guild_id = ctx.guild.id
+        decisions = await get_ai_decisions(guild_id, limit=50)
+        decisions = [d for d in decisions if d.get("guild_id") == guild_id]
+        if not decisions:
             await ctx.reply("No AI decisions have been recorded yet.", ephemeral=True)
             return
 
-        embed = discord.Embed(
-            title="Last 5 AI Moderation Decisions", color=discord.Color.purple()
-        )
-        embed.timestamp = discord.utils.utcnow()
+        view = DecisionPaginator(decisions, ctx.author.id)
+        embed = CoreAICog.build_decision_embed(decisions[0], 1, len(decisions))
+        await ctx.reply(embed=embed, view=view, ephemeral=True)
 
-        for i, record in enumerate(reversed(list(self.last_ai_decisions))):
-            decision_info = record.get("ai_decision", {})
-            violation = decision_info.get("violation", "N/A")
-            rule_violated = decision_info.get("rule_violated", "N/A")
-            reasoning = decision_info.get("reasoning", "N/A")
-            action = decision_info.get("action", "N/A")
-            error_msg = decision_info.get("error")
-
-            field_value = (
-                f"**Author:** {record.get('author_name', 'N/A')} ({record.get('author_id', 'N/A')})\n"
-                f"**Message ID:** {record.get('message_id', 'N/A')}\n"
-                f"**Content Snippet:** ```{record.get('message_content_snippet', 'N/A')}```\n"
-                f"**Timestamp:** {record.get('timestamp', 'N/A')[:19].replace('T', ' ')}\n"
-            )
-            if error_msg:
-                field_value += f"**Status:** <font color='red'>Error during processing: {error_msg}</font>\n"
-            else:
-                field_value += (
-                    f"**Violation:** {violation}\n"
-                    f"**Rule Violated:** {rule_violated}\n"
-                    f"**Action:** {action}\n"
-                    f"**Reasoning:** ```{reasoning}```\n"
-                )
-
-            if len(field_value) > 1024:
-                field_value = field_value[:1020] + "..."
-
-            embed.add_field(
-                name=f"Decision #{len(self.last_ai_decisions) - i}",
-                value=field_value,
-                inline=False,
-            )
-            if len(embed.fields) >= 5:
-                break
-
-        if not embed.fields:
-            await ctx.reply("Could not format AI decisions.", ephemeral=True)
-            return
-
-        await ctx.reply(embed=embed, ephemeral=True)
-
-    @aidebug_last_decisions.error
-    async def aidebug_last_decisions_error(
+    @ai_last_decisions.error
+    async def ai_last_decisions_error(
         self, ctx: commands.Context, error: app_commands.AppCommandError
     ):
         if isinstance(error, app_commands.MissingPermissions):
@@ -1322,7 +1379,44 @@ class CoreAICog(commands.Cog, name="Core AI"):
             )
         else:
             await ctx.reply(f"An error occurred: {error}", ephemeral=True)
-            print(f"Error in aidebug_last_decisions command: {error}")
+            print(f"Error in ai_last_decisions command: {error}")
+
+    @staticmethod
+    def build_decision_embed(record: dict, index: int, total: int) -> discord.Embed:
+        decision_info = record.get("ai_decision", {})
+        violation = decision_info.get("violation", "N/A")
+        rule_violated = decision_info.get("rule_violated", "N/A")
+        reasoning = decision_info.get("reasoning", "N/A")
+        action = decision_info.get("action", "N/A")
+        error_msg = decision_info.get("error")
+
+        embed = discord.Embed(
+            title=f"AI Moderation Decision {index}/{total}",
+            color=discord.Color.purple(),
+        )
+        embed.timestamp = discord.utils.utcnow()
+
+        field_value = (
+            f"**Author:** {record.get('author_name', 'N/A')} ({record.get('author_id', 'N/A')})\n"
+            f"**Message ID:** {record.get('message_id', 'N/A')}\n"
+            f"**Content Snippet:** ```{record.get('message_content_snippet', 'N/A')}```\n"
+            f"**Timestamp:** {str(record.get('timestamp', 'N/A'))[:19].replace('T', ' ')}\n"
+        )
+        if error_msg:
+            field_value += f"**Status:** Error during processing: {error_msg}\n"
+        else:
+            field_value += (
+                f"**Violation:** {violation}\n"
+                f"**Rule Violated:** {rule_violated}\n"
+                f"**Action:** {action}\n"
+                f"**Reasoning:** ```{reasoning}```\n"
+            )
+
+        if len(field_value) > 1024:
+            field_value = field_value[:1020] + "..."
+
+        embed.add_field(name="Decision Details", value=field_value, inline=False)
+        return embed
 
     async def get_server_rules(self, guild_id: int) -> str:
         return await get_guild_config_async(guild_id, "SERVER_RULES", "No rules set.")

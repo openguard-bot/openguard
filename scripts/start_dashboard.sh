@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 echo "Starting FastAPI backend..."
 # Ensure the project root is on the Python path so the backend can
 # import modules such as the `database` package.
@@ -10,11 +11,14 @@ if [ -f .env ]; then
     source .env
     set +o allexport
 fi
-(cd dashboard/backend && python -m uvicorn main:app --reload --port 5030) &
 
-echo "Starting React frontend..."
-# Pass backend URL to React for proper redirects during development
-export REACT_APP_API_URL="http://localhost:5030"
-(cd dashboard/frontend && npm install && npm start) &
+(python -m uvicorn dashboard.backend.main:app --reload --port 5030) &
+BACKEND_PID=$!
 
-wait
+echo "Starting Vite frontend..."
+# Pass backend URL to Vite for proper redirects during development
+export VITE_REACT_APP_API_URL="http://localhost"
+(cd dashboard/frontend && npm install && npm run dev) &
+FRONTEND_PID=$!
+
+wait $BACKEND_PID $FRONTEND_PID

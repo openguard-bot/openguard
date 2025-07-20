@@ -5,21 +5,49 @@ import Footer from '@/components/Footer.astro';
 import '../styles/globals.css';
 
 interface Props {
-	title: string;
+    title: string;
+    description?: string;
+    image?: string;
 }
 
-const { title } = Astro.props;
+const {
+    title,
+    description = 'OpenGuard - The best Discord moderation bot for your server.',
+    image = '/openguard-hero.png',
+} = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://openguard.lol');
 ---
 
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="description" content="OpenGuard - The best Discord moderation bot for your server." />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<title>{title}</title>
+                <meta name="description" content={description} />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+                <meta name="generator" content={Astro.generator} />
+                <link rel="canonical" href={canonical.href} />
+                <meta property="og:title" content={title} />
+                <meta property="og:description" content={description} />
+                <meta property="og:image" content={image} />
+                <meta property="og:url" content={canonical.href} />
+                <meta name="twitter:card" content="summary_large_image" />
+                <script>
+                        const storedTheme = localStorage.getItem('vite-ui-theme');
+                        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        const theme =
+                                storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'system'
+                                        ? storedTheme
+                                        : systemPrefersDark
+                                                ? 'dark'
+                                                : 'light';
+                        const shouldBeDark =
+                                theme === 'dark' || (theme === 'system' && systemPrefersDark);
+                        if (shouldBeDark) {
+                                document.documentElement.classList.add('dark');
+                        }
+                </script>
+                <title>{title}</title>
     <ViewTransitions />
 	</head>
 	<body class="min-h-screen font-sans antialiased text-foreground bg-background flex flex-col items-center">

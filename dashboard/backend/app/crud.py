@@ -152,47 +152,76 @@ async def update_moderation_settings(
     return await get_moderation_settings(db, guild_id)
 
 
-async def get_logging_settings(db: Session, guild_id: int) -> schemas.LoggingSettings:
-    """Retrieve logging settings for a guild."""
+async def get_logging_settings(
+    db: Session, guild_id: int
+) -> schemas.EventLoggingSettings:
+    """Retrieve event logging settings for a guild."""
     result = await db.execute(
         text(
-            "SELECT key, value FROM guild_settings WHERE guild_id = :guild_id AND key IN ('log_channel_id', 'message_delete_logging', 'message_edit_logging', 'member_join_logging', 'member_leave_logging')"
+            "SELECT value FROM guild_settings WHERE guild_id = :guild_id AND key = 'logging_webhook_url'"
         ),
         {"guild_id": guild_id},
     )
-    settings_data: Dict[str, Any] = {
-        "log_channel_id": None,
-        "message_delete_logging": False,
-        "message_edit_logging": False,
-        "member_join_logging": False,
-        "member_leave_logging": False,
-    }
-    for key, value in result.fetchall():
-        settings_data[key] = value
-    logger.info(f"Logging settings data for guild {guild_id}: {settings_data}")
-    try:
-        return schemas.LoggingSettings(**settings_data)
-    except Exception as e:
-        logger.error(f"Error creating LoggingSettings for guild {guild_id}: {e}")
-        raise
+    row = result.fetchone()
+    webhook_url = None
+    if row:
+        webhook_url = row[0]
+        if isinstance(webhook_url, str):
+            try:
+                webhook_url = json.loads(webhook_url)
+            except json.JSONDecodeError:
+                pass
+
+    toggles_result = await db.execute(
+        text(
+            "SELECT event_key, enabled FROM log_event_toggles WHERE guild_id = :guild_id"
+        ),
+        {"guild_id": guild_id},
+    )
+    enabled_events = {key: bool(val) for key, val in toggles_result.fetchall()}
+
+    return schemas.EventLoggingSettings(
+        webhook_url=webhook_url, enabled_events=enabled_events
+    )
 
 
 async def update_logging_settings(
-    db: Session, guild_id: int, settings_data: schemas.LoggingSettingsUpdate
-) -> schemas.LoggingSettings:
-    """Update logging settings for a guild."""
-    for key, value in settings_data.model_dump(exclude_unset=True).items():
+    db: Session, guild_id: int, settings_data: schemas.EventLoggingSettingsUpdate
+) -> schemas.EventLoggingSettings:
+    """Update event logging settings for a guild."""
+    data = settings_data.model_dump(exclude_unset=True)
+
+    if "webhook_url" in data:
         await db.execute(
             text(
                 """
                 INSERT INTO guild_settings (guild_id, key, value)
-                VALUES (:guild_id, :key, :value)
+                VALUES (:guild_id, 'logging_webhook_url', :value)
                 ON CONFLICT (guild_id, key)
                 DO UPDATE SET value = :value
                 """
             ),
-            {"guild_id": guild_id, "key": key, "value": value},
+            {"guild_id": guild_id, "value": json.dumps(data["webhook_url"])},
         )
+
+    if "enabled_events" in data:
+        for event_key, enabled in data["enabled_events"].items():
+            await db.execute(
+                text(
+                    """
+                    INSERT INTO log_event_toggles (guild_id, event_key, enabled)
+                    VALUES (:guild_id, :event_key, :enabled)
+                    ON CONFLICT (guild_id, event_key)
+                    DO UPDATE SET enabled = :enabled, updated_at = CURRENT_TIMESTAMP
+                    """
+                ),
+                {
+                    "guild_id": guild_id,
+                    "event_key": event_key,
+                    "enabled": enabled,
+                },
+            )
+
     await db.commit()
     return await get_logging_settings(db, guild_id)
 
@@ -759,7 +788,12 @@ async def create_blog_post(
     )
     await db.commit()
     row = result.fetchone()
-    return schemas.BlogPost(**dict(row))
+    logger.info(f"Type of row in create_blog_post: {type(row)}")
+    logger.info(f"Content of row in create_blog_post: {row}")
+    if hasattr(row, "_asdict"):
+        return schemas.BlogPost(**row._asdict())
+    else:
+        return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
 
 
 async def get_blog_post(db: Session, post_id: int) -> Optional[schemas.BlogPost]:
@@ -769,7 +803,14 @@ async def get_blog_post(db: Session, post_id: int) -> Optional[schemas.BlogPost]
     )
     row = result.fetchone()
     if row:
-        return schemas.BlogPost(**dict(row))
+        logger.info(f"Type of row in get_blog_post: {type(row)}")
+        logger.info(f"Content of row in get_blog_post: {row}")
+        # Attempt to convert to dictionary using _asdict() if available, otherwise iterate
+        if hasattr(row, "_asdict"):
+            return schemas.BlogPost(**row._asdict())
+        else:
+            # Fallback for Row objects that might not have _asdict() but are iterable
+            return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
     return None
 
 
@@ -780,7 +821,10 @@ async def get_blog_post_by_slug(db: Session, slug: str) -> Optional[schemas.Blog
     )
     row = result.fetchone()
     if row:
-        return schemas.BlogPost(**dict(row))
+        if hasattr(row, "_asdict"):
+            return schemas.BlogPost(**row._asdict())
+        else:
+            return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
     return None
 
 
@@ -841,7 +885,10 @@ async def update_blog_post(
     await db.commit()
     row = result.fetchone()
     if row:
-        return schemas.BlogPost(**dict(row))
+        if hasattr(row, "_asdict"):
+            return schemas.BlogPost(**row._asdict())
+        else:
+            return schemas.BlogPost(**{col: getattr(row, col) for col in row.keys()})
     return None
 
 
@@ -1113,9 +1160,64 @@ async def update_rate_limiting_settings(
     return await get_rate_limiting_settings(db, guild_id)
 
 
-async def get_security_settings(
-    db: Session, guild_id: int
-) -> schemas.SecuritySettings:
+async def get_vanity_settings(db: Session, guild_id: int) -> schemas.VanityURLSettings:
+    """Get vanity URL settings for a guild."""
+    result = await db.execute(
+        text(
+            "SELECT key, value FROM guild_settings WHERE guild_id = :guild_id AND key IN ('VANITY_URL_LOCK', 'VANITY_URL_NOTIFY_CHANNEL', 'VANITY_URL_NOTIFY_TARGET')"
+        ),
+        {"guild_id": guild_id},
+    )
+    data: Dict[str, Any] = {
+        "lock_code": None,
+        "notify_channel_id": None,
+        "notify_target_id": None,
+    }
+    for key, value in result.fetchall():
+        if key == "VANITY_URL_LOCK":
+            data["lock_code"] = value
+        elif key == "VANITY_URL_NOTIFY_CHANNEL":
+            data["notify_channel_id"] = value
+        elif key == "VANITY_URL_NOTIFY_TARGET":
+            data["notify_target_id"] = value
+    return schemas.VanityURLSettings(**data)
+
+
+async def update_vanity_settings(
+    db: Session, guild_id: int, settings: schemas.VanityURLSettingsUpdate
+) -> schemas.VanityURLSettings:
+    """Update vanity URL settings for a guild."""
+    for key, value in settings.model_dump(exclude_unset=True).items():
+        if key == "lock_code":
+            db_key = "VANITY_URL_LOCK"
+        elif key == "notify_channel_id":
+            db_key = "VANITY_URL_NOTIFY_CHANNEL"
+        elif key == "notify_target_id":
+            db_key = "VANITY_URL_NOTIFY_TARGET"
+        else:
+            continue
+        await db.execute(
+            text(
+                """
+                INSERT INTO guild_settings (guild_id, key, value)
+                VALUES (:guild_id, :key, :value)
+                ON CONFLICT (guild_id, key)
+                DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {
+                "guild_id": guild_id,
+                "key": db_key,
+                "value": (
+                    json.dumps(value) if isinstance(value, (dict, list)) else value
+                ),
+            },
+        )
+    await db.commit()
+    return await get_vanity_settings(db, guild_id)
+
+
+async def get_security_settings(db: Session, guild_id: int) -> schemas.SecuritySettings:
     """Get security settings for a guild."""
     bot_detection = await get_bot_detection_config(db, guild_id)
     return schemas.SecuritySettings(bot_detection=bot_detection)
@@ -1126,9 +1228,7 @@ async def update_security_settings(
 ) -> schemas.SecuritySettings:
     """Update security settings for a guild."""
     if settings.bot_detection:
-        await update_bot_detection_config(
-            db, guild_id, settings.bot_detection
-        )
+        await update_bot_detection_config(db, guild_id, settings.bot_detection)
     return await get_security_settings(db, guild_id)
 
 
@@ -1136,8 +1236,23 @@ async def get_ai_settings(db: Session, guild_id: int) -> schemas.AISettings:
     """Get AI settings for a guild."""
     channel_exclusions = await get_channel_exclusions(db, guild_id)
     channel_rules = await get_channel_rules(db, guild_id)
+    result = await db.execute(
+        text(
+            "SELECT key, value FROM guild_config WHERE guild_id = :guild_id AND key IN ('AI_ANALYSIS_MODE', 'AI_KEYWORD_RULES')"
+        ),
+        {"guild_id": guild_id},
+    )
+    extra = {"analysis_mode": "all", "keyword_rules": []}
+    for key, value in result.fetchall():
+        parsed = json.loads(value) if isinstance(value, str) else value
+        extra["analysis_mode" if key == "AI_ANALYSIS_MODE" else "keyword_rules"] = (
+            parsed
+        )
     return schemas.AISettings(
-        channel_exclusions=channel_exclusions, channel_rules=channel_rules
+        channel_exclusions=channel_exclusions,
+        channel_rules=channel_rules,
+        analysis_mode=extra["analysis_mode"],
+        keyword_rules=extra["keyword_rules"],
     )
 
 
@@ -1149,12 +1264,35 @@ async def update_ai_settings(
         await update_channel_exclusions(db, guild_id, settings.channel_exclusions)
     if settings.channel_rules:
         await update_channel_rules(db, guild_id, settings.channel_rules)
+    if settings.analysis_mode is not None:
+        await db.execute(
+            text(
+                """
+                INSERT INTO guild_config (guild_id, key, value)
+                VALUES (:guild_id, 'AI_ANALYSIS_MODE', :value)
+                ON CONFLICT (guild_id, key)
+                DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {"guild_id": guild_id, "value": json.dumps(settings.analysis_mode)},
+        )
+    if settings.keyword_rules is not None:
+        await db.execute(
+            text(
+                """
+                INSERT INTO guild_config (guild_id, key, value)
+                VALUES (:guild_id, 'AI_KEYWORD_RULES', :value)
+                ON CONFLICT (guild_id, key)
+                DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {"guild_id": guild_id, "value": json.dumps(settings.keyword_rules)},
+        )
+    await db.commit()
     return await get_ai_settings(db, guild_id)
 
 
-async def get_channels_settings(
-    db: Session, guild_id: int
-) -> schemas.ChannelsSettings:
+async def get_channels_settings(db: Session, guild_id: int) -> schemas.ChannelsSettings:
     """Get channels settings for a guild."""
     exclusions = await get_channel_exclusions(db, guild_id)
     rules = await get_channel_rules(db, guild_id)
@@ -1320,43 +1458,37 @@ async def get_table_data(
         if safe_table_name != table_name:
             raise ValueError("Invalid table name")
 
-        # Get column names for the table from the database inspector
-        async with db.get_bind().connect() as conn:
-            def get_columns_sync(sync_conn):
-                inspector = inspect(sync_conn)
-                return inspector.get_columns(table_name)
+    # Get column names for the table from the database inspector
+    async with db.get_bind().connect() as conn:
+        def get_columns_sync(sync_conn):
+            inspector = inspect(sync_conn)
+            return inspector.get_columns(table_name)
 
-            column_dicts = await conn.run_sync(get_columns_sync)
-            columns = [c['name'] for c in column_dicts]
+        column_dicts = await conn.run_sync(get_columns_sync)
+        columns = [c['name'] for c in column_dicts]
 
-        query_str = f"SELECT * FROM {safe_table_name}"
-        params = {}
-        if guild_id and "guild_id" in columns:
-            query_str += " WHERE guild_id = :guild_id"
-            params["guild_id"] = guild_id
+    query_str = f"SELECT * FROM {safe_table_name}"
+    params = {}
+    if guild_id and "guild_id" in columns:
+        query_str += " WHERE guild_id = :guild_id"
+        params["guild_id"] = guild_id
 
-        logger.info(f"Executing query: {query_str} with params: {params}")
-        result = await db.execute(text(query_str), params)
+    result = await db.execute(text(query_str), params)
 
-        data = []
-        for row in result.mappings().all():
-            row_data = {}
-            for key, value in row.items():
-                if isinstance(value, datetime):
-                    row_data[key] = value.isoformat()
-                else:
-                    row_data[key] = value
-            data.append(row_data)
-
-        logger.info(f"Retrieved {len(data)} rows from table {table_name}")
-        return data
-    except Exception as e:
-        logger.error(f"Error in get_table_data for table {table_name}: {e}")
-        raise
+    data = []
+    for row in result.mappings().all():
+        row_data = {}
+        for key, value in row.items():
+            if isinstance(value, datetime):
+                row_data[key] = value.isoformat()
+            else:
+                row_data[key] = value
+        data.append(row_data)
+    return data
 
 
-async def get_primary_key_column(db: Session, table_name: str) -> Optional[str]:
-    """Get the primary key column name for a table."""
+async def get_primary_key_columns(db: Session, table_name: str) -> List[str]:
+    """Get the primary key column names for a table."""
     result = await db.execute(
         text(
             """
@@ -1367,56 +1499,82 @@ async def get_primary_key_column(db: Session, table_name: str) -> Optional[str]:
               AND tc.table_schema = kcu.table_schema
             WHERE tc.constraint_type = 'PRIMARY KEY'
               AND tc.table_name = :table_name
-              AND tc.table_schema = 'public';
+              AND tc.table_schema = 'public'
+            ORDER BY kcu.ordinal_position;
             """
         ),
         {"table_name": table_name},
     )
-    pk_column = result.scalar_one_or_none()
-    return pk_column
+    pk_columns = [row[0] for row in result.fetchall()]
+    return pk_columns
 
 
 async def update_table_row(
-    db: Session, table_name: str, pk_value: Any, row_data: Dict[str, Any]
+    db: Session, table_name: str, pk_values: Dict[str, Any], row_data: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Update a row in a specific table."""
+    """Update a row in a specific table, handling composite keys."""
     safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
     if safe_table_name != table_name:
         raise ValueError("Invalid table name")
 
-    pk_column = await get_primary_key_column(db, safe_table_name)
-    if not pk_column:
+    pk_columns = await get_primary_key_columns(db, safe_table_name)
+    if not pk_columns:
         raise ValueError(f"No primary key found for table {safe_table_name}")
 
-    update_fields = []
-    params = {f"pk_value": pk_value}
+    # Ensure all parts of the composite key are present in pk_values
+    if not all(key in pk_values for key in pk_columns):
+        raise ValueError("All parts of the primary key must be provided for update.")
+
+    update_dict = {}
     for key, value in row_data.items():
-        # Do not allow updating the primary key
-        if key == pk_column:
+        # Do not allow updating primary key columns
+        if key in pk_columns:
             continue
-
+        # Sanitize column names to prevent injection
         sanitized_key = "".join(c for c in key if c.isalnum() or c == "_")
-        if sanitized_key != key:
-            # skip potentially malicious keys
-            continue
+        if sanitized_key == key:
+            update_dict[sanitized_key] = value
 
-        update_fields.append(f"{sanitized_key} = :{key}")
-        params[key] = value
+    if not update_dict:
+        raise ValueError("No valid fields to update.")
 
-    if not update_fields:
-        raise ValueError("No fields to update")
+    from sqlalchemy.sql import table, column
+    from sqlalchemy import text
 
-    query = f"""
-        UPDATE {safe_table_name}
-        SET {', '.join(update_fields)}
-        WHERE {pk_column} = :pk_value
-        RETURNING *
-    """
+    # Build the SET clause
+    set_clause = ", ".join([f'"{key}" = :{key}' for key in update_dict.keys()])
 
-    result = await db.execute(text(query), params)
+    # Build the WHERE clause with explicit casting for bigint
+    where_clauses = []
+    for col in pk_columns:
+        if col == "guild_id":
+            where_clauses.append(f'"{col}" = CAST(:pk_{col} AS BIGINT)')
+        else:
+            where_clauses.append(f'"{col}" = :pk_{col}')
+    where_clause = " AND ".join(where_clauses)
+
+    # Get all columns to return the updated row
+    def get_columns_sync(sync_conn):
+        inspector = inspect(sync_conn.bind)
+        return inspector.get_columns(table_name)
+
+    column_dicts = await db.run_sync(get_columns_sync)
+    all_columns = [f'"{c["name"]}"' for c in column_dicts]
+
+    query = text(
+        f'UPDATE "{safe_table_name}" SET {set_clause} WHERE {where_clause} RETURNING {", ".join(all_columns)}'
+    )
+
+    # Combine pk_values (prefixed) and update_dict for parameters
+    params = {f"pk_{key}": value for key, value in pk_values.items()}
+    params.update(update_dict)
+
+    result = await db.execute(query, params)
     await db.commit()
 
-    updated_row = result.mappings().one()
+    updated_row = result.mappings().one_or_none()
+    if not updated_row:
+        raise ValueError("Row not found or update failed.")
 
     # Convert datetime objects to ISO format strings
     response_data = {}
@@ -1429,3 +1587,45 @@ async def update_table_row(
     return response_data
 
 
+async def delete_table_row(
+    db: Session, table_name: str, pk_values: Dict[str, Any]
+) -> bool:
+    """Delete a row from a specific table, handling composite keys."""
+    safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
+    if safe_table_name != table_name:
+        raise ValueError("Invalid table name")
+
+    pk_columns = await get_primary_key_columns(db, safe_table_name)
+    if not pk_columns:
+        raise ValueError(f"No primary key found for table {safe_table_name}")
+
+    if not all(key in pk_values for key in pk_columns):
+        raise ValueError("All parts of the primary key must be provided for deletion.")
+
+    # Use raw SQL with explicit casting for bigint to avoid type issues
+    where_clauses = []
+    for col in pk_columns:
+        if col == "guild_id":
+            where_clauses.append(f'"{col}" = CAST(:pk_{col} AS BIGINT)')
+        else:
+            where_clauses.append(f'"{col}" = :pk_{col}')
+    where_clause = " AND ".join(where_clauses)
+
+    query = text(f'DELETE FROM "{safe_table_name}" WHERE {where_clause}')
+
+    # Create a new dictionary for parameters with prefixed keys
+    params = {}
+    for key, value in pk_values.items():
+        if key == "guild_id":
+            params[f"pk_{key}"] = int(value)  # Ensure guild_id is an integer
+        else:
+            params[f"pk_{key}"] = value
+
+    logger.info(
+        f"crud.py: Executing DELETE query: {query.compile(compile_kwargs={'literal_binds': True})}"
+    )
+    logger.info(f"crud.py: DELETE query parameters: {params}")
+    result = await db.execute(query, params)
+    await db.commit()
+
+    return result.rowcount > 0

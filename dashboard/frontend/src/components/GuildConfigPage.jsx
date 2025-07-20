@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import {
@@ -9,6 +9,7 @@ import {
   Bot,
   Settings,
   Zap,
+  Link,
 } from "lucide-react";
 import GeneralSettings from "./GeneralSettings";
 import ModerationSettings from "./ModerationSettings";
@@ -18,10 +19,16 @@ import RaidDefenseSettings from "./RaidDefenseSettings";
 import RateLimitingSettings from "./RateLimitingSettings";
 import LoggingSettings from "./LoggingSettings";
 import ChannelManagement from "./ChannelManagement";
+import VanitySettings from "./VanitySettings";
 
 const GuildConfigPage = () => {
   const { guildId } = useParams();
   const [activeTab, setActiveTab] = useState("general");
+
+  useEffect(() => {
+    console.log("GuildConfigPage - guildId:", guildId);
+    console.log("GuildConfigPage - activeTab:", activeTab);
+  }, [guildId, activeTab]);
 
   return (
     <div className="space-y-6">
@@ -39,7 +46,7 @@ const GuildConfigPage = () => {
         onValueChange={setActiveTab}
         className="space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             General
@@ -64,6 +71,10 @@ const GuildConfigPage = () => {
             <MessageSquare className="h-4 w-4" />
             Rate Limiting
           </TabsTrigger>
+          <TabsTrigger value="vanity" className="flex items-center gap-2">
+            <Link className="h-4 w-4" />
+            Vanity URL
+          </TabsTrigger>
           <TabsTrigger value="logging" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Logging
@@ -74,28 +85,31 @@ const GuildConfigPage = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general">
+        <TabsContent value="general" className="">
           <GeneralSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="moderation">
+        <TabsContent value="moderation" className="">
           <ModerationSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="ai">
+        <TabsContent value="ai" className="">
           <AISettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="security">
+        <TabsContent value="security" className="">
           <SecuritySettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="raid-defense">
+        <TabsContent value="raid-defense" className="">
           <RaidDefenseSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="rate-limiting">
+        <TabsContent value="rate-limiting" className="">
           <RateLimitingSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="logging">
+        <TabsContent value="vanity" className="">
+          <VanitySettings guildId={guildId} />
+        </TabsContent>
+        <TabsContent value="logging" className="">
           <LoggingSettings guildId={guildId} />
         </TabsContent>
-        <TabsContent value="channels">
+        <TabsContent value="channels" className="">
           <ChannelManagement guildId={guildId} />
         </TabsContent>
       </Tabs>

@@ -65,7 +65,7 @@ const AdminGuildsPage = () => {
               <TableCell>{guild.owner_id}</TableCell>
               <TableCell>{guild.member_count}</TableCell>
               <TableCell>
-                <Link to={`/admin/guilds/${guild.id}`}>
+                <Link to={`guilds/${guild.id}`}>
                   <Button>Manage</Button>
                 </Link>
               </TableCell>

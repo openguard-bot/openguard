@@ -163,9 +163,14 @@ class RaidDefenceCog(commands.Cog):
         )
         embed.add_field(name="Threshold", value=f"{threshold} users", inline=True)
         embed.add_field(name="Timeframe", value=f"{timeframe} seconds", inline=True)
-        embed.set_footer(text=f"Configured by {interaction.user}")
 
-        await interaction.response.send_message(embed=embed, ephemeral=False)
+        user = interaction.user if hasattr(interaction, "user") else interaction.author
+        embed.set_footer(text=f"Configured by {user}")
+
+        if hasattr(interaction, "response"):
+            await interaction.response.send_message(embed=embed, ephemeral=False)
+        else:
+            await interaction.send(embed=embed, ephemeral=False)
         print(
             f"[RAID DEFENSE] Configuration updated for guild {interaction.guild.name}: enabled={enable}, threshold={threshold}, timeframe={timeframe}"
         )
@@ -190,7 +195,7 @@ class RaidDefenceCog(commands.Cog):
                 "user_id": member.id,
                 "timestamp": current_time,
                 "account_age": (
-                    datetime.datetime.utcnow() - member.created_at
+                    datetime.datetime.now(datetime.timezone.utc) - member.created_at
                 ).total_seconds(),
             }
         )
