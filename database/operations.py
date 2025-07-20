@@ -978,3 +978,68 @@ async def reset_captcha_attempts(guild_id: int, user_id: int) -> bool:
     except Exception as e:
         log.error(f"Failed to reset captcha attempts for user {user_id} in guild {guild_id}: {e}")
         return False
+
+
+# Verification Token Operations
+
+
+async def store_verification_token(guild_id: int, user_id: int, token: str, expires_at: datetime) -> bool:
+    """Store a verification token with expiration."""
+    try:
+        await execute_query(
+            """INSERT INTO verification_tokens (guild_id, user_id, token, expires_at)
+               VALUES ($1, $2, $3, $4)
+               ON CONFLICT (guild_id, user_id)
+               DO UPDATE SET token = $3, expires_at = $4, created_at = CURRENT_TIMESTAMP""",
+            guild_id,
+            user_id,
+            token,
+            expires_at,
+        )
+        return True
+    except Exception as e:
+        log.error(f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}")
+        return False
+
+
+async def get_verification_token(guild_id: int, user_id: int) -> Optional[str]:
+    """Get a valid verification token for a user."""
+    try:
+        result = await execute_query(
+            """SELECT token FROM verification_tokens
+               WHERE guild_id = $1 AND user_id = $2 AND expires_at > CURRENT_TIMESTAMP""",
+            guild_id,
+            user_id,
+            fetch_one=True,
+        )
+        return result["token"] if result else None
+    except Exception as e:
+        log.error(f"Failed to get verification token for user {user_id} in guild {guild_id}: {e}")
+        return None
+
+
+async def validate_verification_token(token: str) -> Optional[tuple[int, int]]:
+    """Validate a verification token and return (guild_id, user_id) if valid."""
+    try:
+        result = await execute_query(
+            """SELECT guild_id, user_id FROM verification_tokens
+               WHERE token = $1 AND expires_at > CURRENT_TIMESTAMP""",
+            token,
+            fetch_one=True,
+        )
+        return (result["guild_id"], result["user_id"]) if result else None
+    except Exception as e:
+        log.error(f"Failed to validate verification token {token}: {e}")
+        return None
+
+
+async def cleanup_expired_tokens() -> bool:
+    """Clean up expired verification tokens."""
+    try:
+        await execute_query(
+            "DELETE FROM verification_tokens WHERE expires_at <= CURRENT_TIMESTAMP"
+        )
+        return True
+    except Exception as e:
+        log.error(f"Failed to cleanup expired tokens: {e}")
+        return False

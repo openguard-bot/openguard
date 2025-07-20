@@ -320,6 +320,46 @@ class BotDetectionSettingsUpdate(BaseModel):
     whitelist_users: Optional[List[str]] = None
 
 
+class CaptchaVerificationRequest(BaseModel):
+    """Request model for captcha verification."""
+    user_id: int
+    guild_id: int
+    verification_token: str
+    hcaptcha_response: str
+
+
+class CaptchaVerificationResponse(BaseModel):
+    """Response model for captcha verification."""
+    success: bool
+    message: str
+    user_id: Optional[int] = None
+    guild_id: Optional[int] = None
+
+
+class CaptchaConfig(BaseModel):
+    """Captcha configuration model."""
+    guild_id: int
+    enabled: bool = False
+    verification_role_id: Optional[int] = None
+    max_attempts: int = 3
+    fail_action: str = "kick"
+    timeout_duration: Optional[int] = None
+    verification_channel_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class CaptchaAttempt(BaseModel):
+    """Captcha attempt model."""
+    id: Optional[int] = None
+    guild_id: int
+    user_id: int
+    attempt_count: int = 0
+    last_attempt: Optional[datetime] = None
+    verified: bool = False
+    created_at: Optional[datetime] = None
+
+
 class RateLimitingSettings(BaseModel):
     enabled: bool
     high_rate_threshold: int

@@ -3,6 +3,7 @@ import aiohttp
 import logging
 import asyncio
 import json
+import uuid
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -1294,4 +1295,187 @@ async def delete_channel_rules(
     if has_admin:
         return await crud.delete_channel_rules(
             db=db, guild_id=guild_id, channel_id=channel_id
+        )
+
+
+# Captcha Verification Endpoints
+
+@router.post("/captcha/verify", response_model=schemas.CaptchaVerificationResponse)
+async def verify_captcha(
+    verification_request: schemas.CaptchaVerificationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Verify hCaptcha response and complete user verification.
+    """
+    try:
+        # Get hCaptcha secret from environment
+        hcaptcha_secret = os.getenv("HCAPTCHA_SECRET_KEY")
+        if not hcaptcha_secret:
+            raise HTTPException(
+                status_code=500,
+                detail="hCaptcha secret key not configured"
+            )
+
+        # Verify hCaptcha response
+        async with aiohttp.ClientSession() as session:
+            payload = {
+                "secret": hcaptcha_secret,
+                "response": verification_request.hcaptcha_response,
+                "remoteip": request.client.host if request.client else None,
+            }
+
+            async with session.post("https://hcaptcha.com/siteverify", data=payload) as response:
+                if response.status != 200:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Failed to verify hCaptcha"
+                    )
+
+                result = await response.json()
+
+                if not result.get("success", False):
+                    error_codes = result.get("error-codes", [])
+                    return schemas.CaptchaVerificationResponse(
+                        success=False,
+                        message=f"hCaptcha verification failed: {', '.join(error_codes)}",
+                        user_id=verification_request.user_id,
+                        guild_id=verification_request.guild_id,
+                    )
+
+        # hCaptcha verification successful - now handle Discord verification
+        # Import here to avoid circular imports
+        from database.operations import (
+            get_captcha_config,
+            update_captcha_attempt,
+            validate_verification_token,
+        )
+
+        guild_id = verification_request.guild_id
+        user_id = verification_request.user_id
+
+        # Validate verification token
+        token_validation = await validate_verification_token(verification_request.verification_token)
+        if not token_validation:
+            return schemas.CaptchaVerificationResponse(
+                success=False,
+                message="Invalid or expired verification token",
+                user_id=user_id,
+                guild_id=guild_id,
+            )
+
+        token_guild_id, token_user_id = token_validation
+        if token_guild_id != guild_id or token_user_id != user_id:
+            return schemas.CaptchaVerificationResponse(
+                success=False,
+                message="Verification token does not match user or guild",
+                user_id=user_id,
+                guild_id=guild_id,
+            )
+
+        # Check if captcha is enabled for this guild
+        config = await get_captcha_config(guild_id)
+        if not config or not config.enabled:
+            return schemas.CaptchaVerificationResponse(
+                success=False,
+                message="Captcha verification is not enabled for this server",
+                user_id=user_id,
+                guild_id=guild_id,
+            )
+
+        # Mark user as verified in database
+        await update_captcha_attempt(guild_id, user_id, increment=False, verified=True)
+
+        # Try to assign role via Discord API
+        role_assigned = False
+        role_error = None
+
+        if config.verification_role_id:
+            try:
+                # Add role to user via Discord API
+                await _fetch_from_discord_api(
+                    f"/guilds/{guild_id}/members/{user_id}/roles/{config.verification_role_id}",
+                    method="PUT",
+                )
+                role_assigned = True
+            except Exception as e:
+                role_error = str(e)
+                logger.error(f"Failed to assign role {config.verification_role_id} to user {user_id}: {e}")
+
+        # Prepare success message
+        if role_assigned:
+            message = "Verification successful! Your role has been assigned."
+        elif config.verification_role_id and role_error:
+            message = "Verification successful, but there was an error assigning your role. Please contact an administrator."
+        else:
+            message = "Verification successful! No role is configured for assignment."
+
+        return schemas.CaptchaVerificationResponse(
+            success=True,
+            message=message,
+            user_id=user_id,
+            guild_id=guild_id,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in captcha verification: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during verification"
+        )
+
+
+@router.get("/captcha/config")
+async def get_captcha_site_key():
+    """
+    Get hCaptcha site key for frontend integration.
+    """
+    site_key = os.getenv("HCAPTCHA_SITE_KEY")
+    if not site_key:
+        raise HTTPException(
+            status_code=500,
+            detail="hCaptcha site key not configured"
+        )
+
+    return {"site_key": site_key}
+
+
+@router.get("/verify")
+async def verification_page(
+    token: Optional[str] = None,
+    user: Optional[str] = None,
+    guild: Optional[str] = None,
+):
+    """
+    Serve the verification page with embedded hCaptcha.
+    This endpoint serves the HTML page for web-based verification.
+    """
+    # Read the HTML template
+    try:
+        with open("web_verification_template.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+
+        # Get hCaptcha site key
+        site_key = os.getenv("HCAPTCHA_SITE_KEY", "")
+
+        # Replace placeholder with actual site key
+        html_content = html_content.replace("YOUR_HCAPTCHA_SITE_KEY", site_key)
+
+        # Return HTML response
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=html_content)
+
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Verification page template not found"
+        )
+    except Exception as e:
+        logger.error(f"Error serving verification page: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error loading verification page"
         )
