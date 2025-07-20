@@ -60,13 +60,6 @@ const AISettings = ({ guildId }) => {
     }));
   };
 
-  const handleSwitchChange = (field, checked) => {
-    setConfig((prev) => ({
-      ...prev,
-      [field]: checked,
-    }));
-  };
-
   const handleRuleChange = (index, field, value) => {
     setRules((prev) =>
       prev.map((r, i) => (i === index ? { ...r, [field]: value } : r))
@@ -197,102 +190,71 @@ const AISettings = ({ guildId }) => {
             />
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="ai_enabled"
-            checked={config.ai_enabled || false}
-            onCheckedChange={(checked) =>
-              handleSwitchChange("ai_enabled", checked)
+        <div className="space-y-2">
+          <Label htmlFor="analysis_mode">Analysis Mode</Label>
+          <select
+            id="analysis_mode"
+            value={config.analysis_mode || "all"}
+            onChange={(e) =>
+              handleInputChange("analysis_mode", e.target.value)
             }
-          />
-          <Label htmlFor="ai_enabled">Enable AI Features</Label>
+            className="w-full border rounded p-2"
+          >
+            <option value="all">Analyze All Messages</option>
+            <option value="rules_only">Only When Rules Match</option>
+            <option value="override">Override With Rules</option>
+          </select>
         </div>
-
-        {config.ai_enabled && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="analysis_mode">Analysis Mode</Label>
-              <select
-                id="analysis_mode"
-                value={config.analysis_mode || "all"}
-                onChange={(e) => handleInputChange("analysis_mode", e.target.value)}
-                className="w-full border rounded p-2"
+        <div className="space-y-2">
+          <Label>Keyword/Regex Rules</Label>
+          {rules.map((rule, idx) => (
+            <div key={idx} className="border p-4 rounded space-y-2">
+              <div className="space-y-1">
+                <Label>Keywords (comma separated)</Label>
+                <Input
+                  value={rule.keywords}
+                  onChange={(e) =>
+                    handleRuleChange(idx, "keywords", e.target.value)
+                  }
+                  placeholder="keyword1, keyword2"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Regex Patterns (comma separated)</Label>
+                <Input
+                  value={rule.regex}
+                  onChange={(e) =>
+                    handleRuleChange(idx, "regex", e.target.value)
+                  }
+                  placeholder="^pattern$"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Instructions</Label>
+                <Textarea
+                  value={rule.instructions}
+                  onChange={(e) =>
+                    handleRuleChange(idx, "instructions", e.target.value)
+                  }
+                  className="resize-y"
+                />
+              </div>
+              <Button
+                variant="destructive"
+                onClick={() => handleRemoveRule(idx)}
               >
-                <option value="all">Analyze All Messages</option>
-                <option value="rules_only">Only When Rules Match</option>
-                <option value="override">Override With Rules</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="analysis_mode">Analysis Mode</Label>
-              <select
-                id="analysis_mode"
-                value={config.analysis_mode || "all"}
-                onChange={(e) => handleInputChange("analysis_mode", e.target.value)}
-                className="w-full border rounded p-2"
-              >
-                <option value="all">Analyze All Messages</option>
-                <option value="rules_only">Only When Rules Match</option>
-                <option value="override">Override With Rules</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="keyword_rules">Keyword/Regex Rules (JSON)</Label>
-              <Textarea
-                id="keyword_rules"
-                value={config.keyword_rules_raw || "[]"}
-                onChange={(e) => handleInputChange("keyword_rules_raw", e.target.value)}
-                className="resize-y"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Keyword/Regex Rules</Label>
-              {rules.map((rule, idx) => (
-                <div key={idx} className="border p-4 rounded space-y-2">
-                  <div className="space-y-1">
-                    <Label>Keywords (comma separated)</Label>
-                    <Input
-                      value={rule.keywords}
-                      onChange={(e) =>
-                        handleRuleChange(idx, "keywords", e.target.value)
-                      }
-                      placeholder="keyword1, keyword2"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Regex Patterns (comma separated)</Label>
-                    <Input
-                      value={rule.regex}
-                      onChange={(e) =>
-                        handleRuleChange(idx, "regex", e.target.value)
-                      }
-                      placeholder="^pattern$"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Instructions</Label>
-                    <Textarea
-                      value={rule.instructions}
-                      onChange={(e) =>
-                        handleRuleChange(idx, "instructions", e.target.value)
-                      }
-                      className="resize-y"
-                    />
-                  </div>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleRemoveRule(idx)}
-                  >
-                    Remove Rule
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" onClick={handleAddRule} className="w-full">
-                Add Rule
+                Remove Rule
               </Button>
             </div>
-          </>
-        )}
+          ))}
+          <Button
+            variant="outline"
+            onClick={handleAddRule}
+            className="w-full"
+          >
+            Add Rule
+          </Button>
+        </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={fetchConfig} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-2" />

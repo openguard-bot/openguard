@@ -51,7 +51,9 @@ describe('AISettings', () => {
 
   it('allows adding a keyword rule', async () => {
     render(<AISettings guildId="123" />);
-    await waitFor(() => screen.getByText(/Add Rule/i));
+    
+    // Wait for the component to finish loading
+    await waitFor(() => expect(screen.queryByText(/Loading.../i)).not.toBeInTheDocument());
 
     const addButton = screen.getByText(/Add Rule/i);
     fireEvent.click(addButton);
