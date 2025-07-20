@@ -27,12 +27,10 @@ class Ping(commands.Cog):
             pass
 
     async def _sample_pg(self, samples: int = 3) -> float:
-        connection = await get_connection()
-        if not connection:
-            return float("inf")
-
         latencies = []
-        async with connection as conn:
+        async with get_connection() as conn:
+            if not conn: # Check if connection was successfully acquired
+                return float("inf")
             for _ in range(samples):
                 start = time.perf_counter()
                 await conn.fetchval("SELECT 1")
