@@ -21,6 +21,7 @@ const AISettings = ({ guildId }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [rules, setRules] = useState([]);
 
     const fetchConfig = useCallback(async () => {
       try {
@@ -29,7 +30,16 @@ const AISettings = ({ guildId }) => {
           axios.get(`/api/guilds/${guildId}/config/ai`),
           axios.get(`/api/guilds/${guildId}/config/general`),
         ]);
-        setConfig({ ...aiRes.data, ...generalRes.data });
+        setConfig({
+          ...aiRes.data,
+          ...generalRes.data,
+        });
+        const initialRules = (aiRes.data.keyword_rules || []).map((r) => ({
+          keywords: (r.keywords || []).join(", "),
+          regex: (r.regex || []).join(", "),
+          instructions: r.instructions || "",
+        }));
+        setRules(initialRules);
       } catch (error) {
         toast.error("Failed to load AI settings");
         console.error("Error fetching AI config:", error);
@@ -58,11 +68,44 @@ const AISettings = ({ guildId }) => {
     }));
   };
 
+  const handleRuleChange = (index, field, value) => {
+    setRules((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const handleAddRule = () => {
+    setRules((prev) => [
+      ...prev,
+      { keywords: "", regex: "", instructions: "" },
+    ]);
+  };
+
+  const handleRemoveRule = (index) => {
+    setRules((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
+      const formattedRules = rules.map((r) => ({
+        keywords: r.keywords
+          .split(",")
+          .map((k) => k.trim())
+          .filter((k) => k),
+        regex: r.regex
+          .split(",")
+          .map((p) => p.trim())
+          .filter((p) => p),
+        instructions: r.instructions,
+      }));
       await Promise.all([
-        axios.put(`/api/guilds/${guildId}/config/ai`, config),
+        axios.put(`/api/guilds/${guildId}/config/ai`, {
+          channel_exclusions: config.channel_exclusions,
+          channel_rules: config.channel_rules,
+          analysis_mode: config.analysis_mode,
+          keyword_rules: formattedRules,
+        }),
         axios.put(`/api/guilds/${guildId}/config/general`, {
           bot_enabled: config.bot_enabled,
           test_mode: config.test_mode,
@@ -172,6 +215,19 @@ const AISettings = ({ guildId }) => {
         {config.ai_enabled && (
           <>
             <div className="space-y-2">
+              <Label htmlFor="analysis_mode">Analysis Mode</Label>
+              <select
+                id="analysis_mode"
+                value={config.analysis_mode || "all"}
+                onChange={(e) => handleInputChange("analysis_mode", e.target.value)}
+                className="w-full border rounded p-2"
+              >
+                <option value="all">Analyze All Messages</option>
+                <option value="rules_only">Only When Rules Match</option>
+                <option value="override">Override With Rules</option>
+              </select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="ai_model">AI Model</Label>
               <Input
                 id="ai_model"
@@ -214,6 +270,52 @@ const AISettings = ({ guildId }) => {
               >
                 <Download className="h-4 w-4 mr-2" />
                 {isSyncing ? "Syncing..." : "Sync Rules from #rules Channel"}
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label>Keyword/Regex Rules</Label>
+              {rules.map((rule, idx) => (
+                <div key={idx} className="border p-4 rounded space-y-2">
+                  <div className="space-y-1">
+                    <Label>Keywords (comma separated)</Label>
+                    <Input
+                      value={rule.keywords}
+                      onChange={(e) =>
+                        handleRuleChange(idx, "keywords", e.target.value)
+                      }
+                      placeholder="keyword1, keyword2"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Regex Patterns (comma separated)</Label>
+                    <Input
+                      value={rule.regex}
+                      onChange={(e) =>
+                        handleRuleChange(idx, "regex", e.target.value)
+                      }
+                      placeholder="^pattern$"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Instructions</Label>
+                    <Textarea
+                      value={rule.instructions}
+                      onChange={(e) =>
+                        handleRuleChange(idx, "instructions", e.target.value)
+                      }
+                      className="resize-y"
+                    />
+                  </div>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleRemoveRule(idx)}
+                  >
+                    Remove Rule
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" onClick={handleAddRule} className="w-full">
+                Add Rule
               </Button>
             </div>
           </>
