@@ -155,7 +155,7 @@ jobs:
         run: yarn build
 
       - name: Install Wrangler
-        run: npm install -g wrangler
+        run: yarn global add wrangler
 
       - name: Deploy Website
         run: wrangler deploy
@@ -222,7 +222,7 @@ jobs:
           VITE_DISCORD_CLIENT_ID: ${{ vars.VITE_DISCORD_CLIENT_ID }}
 
       - name: Install Wrangler
-        run: npm install -g wrangler
+        run: yarn global add wrangler
 
       - name: Deploy Dashboard Frontend
         run: wrangler deploy
