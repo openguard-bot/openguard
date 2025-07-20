@@ -13,6 +13,8 @@ const mockConfig = {
   ai_model: 'gpt-4-turbo',
   ai_temperature: 0.7,
   ai_system_prompt: 'You are a helpful assistant.',
+  analysis_mode: 'all',
+  keyword_rules: [],
   bot_enabled: true,
   test_mode: false,
 };
@@ -69,6 +71,18 @@ describe('AISettings', () => {
     const testModeSwitch = screen.getByLabelText(/AI Test Mode/i);
     fireEvent.click(testModeSwitch);
     expect(testModeSwitch).toBeChecked();
+  });
+
+  it('allows adding a keyword rule', async () => {
+    render(<AISettings guildId="123" />);
+    await waitFor(() => screen.getByText(/Add Rule/i));
+
+    const addButton = screen.getByText(/Add Rule/i);
+    fireEvent.click(addButton);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Remove Rule/i).length).toBe(1);
+    });
   });
 
   it('saves settings and shows success toast', async () => {

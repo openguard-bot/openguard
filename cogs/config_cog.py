@@ -553,6 +553,20 @@ class ConfigCog(commands.Cog, name="Configuration"):
             )
             return
 
+    @config.command(
+        name="set_rules",
+        description="Manually set the AI moderation rules for this guild.",
+    )
+    @app_commands.describe(rules="The rules text for AI moderation")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def set_rules(self, ctx: commands.Context, *, rules: str):
+        """Manually set server rules used for AI moderation."""
+        await set_guild_config(ctx.guild.id, "SERVER_RULES", rules)
+        response_func = (
+            ctx.interaction.response.send_message if ctx.interaction else ctx.send
+        )
+        await response_func("Server rules have been updated.", ephemeral=False)
+
 
 async def setup(bot: commands.Bot):
     """Loads the ConfigCog."""

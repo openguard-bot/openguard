@@ -17,6 +17,8 @@ from .aimod_helpers.config_manager import (
     set_guild_config,
     is_channel_excluded,
     get_channel_rules,
+    get_analysis_mode,
+    get_message_rules,
 )
 from .aimod_helpers.utils import (
     truncate_text,
@@ -43,7 +45,7 @@ def is_dev_aimodtest_user(interaction: discord.Interaction) -> bool:
 
 class DecisionPaginator(discord.ui.View):
     def __init__(self, decisions: list[dict], author_id: int):
-        super().__init__(timeout=3600) # 1 hour
+        super().__init__(timeout=3600)  # 1 hour
         self.decisions = decisions
         self.author_id = author_id
         self.index = 0
@@ -493,10 +495,9 @@ class CoreAICog(commands.Cog, name="Core AI"):
         message_content: str,
         user_history: str,
         image_data_list=None,
+        custom_rules_text: str | None = None,
     ):
-        """
-        Sends the message content, user history, and additional context to the LiteLLM API for analysis.
-        """
+        """Analyze a message using LiteLLM and the provided rules."""
         guild_id = message.guild.id
         user_id = message.author.id
 
@@ -520,18 +521,25 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL
                 )
 
-        # Check for channel-specific rules first, fallback to server rules
-        channel_rules = await get_channel_rules(guild_id, message.channel.id)
-        if channel_rules:
-            rules_text = channel_rules
-            print(
-                f"Using channel-specific rules for channel {message.channel.name} (ID: {message.channel.id})"
-            )
+        if custom_rules_text is not None:
+            rules_text = custom_rules_text
+            print("Using custom rule instructions for analysis.")
         else:
-            rules_text = await self.get_server_rules(guild_id)
-            print(
-                f"Using server default rules for channel {message.channel.name} (ID: {message.channel.id})"
-            )
+            # Check for channel-specific rules first, fallback to server rules
+            channel_rules = await get_channel_rules(guild_id, message.channel.id)
+            if channel_rules:
+                rules_text = channel_rules
+                print(
+                    f"Using channel-specific rules for channel {message.channel.name} (ID: {message.channel.id})"
+                )
+            else:
+                rules_text = await self.get_server_rules(guild_id)
+                if rules_text == "No rules set.":
+                    print("No server rules set; skipping analysis.")
+                    return None
+                print(
+                    f"Using server default rules for channel {message.channel.name} (ID: {message.channel.id})"
+                )
 
         system_prompt_text = SYSTEM_PROMPT_TEMPLATE.format(rules_text=rules_text)
 
@@ -988,6 +996,23 @@ class CoreAICog(commands.Cog, name="Core AI"):
         """Checks if a user ID is in the global ban list."""
         return user_id in GLOBAL_BANS
 
+    @staticmethod
+    def match_keyword_rule(content: str, rules: list[dict]):
+        """Return the first matching keyword/regex rule."""
+        import re
+
+        for rule in rules:
+            for kw in rule.get("keywords", []):
+                if kw.lower() in content.lower():
+                    return rule
+            for pattern in rule.get("regex", []):
+                try:
+                    if re.search(pattern, content, re.IGNORECASE):
+                        return rule
+                except re.error:
+                    continue
+        return None
+
     @commands.Cog.listener(name="on_member_join")
     async def member_join_listener(self, member: discord.Member):
         """Checks if a joining member is globally banned and bans them if so."""
@@ -1178,6 +1203,18 @@ class CoreAICog(commands.Cog, name="Core AI"):
                         )
             return
 
+        analysis_mode = await get_analysis_mode(message.guild.id)
+        message_rules = await get_message_rules(message.guild.id)
+        matched_rule = self.match_keyword_rule(message.content, message_rules)
+        custom_rules_text = None
+        if analysis_mode == "rules_only":
+            if not matched_rule:
+                print("No rule matched; skipping analysis in rules_only mode.")
+                return
+            custom_rules_text = matched_rule.get("instructions", "")
+        elif analysis_mode == "override":
+            if matched_rule:
+                custom_rules_text = matched_rule.get("instructions", "")
         message_content = message.content
         image_data_list = []
         if message.attachments:
@@ -1236,7 +1273,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 f"Including {len(image_data_list)} attachments in analysis: {', '.join(attachment_types)}"
             )
         ai_decision = await self.query_vertex_ai(
-            message, message_content, user_history_summary, image_data_list
+            message,
+            message_content,
+            user_history_summary,
+            image_data_list,
+            custom_rules_text,
         )
 
         if not ai_decision:
@@ -1313,9 +1354,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 f"AI analysis complete for message {message.id}. No violation detected."
             )
 
-    @ai.command(
-        name="decisions", description="View recent AI moderation decisions"
-    )
+    @ai.command(name="decisions", description="View recent AI moderation decisions")
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     async def ai_last_decisions(self, ctx: commands.Context):

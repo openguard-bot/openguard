@@ -1179,8 +1179,23 @@ async def get_ai_settings(db: Session, guild_id: int) -> schemas.AISettings:
     """Get AI settings for a guild."""
     channel_exclusions = await get_channel_exclusions(db, guild_id)
     channel_rules = await get_channel_rules(db, guild_id)
+    result = await db.execute(
+        text(
+            "SELECT key, value FROM guild_config WHERE guild_id = :guild_id AND key IN ('AI_ANALYSIS_MODE', 'AI_KEYWORD_RULES')"
+        ),
+        {"guild_id": guild_id},
+    )
+    extra = {"analysis_mode": "all", "keyword_rules": []}
+    for key, value in result.fetchall():
+        parsed = json.loads(value) if isinstance(value, str) else value
+        extra["analysis_mode" if key == "AI_ANALYSIS_MODE" else "keyword_rules"] = (
+            parsed
+        )
     return schemas.AISettings(
-        channel_exclusions=channel_exclusions, channel_rules=channel_rules
+        channel_exclusions=channel_exclusions,
+        channel_rules=channel_rules,
+        analysis_mode=extra["analysis_mode"],
+        keyword_rules=extra["keyword_rules"],
     )
 
 
@@ -1192,6 +1207,31 @@ async def update_ai_settings(
         await update_channel_exclusions(db, guild_id, settings.channel_exclusions)
     if settings.channel_rules:
         await update_channel_rules(db, guild_id, settings.channel_rules)
+    if settings.analysis_mode is not None:
+        await db.execute(
+            text(
+                """
+                INSERT INTO guild_config (guild_id, key, value)
+                VALUES (:guild_id, 'AI_ANALYSIS_MODE', :value)
+                ON CONFLICT (guild_id, key)
+                DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {"guild_id": guild_id, "value": json.dumps(settings.analysis_mode)},
+        )
+    if settings.keyword_rules is not None:
+        await db.execute(
+            text(
+                """
+                INSERT INTO guild_config (guild_id, key, value)
+                VALUES (:guild_id, 'AI_KEYWORD_RULES', :value)
+                ON CONFLICT (guild_id, key)
+                DO UPDATE SET value = :value, updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {"guild_id": guild_id, "value": json.dumps(settings.keyword_rules)},
+        )
+    await db.commit()
     return await get_ai_settings(db, guild_id)
 
 

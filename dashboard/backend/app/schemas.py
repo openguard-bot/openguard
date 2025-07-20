@@ -359,6 +359,8 @@ class SecuritySettingsUpdate(BaseModel):
 class AISettings(BaseModel):
     channel_exclusions: ChannelExclusionSettings
     channel_rules: ChannelRulesUpdate
+    analysis_mode: str
+    keyword_rules: List[Dict[str, Any]] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -366,6 +368,8 @@ class AISettings(BaseModel):
 class AISettingsUpdate(BaseModel):
     channel_exclusions: Optional[ChannelExclusionSettings] = None
     channel_rules: Optional[ChannelRulesUpdate] = None
+    analysis_mode: Optional[str] = None
+    keyword_rules: Optional[List[Dict[str, Any]]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
