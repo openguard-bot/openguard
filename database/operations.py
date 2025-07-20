@@ -33,6 +33,8 @@ from .models import (
     UserData,
     GuildAPIKey,
     AppealStatus,
+    CaptchaConfig,
+    CaptchaAttempt,
 )
 
 log = logging.getLogger(__name__)
@@ -850,3 +852,129 @@ async def get_ai_decisions(
     except Exception as e:
         log.error(f"Failed to fetch AI decisions for guild {guild_id}: {e}")
         return []
+
+
+# Captcha Configuration Operations
+
+
+async def get_captcha_config(guild_id: int) -> Optional[CaptchaConfig]:
+    """Get captcha configuration for a guild."""
+    cache_key = f"captcha_config:{guild_id}"
+    cached = await get_cache(cache_key)
+    if cached:
+        return CaptchaConfig(**cached)
+
+    try:
+        result = await execute_query(
+            "SELECT * FROM captcha_config WHERE guild_id = $1", guild_id, fetch_one=True
+        )
+        if result:
+            config = CaptchaConfig(**dict(result))
+            await set_cache(cache_key, config.__dict__)
+            return config
+        return None
+    except Exception as e:
+        log.error(f"Failed to get captcha config for guild {guild_id}: {e}")
+        return None
+
+
+async def set_captcha_config(guild_id: int, config: CaptchaConfig) -> bool:
+    """Set captcha configuration for a guild."""
+    try:
+        data = {
+            "guild_id": guild_id,
+            "enabled": config.enabled,
+            "verification_role_id": config.verification_role_id,
+            "max_attempts": config.max_attempts,
+            "fail_action": config.fail_action,
+            "timeout_duration": config.timeout_duration,
+            "verification_channel_id": config.verification_channel_id,
+        }
+        success = await insert_or_update("captcha_config", ["guild_id"], data)
+        if success:
+            await set_cache(f"captcha_config:{guild_id}", config.__dict__)
+        return success
+    except Exception as e:
+        log.error(f"Failed to set captcha config for guild {guild_id}: {e}")
+        return False
+
+
+async def update_captcha_config_field(guild_id: int, field: str, value: Any) -> bool:
+    """Update a specific field in captcha configuration."""
+    try:
+        await execute_query(
+            f"UPDATE captcha_config SET {field} = $1, updated_at = CURRENT_TIMESTAMP WHERE guild_id = $2",
+            value,
+            guild_id,
+        )
+        await delete_cache(f"captcha_config:{guild_id}")
+        return True
+    except Exception as e:
+        log.error(f"Failed to update captcha config field {field} for guild {guild_id}: {e}")
+        return False
+
+
+# Captcha Attempts Operations
+
+
+async def get_captcha_attempt(guild_id: int, user_id: int) -> Optional[CaptchaAttempt]:
+    """Get captcha attempt record for a user in a guild."""
+    try:
+        result = await execute_query(
+            "SELECT * FROM captcha_attempts WHERE guild_id = $1 AND user_id = $2",
+            guild_id,
+            user_id,
+            fetch_one=True,
+        )
+        return CaptchaAttempt(**dict(result)) if result else None
+    except Exception as e:
+        log.error(f"Failed to get captcha attempt for user {user_id} in guild {guild_id}: {e}")
+        return None
+
+
+async def update_captcha_attempt(guild_id: int, user_id: int, increment: bool = True, verified: bool = False) -> bool:
+    """Update or create captcha attempt record."""
+    try:
+        current_time = datetime.now(timezone.utc)
+
+        # Try to get existing record
+        existing = await get_captcha_attempt(guild_id, user_id)
+
+        if existing:
+            new_count = existing.attempt_count + 1 if increment else existing.attempt_count
+            await execute_query(
+                """UPDATE captcha_attempts
+                   SET attempt_count = $1, last_attempt = $2, verified = $3
+                   WHERE guild_id = $4 AND user_id = $5""",
+                new_count,
+                current_time,
+                verified,
+                guild_id,
+                user_id,
+            )
+        else:
+            # Create new record
+            await execute_query(
+                """INSERT INTO captcha_attempts (guild_id, user_id, attempt_count, last_attempt, verified)
+                   VALUES ($1, $2, $3, $4, $5)""",
+                guild_id,
+                user_id,
+                1 if increment else 0,
+                current_time,
+                verified,
+            )
+        return True
+    except Exception as e:
+        log.error(f"Failed to update captcha attempt for user {user_id} in guild {guild_id}: {e}")
+        return False
+
+
+async def reset_captcha_attempts(guild_id: int, user_id: int) -> bool:
+    """Reset captcha attempts for a user."""
+    try:
+        return await delete_record(
+            "captcha_attempts", "guild_id = $1 AND user_id = $2", guild_id, user_id
+        )
+    except Exception as e:
+        log.error(f"Failed to reset captcha attempts for user {user_id} in guild {guild_id}: {e}")
+        return False
