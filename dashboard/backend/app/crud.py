@@ -1423,7 +1423,9 @@ async def get_table_names(db: Session) -> List[str]:
     try:
         # Try the standard PostgreSQL approach first
         result = await db.execute(
-            text("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'")
+            text(
+                "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'"
+            )
         )
         rows = result.fetchall()
         table_names = [row[0] for row in rows]
@@ -1431,7 +1433,9 @@ async def get_table_names(db: Session) -> List[str]:
         if not table_names:
             # Fallback: try information_schema
             result = await db.execute(
-                text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+                text(
+                    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+                )
             )
             rows = result.fetchall()
             table_names = [row[0] for row in rows]
@@ -1442,8 +1446,14 @@ async def get_table_names(db: Session) -> List[str]:
         logger.error(f"Error fetching table names: {e}")
         # Return a hardcoded list of known tables as a fallback
         return [
-            "user_infractions", "guild_settings", "global_bans", "moderation_logs",
-            "command_logs", "user_data", "blog_posts", "guild_api_keys"
+            "user_infractions",
+            "guild_settings",
+            "global_bans",
+            "moderation_logs",
+            "command_logs",
+            "user_data",
+            "blog_posts",
+            "guild_api_keys",
         ]
 
 
@@ -1460,12 +1470,13 @@ async def get_table_data(
 
         # Get column names for the table from the database inspector
         async with db.get_bind().connect() as conn:
+
             def get_columns_sync(sync_conn):
                 inspector = inspect(sync_conn)
                 return inspector.get_columns(table_name)
 
             column_dicts = await conn.run_sync(get_columns_sync)
-            columns = [c['name'] for c in column_dicts]
+            columns = [c["name"] for c in column_dicts]
 
         query_str = f"SELECT * FROM {safe_table_name}"
         params = {}

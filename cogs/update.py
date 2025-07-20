@@ -1,3 +1,4 @@
+# pylint: disable=import-error
 import discord
 from discord.ext import commands
 from discord import app_commands
