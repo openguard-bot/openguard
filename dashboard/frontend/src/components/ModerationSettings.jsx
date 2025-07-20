@@ -118,7 +118,7 @@ const ModerationSettings = ({ guildId }) => {
                     </Label>
                     <Switch
                       id={`${id}-confirmation`}
-                      checked={config.action_confirmations?.[id] || false}
+                    checked={config.action_confirmations?.[id] ?? false}
                       onCheckedChange={(value) =>
                         handleActionConfirmationChange(id, value)
                       }
@@ -136,7 +136,7 @@ const ModerationSettings = ({ guildId }) => {
                   <DiscordSelector
                     guildId={guildId}
                     type="roles"
-                    value={config.suicidal_content_ping_role_id || ""}
+                    value={config.suicidal_content_ping_role_id ?? ""}
                     onValueChange={(value) =>
                       handleInputChange("suicidal_content_ping_role_id", value)
                     }
@@ -148,7 +148,7 @@ const ModerationSettings = ({ guildId }) => {
                   <DiscordSelector
                     guildId={guildId}
                     type="roles"
-                    value={config.confirmation_ping_role_id || ""}
+                    value={config.confirmation_ping_role_id ?? ""}
                     onValueChange={(value) =>
                       handleInputChange("confirmation_ping_role_id", value)
                     }
@@ -175,7 +175,7 @@ const ModerationSettings = ({ guildId }) => {
                   </div>
                   <Switch
                     id="anti-spam"
-                    checked={config.anti_spam || false}
+                    checked={config.anti_spam ?? false}
                     onCheckedChange={(value) =>
                       handleInputChange("anti_spam", value)
                     }
@@ -192,7 +192,7 @@ const ModerationSettings = ({ guildId }) => {
                   </div>
                   <Switch
                     id="anti-raid"
-                    checked={config.anti_raid || false}
+                    checked={config.anti_raid ?? false}
                     onCheckedChange={(value) =>
                       handleInputChange("anti_raid", value)
                     }
@@ -209,7 +209,7 @@ const ModerationSettings = ({ guildId }) => {
                   </div>
                   <Switch
                     id="link-detection"
-                    checked={config.link_detection || false}
+                    checked={config.link_detection ?? false}
                     onCheckedChange={(value) =>
                       handleInputChange("link_detection", value)
                     }
@@ -225,7 +225,7 @@ const ModerationSettings = ({ guildId }) => {
               <DiscordSelector
                 type="roles"
                 guildId={guildId}
-                selected={config.ignored_roles || []}
+                selected={config.ignored_roles ?? []}
                 onSelectionChange={(roles) =>
                   handleInputChange("ignored_roles", roles)
                 }
@@ -239,7 +239,7 @@ const ModerationSettings = ({ guildId }) => {
               <DiscordSelector
                 type="channels"
                 guildId={guildId}
-                selected={config.ignored_channels || []}
+                selected={config.ignored_channels ?? []}
                 onSelectionChange={(channels) =>
                   handleInputChange("ignored_channels", channels)
                 }

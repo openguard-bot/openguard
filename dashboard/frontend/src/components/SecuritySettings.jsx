@@ -71,7 +71,7 @@ const SecuritySettings = ({ guildId }) => {
   const addArrayItem = (field, defaultValue = "") => {
     setConfig((prev) => ({
       ...prev,
-      [field]: [...(prev[field] || []), defaultValue],
+      [field]: [...(prev[field] ?? []), defaultValue],
     }));
   };
 
@@ -131,7 +131,7 @@ const SecuritySettings = ({ guildId }) => {
         <div className="flex items-center space-x-2">
           <Switch
             id="bot_detection_enabled"
-            checked={config.enabled || false}
+            checked={config.enabled ?? false}
             onCheckedChange={(checked) => handleSwitchChange("enabled", checked)}
           />
           <Label htmlFor="bot_detection_enabled">Enable Bot Detection</Label>
@@ -143,7 +143,7 @@ const SecuritySettings = ({ guildId }) => {
               <div className="space-y-2">
                 <Label htmlFor="bot_action">Action on Detection</Label>
                 <Select
-                  value={config.action || "warn"}
+                  value={config.action ?? "warn"}
                   onValueChange={(value) => handleInputChange("action", value)}
                 >
                   <SelectTrigger>
@@ -164,7 +164,7 @@ const SecuritySettings = ({ guildId }) => {
                 <Input
                   id="timeout_duration"
                   type="number"
-                  value={config.timeout_duration || 300}
+                  value={config.timeout_duration ?? 300}
                   onChange={(e) =>
                     handleInputChange("timeout_duration", parseInt(e.target.value))
                   }
@@ -175,7 +175,7 @@ const SecuritySettings = ({ guildId }) => {
             <div className="space-y-2">
               <Label>Detection Keywords</Label>
               <div className="space-y-2">
-                {(config.keywords || []).map((keyword, index) => (
+                {(config.keywords ?? []).map((keyword, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <Input
                       value={keyword}
@@ -206,7 +206,7 @@ const SecuritySettings = ({ guildId }) => {
               <Label htmlFor="log_channel">Log Channel ID</Label>
               <Input
                 id="log_channel"
-                value={config.log_channel || ""}
+                value={config.log_channel ?? ""}
                 onChange={(e) =>
                   handleInputChange("log_channel", e.target.value)
                 }

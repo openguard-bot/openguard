@@ -11,14 +11,10 @@ class DevsFacts(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        
+
         # List of developer names
-        self.developers = [
-            "slipstreamm",
-            "ilikepancakes", 
-            "izzy"
-        ]
-        
+        self.developers = ["slipstreamm", "ilikepancakes", "izzy"]
+
         # List of fact templates with placeholders
         self.fact_templates = [
             "{dev} has had {number} monster drinks today",
@@ -40,7 +36,7 @@ class DevsFacts(commands.Cog):
             "{dev} has spent {number} hours in meetings about coding instead of coding",
             "{dev} has {number} different versions of Node.js installed",
             "{dev} has {number} energy drinks in their fridge right now",
-            "{dev} has typed 'console.log' {number} times today"
+            "{dev} has typed 'console.log' {number} times today",
         ]
 
     @commands.hybrid_group(
@@ -51,8 +47,7 @@ class DevsFacts(commands.Cog):
         await ctx.send_help(ctx.command)
 
     @devs.command(
-        name="facts",
-        description="Display a random fact about the developers"
+        name="facts", description="Display a random fact about the developers"
     )
     async def devs_facts(self, ctx: commands.Context):
         """Display a random fact about one of the developers."""
@@ -71,9 +66,7 @@ class DevsFacts(commands.Cog):
 
         # Create an embed for better presentation
         embed = discord.Embed(
-            title="🔍 Developer Fact",
-            description=fact,
-            color=discord.Color.blue()
+            title="🔍 Developer Fact", description=fact, color=discord.Color.blue()
         )
 
         # Add a footer with some flavor text

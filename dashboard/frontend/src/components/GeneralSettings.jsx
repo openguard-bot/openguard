@@ -98,7 +98,7 @@ const GeneralSettings = ({ guildId }) => {
                 <Label htmlFor="prefix">Command Prefix</Label>
                 <Input
                   id="prefix"
-                  value={config.prefix || "!"}
+                  value={config.prefix ?? "!"}
                   onChange={(e) => handleInputChange("prefix", e.target.value)}
                   placeholder="!"
                 />
@@ -109,7 +109,7 @@ const GeneralSettings = ({ guildId }) => {
               <div className="space-y-2">
                 <Label htmlFor="language">Language</Label>
                 <Select
-                  value={config.language || "en"}
+                  value={config.language ?? "en"}
                   onValueChange={(value) => handleInputChange("language", value)}
                 >
                   <SelectTrigger id="language">

@@ -184,7 +184,7 @@ const LoggingSettings = ({ guildId }) => {
               <Label htmlFor="webhook_url">Logging Webhook URL</Label>
               <Input
                 id="webhook_url"
-                value={config.webhook_url || ""}
+                value={config.webhook_url ?? ""}
                 onChange={(e) => handleInputChange("webhook_url", e.target.value)}
                 placeholder="https://discord.com/api/webhooks/..."
                 type="url"
