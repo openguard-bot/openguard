@@ -14,6 +14,7 @@ from typing import List, Optional
 from lists import config
 
 from . import schemas, crud
+from cogs.aimod_helpers import gemini_client
 
 # pylint: disable=no-member
 from .db import get_db
@@ -1298,6 +1299,53 @@ async def delete_channel_rules(
         return await crud.delete_channel_rules(
             db=db, guild_id=guild_id, channel_id=channel_id
         )
+
+
+@router.get(
+    "/guilds/{guild_id}/automod/rules",
+    dependencies=[Depends(has_admin_permissions)],
+)
+async def get_automod_rules(guild_id: int):
+    """Fetch all AutoMod rules from Discord."""
+    return await _fetch_from_discord_api(f"/guilds/{guild_id}/auto-moderation/rules")
+
+
+@router.post(
+    "/guilds/{guild_id}/automod/rules",
+    dependencies=[Depends(has_admin_permissions)],
+)
+async def create_automod_rule(guild_id: int, rule: dict):
+    """Create an AutoMod rule via Discord API."""
+    return await _fetch_from_discord_api(
+        f"/guilds/{guild_id}/auto-moderation/rules", method="POST", json=rule
+    )
+
+
+@router.delete(
+    "/guilds/{guild_id}/automod/rules/{rule_id}",
+    dependencies=[Depends(has_admin_permissions)],
+)
+async def delete_automod_rule(guild_id: int, rule_id: int):
+    """Delete an AutoMod rule."""
+    await _fetch_from_discord_api(
+        f"/guilds/{guild_id}/auto-moderation/rules/{rule_id}", method="DELETE"
+    )
+    return {"status": "deleted"}
+
+
+@router.post(
+    "/guilds/{guild_id}/automod/ai-regex",
+    dependencies=[Depends(has_admin_permissions)],
+)
+async def automod_ai_regex(guild_id: int, payload: schemas.AIRegexRequest):
+    """Generate a regex pattern using Gemini based on a description."""
+    regex = await gemini_client.generate_content(
+        [
+            {"role": "system", "content": "You create Discord AutoMod regex patterns. Return only the regex."},
+            {"role": "user", "content": payload.description},
+        ]
+    )
+    return {"regex": regex.strip()}
 
 
 # Captcha Verification Endpoints
