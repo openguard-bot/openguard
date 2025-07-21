@@ -20,6 +20,7 @@ import RateLimitingSettings from "./RateLimitingSettings";
 import LoggingSettings from "./LoggingSettings";
 import ChannelManagement from "./ChannelManagement";
 import VanitySettings from "./VanitySettings";
+import AutoModSettings from "./AutoModSettings";
 
 const GuildConfigPage = () => {
   const { guildId } = useParams();
@@ -71,6 +72,10 @@ const GuildConfigPage = () => {
             <MessageSquare className="h-4 w-4" />
             Rate Limiting
           </TabsTrigger>
+          <TabsTrigger value="automod" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            AutoMod
+          </TabsTrigger>
           <TabsTrigger value="vanity" className="flex items-center gap-2">
             <Link className="h-4 w-4" />
             Vanity URL
@@ -102,6 +107,9 @@ const GuildConfigPage = () => {
         </TabsContent>
         <TabsContent value="rate-limiting" className="">
           <RateLimitingSettings guildId={guildId} />
+        </TabsContent>
+        <TabsContent value="automod" className="">
+          <AutoModSettings guildId={guildId} />
         </TabsContent>
         <TabsContent value="vanity" className="">
           <VanitySettings guildId={guildId} />

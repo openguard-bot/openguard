@@ -565,3 +565,7 @@ class RawTableRowUpdate(BaseModel):
 
 class RawTableRowDelete(BaseModel):
     pk_values: Dict[str, Any]
+
+class AIRegexRequest(BaseModel):
+    description: str
+
