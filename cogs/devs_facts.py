@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 import random
 
 
@@ -39,16 +38,12 @@ class DevsFacts(commands.Cog):
             "{dev} has typed 'console.log' {number} times today",
         ]
 
-    @commands.hybrid_group(
-        name="devs", description="Commands related to the developers"
-    )
+    @commands.hybrid_group(name="devs", description="Commands related to the developers")
     async def devs(self, ctx: commands.Context):
         """Commands related to the developers."""
         await ctx.send_help(ctx.command)
 
-    @devs.command(
-        name="facts", description="Display a random fact about the developers"
-    )
+    @devs.command(name="facts", description="Display a random fact about the developers")
     async def devs_facts(self, ctx: commands.Context):
         """Display a random fact about one of the developers."""
 
@@ -65,9 +60,7 @@ class DevsFacts(commands.Cog):
         fact = fact_template.format(dev=dev, number=random_number)
 
         # Create an embed for better presentation
-        embed = discord.Embed(
-            title="🔍 Developer Fact", description=fact, color=discord.Color.blue()
-        )
+        embed = discord.Embed(title="🔍 Developer Fact", description=fact, color=discord.Color.blue())
 
         # Add a footer with some flavor text
         embed.set_footer(text="*These facts are 100% scientifically accurate")

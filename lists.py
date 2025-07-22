@@ -2,7 +2,7 @@ import logging
 import threading
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import yaml
 from watchdog.events import FileSystemEventHandler
@@ -60,9 +60,9 @@ class ConfigChangeHandler(FileSystemEventHandler):
 
     def dispatch(self, event):
         # We only care about events for the config file path.
-        if event.src_path == str(self.config.config_path) or getattr(
-            event, "dest_path", None
-        ) == str(self.config.config_path):
+        if event.src_path == str(self.config.config_path) or getattr(event, "dest_path", None) == str(
+            self.config.config_path
+        ):
             if event.is_directory:
                 return
 
@@ -84,9 +84,7 @@ print(CONFIG_FILE)
 
 # Set up watchdog observer
 observer = Observer()
-observer.schedule(
-    ConfigChangeHandler(config), path=str(CONFIG_FILE.parent), recursive=False
-)
+observer.schedule(ConfigChangeHandler(config), path=str(CONFIG_FILE.parent), recursive=False)
 observer.daemon = True
 observer.start()
 

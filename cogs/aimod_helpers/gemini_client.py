@@ -1,10 +1,10 @@
 import os
-import litellm
 from litellm import acompletion
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 DEFAULT_GEMINI_MODEL = "gemini/gemini-2.5-flash-lite-preview-06-17"
+
 
 async def generate_content(messages, model: str = DEFAULT_GEMINI_MODEL, **kwargs) -> str:
     """Generate text using Google's Gemini via LiteLLM."""

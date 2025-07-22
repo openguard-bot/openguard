@@ -19,9 +19,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.hybrid_group(
-        name="config", description="Configure AI moderation settings."
-    )
+    @commands.hybrid_group(name="config", description="Configure AI moderation settings.")
     async def config(self, ctx: commands.Context):
         """Configure AI moderation settings."""
         await ctx.send_help(ctx.command)
@@ -53,9 +51,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
     ):
         """Sets the channel for a specific log type."""
         guild_id = ctx.guild.id
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
 
         if log_type.value == "server_events":
             if channel:
@@ -84,9 +80,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
                     message = f"Server Event Logs will now be sent to {channel.mention} using the existing webhook."
                 else:
                     try:
-                        webhook = await channel.create_webhook(
-                            name=f"{ctx.guild.name}-server-events-log"
-                        )
+                        webhook = await channel.create_webhook(name=f"{ctx.guild.name}-server-events-log")
                         webhook_url = webhook.url
                         message = f"Server Event Logs will now be sent to {channel.mention} via a new webhook."
                     except discord.Forbidden:
@@ -107,9 +101,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
             else:
                 # Disable server event logging by clearing the webhook URL
                 await settings_manager.set_logging_webhook(guild_id, None)
-                await response_func(
-                    f"{log_type.name} have been disabled.", ephemeral=True
-                )
+                await response_func(f"{log_type.name} have been disabled.", ephemeral=True)
         else:
             # Existing logic for other log types (moderation, ai_actions)
             key_map = {
@@ -126,13 +118,9 @@ class ConfigCog(commands.Cog, name="Configuration"):
                     ephemeral=True,
                 )
             else:
-                await response_func(
-                    f"{log_type.name} have been disabled.", ephemeral=True
-                )
+                await response_func(f"{log_type.name} have been disabled.", ephemeral=True)
 
-    @config.command(
-        name="setlang", description="Set the language for bot responses in this guild."
-    )
+    @config.command(name="setlang", description="Set the language for bot responses in this guild.")
     @app_commands.describe(language="The language to use")
     @app_commands.choices(
         language=[
@@ -145,33 +133,23 @@ class ConfigCog(commands.Cog, name="Configuration"):
         ]
     )
     @app_commands.checks.has_permissions(administrator=True)
-    async def modset_language(
-        self, ctx: commands.Context, language: app_commands.Choice[str]
-    ):
+    async def modset_language(self, ctx: commands.Context, language: app_commands.Choice[str]):
         """Sets the language for bot responses in this guild."""
         guild_id = ctx.guild.id
         lang_code = language.value
         await set_guild_config(guild_id, GUILD_LANGUAGE_KEY, lang_code)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(
             f"Bot language set to `{lang_code}` for this guild.",
             ephemeral=False if ctx.interaction else False,
         )
 
-    @config.command(
-        name="suggestionschannel", description="Set the suggestions channel."
-    )
+    @config.command(name="suggestionschannel", description="Set the suggestions channel.")
     @app_commands.describe(channel="The text channel to use for suggestions.")
     @app_commands.checks.has_permissions(administrator=True)
-    async def modset_suggestions_channel(
-        self, ctx: commands.Context, channel: discord.TextChannel
-    ):
+    async def modset_suggestions_channel(self, ctx: commands.Context, channel: discord.TextChannel):
         await set_guild_config(ctx.guild.id, "SUGGESTIONS_CHANNEL_ID", channel.id)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(
             f"Suggestions channel set to {channel.mention}.",
             ephemeral=False if ctx.interaction else False,
@@ -182,9 +160,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
     @app_commands.checks.has_permissions(administrator=True)
     async def modset_moderator_role(self, ctx: commands.Context, role: discord.Role):
         await set_guild_config(ctx.guild.id, "MODERATOR_ROLE_ID", role.id)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(
             f"Moderator role set to {role.mention}.",
             ephemeral=False if ctx.interaction else False,
@@ -196,33 +172,21 @@ class ConfigCog(commands.Cog, name="Configuration"):
     )
     @app_commands.describe(role="The role to ping for urgent suicidal content alerts.")
     @app_commands.checks.has_permissions(administrator=True)
-    async def modset_suicidal_ping_role(
-        self, ctx: commands.Context, role: discord.Role
-    ):
+    async def modset_suicidal_ping_role(self, ctx: commands.Context, role: discord.Role):
         await set_guild_config(ctx.guild.id, "SUICIDAL_PING_ROLE_ID", role.id)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(
             f"Suicidal content ping role set to {role.mention}.",
             ephemeral=False if ctx.interaction else False,
         )
 
-    @config.command(
-        name="addnsfwchannel", description="Add a channel to the list of NSFW channels."
-    )
+    @config.command(name="addnsfwchannel", description="Add a channel to the list of NSFW channels.")
     @app_commands.describe(channel="The text channel to mark as NSFW for the bot.")
     @app_commands.checks.has_permissions(administrator=True)
-    async def modset_add_nsfw_channel(
-        self, ctx: commands.Context, channel: discord.TextChannel
-    ):
+    async def modset_add_nsfw_channel(self, ctx: commands.Context, channel: discord.TextChannel):
         guild_id = ctx.guild.id
-        nsfw_channels: list[int] = await get_guild_config_async(
-            guild_id, "NSFW_CHANNEL_IDS", []
-        )
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        nsfw_channels: list[int] = await get_guild_config_async(guild_id, "NSFW_CHANNEL_IDS", [])
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         if channel.id not in nsfw_channels:
             nsfw_channels.append(channel.id)
             await set_guild_config(guild_id, "NSFW_CHANNEL_IDS", nsfw_channels)
@@ -242,16 +206,10 @@ class ConfigCog(commands.Cog, name="Configuration"):
     )
     @app_commands.describe(channel="The text channel to remove from the NSFW list.")
     @app_commands.checks.has_permissions(administrator=True)
-    async def modset_remove_nsfw_channel(
-        self, ctx: commands.Context, channel: discord.TextChannel
-    ):
+    async def modset_remove_nsfw_channel(self, ctx: commands.Context, channel: discord.TextChannel):
         guild_id = ctx.guild.id
-        nsfw_channels: list[int] = await get_guild_config_async(
-            guild_id, "NSFW_CHANNEL_IDS", []
-        )
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        nsfw_channels: list[int] = await get_guild_config_async(guild_id, "NSFW_CHANNEL_IDS", [])
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         if channel.id in nsfw_channels:
             nsfw_channels.remove(channel.id)
             await set_guild_config(guild_id, "NSFW_CHANNEL_IDS", nsfw_channels)
@@ -265,18 +223,12 @@ class ConfigCog(commands.Cog, name="Configuration"):
                 ephemeral=True if ctx.interaction else False,
             )
 
-    @config.command(
-        name="listnsfwchannels", description="List currently configured NSFW channels."
-    )
+    @config.command(name="listnsfwchannels", description="List currently configured NSFW channels.")
     @app_commands.checks.has_permissions(administrator=True)
     async def modset_list_nsfw_channels(self, ctx: commands.Context):
         guild_id = ctx.guild.id
-        nsfw_channel_ids: list[int] = await get_guild_config_async(
-            guild_id, "NSFW_CHANNEL_IDS", []
-        )
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        nsfw_channel_ids: list[int] = await get_guild_config_async(guild_id, "NSFW_CHANNEL_IDS", [])
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         if not nsfw_channel_ids:
             await response_func(
                 "No NSFW channels are currently configured.",
@@ -293,7 +245,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
                 channel_mentions.append(f"ID:{channel_id} (not found)")
 
         await response_func(
-            f"Configured NSFW channels:\n- " + "\n- ".join(channel_mentions),
+            "Configured NSFW channels:\n- " + "\n- ".join(channel_mentions),
             ephemeral=False if ctx.interaction else False,
         )
 
@@ -308,15 +260,9 @@ class ConfigCog(commands.Cog, name="Configuration"):
     @app_commands.choices(
         action=[
             app_commands.Choice(name="Warn", value=ActionType.WARN.value),
-            app_commands.Choice(
-                name="Timeout (Short)", value=ActionType.TIMEOUT_SHORT.value
-            ),
-            app_commands.Choice(
-                name="Timeout (Medium)", value=ActionType.TIMEOUT_MEDIUM.value
-            ),
-            app_commands.Choice(
-                name="Timeout (Long)", value=ActionType.TIMEOUT_LONG.value
-            ),
+            app_commands.Choice(name="Timeout (Short)", value=ActionType.TIMEOUT_SHORT.value),
+            app_commands.Choice(name="Timeout (Medium)", value=ActionType.TIMEOUT_MEDIUM.value),
+            app_commands.Choice(name="Timeout (Long)", value=ActionType.TIMEOUT_LONG.value),
             app_commands.Choice(name="Kick", value=ActionType.KICK.value),
             app_commands.Choice(name="Ban", value=ActionType.BAN.value),
         ],
@@ -338,9 +284,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
         settings = await get_guild_config_async(guild_id, key, {})
         settings[action.value] = mode.value
         await set_guild_config(guild_id, key, settings)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(
             f"Confirmation mode for **{action.name}** set to **{mode.name}**.",
             ephemeral=True,
@@ -375,13 +319,9 @@ class ConfigCog(commands.Cog, name="Configuration"):
         for action in action_types:
             mode = settings.get(action.value, "automatic")  # Default to automatic
             action_name = action.name.replace("_", " ").title()
-            embed.add_field(
-                name=action_name, value=f"`{mode.capitalize()}`", inline=True
-            )
+            embed.add_field(name=action_name, value=f"`{mode.capitalize()}`", inline=True)
 
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=embed, ephemeral=True)
 
     @config.command(
@@ -390,19 +330,13 @@ class ConfigCog(commands.Cog, name="Configuration"):
     )
     @app_commands.describe(role="The role to ping for manual confirmation.")
     @app_commands.checks.has_permissions(administrator=True)
-    async def set_confirmation_ping_role(
-        self, ctx: commands.Context, role: discord.Role
-    ):
+    async def set_confirmation_ping_role(self, ctx: commands.Context, role: discord.Role):
         """Sets the role to ping for manual confirmation."""
         guild_id = ctx.guild.id
         key = "CONFIRMATION_PING_ROLE_ID"
         await set_guild_config(guild_id, key, role.id)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
-        await response_func(
-            f"Confirmation ping role set to {role.mention}.", ephemeral=False
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
+        await response_func(f"Confirmation ping role set to {role.mention}.", ephemeral=False)
 
     @config.command(
         name="clear_confirmation_ping_role",
@@ -414,12 +348,8 @@ class ConfigCog(commands.Cog, name="Configuration"):
         guild_id = ctx.guild.id
         key = "CONFIRMATION_PING_ROLE_ID"
         await set_guild_config(guild_id, key, None)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
-        await response_func(
-            f"Confirmation ping role has been cleared.", ephemeral=False
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
+        await response_func("Confirmation ping role has been cleared.", ephemeral=False)
 
     @config.command(
         name="ai_enabled",
@@ -429,9 +359,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
     @app_commands.checks.has_permissions(administrator=True)
     async def modenable(self, ctx: commands.Context, enabled: bool):
         await set_guild_config(ctx.guild.id, "ENABLED", enabled)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(
             f"AI moderation is now {'enabled' if enabled else 'disabled'} for this guild.",
             ephemeral=False if ctx.interaction else False,
@@ -446,9 +374,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
     async def config_testmode(self, ctx: commands.Context, enabled: bool):
         """Enables or disables AI moderation test mode."""
         if not ctx.guild:
-            await ctx.reply(
-                "This command can only be used in a server.", ephemeral=True
-            )
+            await ctx.reply("This command can only be used in a server.", ephemeral=True)
             return
 
         await set_guild_config(ctx.guild.id, "TEST_MODE_ENABLED", enabled)
@@ -467,9 +393,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
         Locates the rules channel in the guild, fetches its content, and updates the per-guild rules for AI moderation.
         """
         guild = ctx.guild
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         if not guild:
             await response_func(
                 "This command can only be used in a server.",
@@ -488,9 +412,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
             )
             return
         try:
-            messages = [
-                msg async for msg in rules_channel.history(limit=10, oldest_first=True)
-            ]
+            messages = [msg async for msg in rules_channel.history(limit=10, oldest_first=True)]
             rules_content = []
 
             for msg in messages:
@@ -515,9 +437,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
                         if embed.fields:
                             for field in embed.fields:
                                 if field.name and field.value:
-                                    embed_text_parts.append(
-                                        f"**{field.name}**\n{field.value}"
-                                    )
+                                    embed_text_parts.append(f"**{field.name}**\n{field.value}")
 
                         # Add embed footer
                         if embed.footer and embed.footer.text:
@@ -562,9 +482,7 @@ class ConfigCog(commands.Cog, name="Configuration"):
     async def set_rules(self, ctx: commands.Context, *, rules: str):
         """Manually set server rules used for AI moderation."""
         await set_guild_config(ctx.guild.id, "SERVER_RULES", rules)
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func("Server rules have been updated.", ephemeral=False)
 
 

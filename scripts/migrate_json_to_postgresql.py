@@ -9,24 +9,21 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from database.connection import initialize_database, get_pool, close_pool
+from database.connection import initialize_database, close_pool
 from database.operations import (
     set_guild_config,
     add_user_infraction,
-    create_appeal,
     add_global_ban,
     add_mod_log,
     set_guild_setting,
     set_log_event_enabled,
     set_botdetect_config,
     set_user_data,
-    update_appeal_status,
 )
 
 
@@ -88,9 +85,7 @@ async def migrate_guild_config():
                     Colors.RED,
                 )
 
-    print_colored(
-        f"Migrated {migrated_count} guild configuration entries", Colors.GREEN
-    )
+    print_colored(f"Migrated {migrated_count} guild configuration entries", Colors.GREEN)
 
 
 async def migrate_user_infractions():
@@ -122,9 +117,7 @@ async def migrate_user_infractions():
             try:
                 timestamp_str = infraction.get("timestamp")
                 if timestamp_str:
-                    timestamp = datetime.fromisoformat(
-                        timestamp_str.replace("Z", "+00:00")
-                    )
+                    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
                 else:
                     timestamp = datetime.now(timezone.utc)
 
@@ -212,13 +205,9 @@ async def migrate_global_bans():
             if success:
                 migrated_count += 1
             else:
-                print_colored(
-                    f"Failed to migrate global ban for user {user_id}", Colors.RED
-                )
+                print_colored(f"Failed to migrate global ban for user {user_id}", Colors.RED)
         except Exception as e:
-            print_colored(
-                f"Error migrating global ban for user {user_id}: {e}", Colors.RED
-            )
+            print_colored(f"Error migrating global ban for user {user_id}: {e}", Colors.RED)
 
     print_colored(f"Migrated {migrated_count} global bans", Colors.GREEN)
 
@@ -237,9 +226,7 @@ async def migrate_logging_data():
             try:
                 timestamp_str = log_entry.get("timestamp")
                 if timestamp_str:
-                    timestamp = datetime.fromisoformat(
-                        timestamp_str.replace("Z", "+00:00")
-                    )
+                    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
                 else:
                     timestamp = datetime.now(timezone.utc)
 
@@ -334,9 +321,7 @@ async def migrate_botdetect_config():
                     Colors.RED,
                 )
 
-    print_colored(
-        f"Migrated {migrated_count} bot detection configuration entries", Colors.GREEN
-    )
+    print_colored(f"Migrated {migrated_count} bot detection configuration entries", Colors.GREEN)
 
 
 async def migrate_user_data():
@@ -358,13 +343,9 @@ async def migrate_user_data():
             if success:
                 migrated_count += 1
             else:
-                print_colored(
-                    f"Failed to migrate user data for user {user_id}", Colors.RED
-                )
+                print_colored(f"Failed to migrate user data for user {user_id}", Colors.RED)
         except Exception as e:
-            print_colored(
-                f"Error migrating user data for user {user_id_str}: {e}", Colors.RED
-            )
+            print_colored(f"Error migrating user data for user {user_id_str}: {e}", Colors.RED)
 
     print_colored(f"Migrated {migrated_count} custom user data entries", Colors.GREEN)
 
@@ -372,9 +353,7 @@ async def migrate_user_data():
 async def main():
     """Main migration function."""
     print_colored("=== JSON to PostgreSQL Migration Script ===", Colors.PURPLE)
-    print_colored(
-        "This script will migrate all existing JSON data to PostgreSQL", Colors.CYAN
-    )
+    print_colored("This script will migrate all existing JSON data to PostgreSQL", Colors.CYAN)
     print()
 
     # Check if database environment variables are set
@@ -408,9 +387,7 @@ async def main():
 
         print()
         print_colored("=== Migration Complete ===", Colors.GREEN)
-        print_colored(
-            "All JSON data has been successfully migrated to PostgreSQL", Colors.GREEN
-        )
+        print_colored("All JSON data has been successfully migrated to PostgreSQL", Colors.GREEN)
         print_colored(
             "You can now update your bot code to use the PostgreSQL database",
             Colors.CYAN,

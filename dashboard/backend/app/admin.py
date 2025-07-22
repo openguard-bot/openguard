@@ -1,9 +1,8 @@
 import asyncio
 import json
 import logging
-from typing import List, Optional, Any
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-import redis.asyncio as redis
 from . import schemas, crud
 from .db import get_db
 from sqlalchemy.orm import Session
@@ -11,9 +10,8 @@ from sqlalchemy import text
 from .api import (
     _fetch_from_discord_api,
     get_current_admin,
-    is_bot_admin,
 )
-from database.cache import get_cache, get_redis
+from database.cache import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +31,7 @@ async def admin_health_check(db: Session = Depends(get_db)):
 
         # Test table access
         try:
-            table_result = await db.execute(
-                text("SELECT COUNT(*) FROM user_infractions")
-            )
+            table_result = await db.execute(text("SELECT COUNT(*) FROM user_infractions"))
             user_infractions_count = table_result.scalar_one()
         except Exception as table_error:
             logger.warning(f"Could not access user_infractions table: {table_error}")
@@ -66,9 +62,7 @@ async def get_guild_details(guild_id: int):
     if not details:
         details = await _fetch_from_discord_api(f"/guilds/{guild_id}?with_counts=true")
         if redis_client:
-            await redis_client.set(
-                cache_key, json.dumps(details), ex=300
-            )  # 5-minute TTL
+            await redis_client.set(cache_key, json.dumps(details), ex=300)  # 5-minute TTL
 
     # Fetch member count from the new cache
     if redis_client:
@@ -100,9 +94,7 @@ async def get_all_guilds():
 
     guild_ids = [guild["id"] for guild in bot_guilds]
 
-    guilds = await asyncio.gather(
-        *[get_guild_details(int(guild_id)) for guild_id in guild_ids]
-    )
+    guilds = await asyncio.gather(*[get_guild_details(int(guild_id)) for guild_id in guild_ids])
     return guilds
 
 
@@ -227,9 +219,7 @@ async def get_db_tables(db: Session = Depends(get_db)):
         return await crud.get_table_names(db)
     except Exception as e:
         logger.error(f"Error fetching table names: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to fetch table names: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to fetch table names: {str(e)}")
 
 
 @router.get(
@@ -267,26 +257,20 @@ async def get_db_table_data(table_name: str, db: Session = Depends(get_db)):
     response_model=List[dict],
     dependencies=[Depends(get_current_admin)],
 )
-async def get_db_table_data_with_filter(
-    table_name: str, guild_id: Optional[int] = None, db: Session = Depends(get_db)
-):
+async def get_db_table_data_with_filter(table_name: str, guild_id: Optional[int] = None, db: Session = Depends(get_db)):
     """
     Get data from a specific table, optionally filtered by guild_id.
     """
     try:
         data = await crud.get_table_data(db, table_name, guild_id)
-        logger.info(
-            f"admin.py: Retrieved data for table '{table_name}' with guild_id '{guild_id}': {data}"
-        )
+        logger.info(f"admin.py: Retrieved data for table '{table_name}' with guild_id '{guild_id}': {data}")
         return data
     except ValueError as e:
         logger.error(f"ValueError in get_db_table_data: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error in get_db_table_data: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to fetch table data: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to fetch table data: {str(e)}")
 
 
 @router.put(
@@ -318,18 +302,14 @@ async def update_db_table_row(
             else:
                 pk_values[key] = value
 
-        return await crud.update_table_row(
-            db, table_name, pk_values, update_data.row_data
-        )
+        return await crud.update_table_row(db, table_name, pk_values, update_data.row_data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         # Catch specific exceptions if needed, e.g., for not found
         if "not found" in str(e).lower():
             raise HTTPException(status_code=404, detail=str(e))
-        raise HTTPException(
-            status_code=500, detail=f"An unexpected error occurred: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 
 @router.delete(
@@ -370,21 +350,13 @@ async def delete_db_table_row(
             else:
                 pk_values[key] = value
 
-        logger.info(
-            f"admin.py: Calling crud.delete_table_row with table_name='{table_name}' and pk_values={pk_values}"
-        )
+        logger.info(f"admin.py: Calling crud.delete_table_row with table_name='{table_name}' and pk_values={pk_values}")
         success = await crud.delete_table_row(db, table_name, pk_values)
         if not success:
-            raise HTTPException(
-                status_code=404, detail="Row not found or already deleted."
-            )
+            raise HTTPException(status_code=404, detail="Row not found or already deleted.")
         return None
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.exception(
-            f"admin.py: An unexpected error occurred during delete_db_table_row: {e}"
-        )
-        raise HTTPException(
-            status_code=500, detail=f"An unexpected error occurred: {e}"
-        )
+        logger.exception(f"admin.py: An unexpected error occurred during delete_db_table_row: {e}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")

@@ -8,9 +8,8 @@ import os
 import asyncio
 import aiofiles
 import logging
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
-import uuid
 
 log = logging.getLogger(__name__)
 
@@ -98,14 +97,10 @@ async def add_mod_log(
             logs.append(new_log)
 
             if await save_json_file(MODERATION_LOGS_PATH, logs):
-                log.info(
-                    f"Added mod log entry for guild {guild_id}, action {action_type}. Case ID: {case_id}"
-                )
+                log.info(f"Added mod log entry for guild {guild_id}, action {action_type}. Case ID: {case_id}")
                 return case_id
             else:
-                log.error(
-                    f"Failed to save mod log entry for guild {guild_id}, action {action_type}"
-                )
+                log.error(f"Failed to save mod log entry for guild {guild_id}, action {action_type}")
                 return None
 
         except Exception as e:
@@ -126,9 +121,7 @@ async def get_mod_log(case_id: int) -> Optional[Dict[str, Any]]:
         return None
 
 
-async def get_user_mod_logs(
-    guild_id: int, target_user_id: int, limit: int = 50
-) -> List[Dict[str, Any]]:
+async def get_user_mod_logs(guild_id: int, target_user_id: int, limit: int = 50) -> List[Dict[str, Any]]:
     """Retrieves moderation logs for a specific user in a guild, ordered by timestamp descending."""
     try:
         logs = await load_json_file(MODERATION_LOGS_PATH, [])
@@ -137,8 +130,7 @@ async def get_user_mod_logs(
         user_logs = [
             log_entry
             for log_entry in logs
-            if log_entry.get("guild_id") == guild_id
-            and log_entry.get("target_user_id") == target_user_id
+            if log_entry.get("guild_id") == guild_id and log_entry.get("target_user_id") == target_user_id
         ]
 
         # Sort by timestamp descending
@@ -146,9 +138,7 @@ async def get_user_mod_logs(
 
         return user_logs[:limit]
     except Exception as e:
-        log.exception(
-            f"Error retrieving user mod logs for user {target_user_id} in guild {guild_id}: {e}"
-        )
+        log.exception(f"Error retrieving user mod logs for user {target_user_id} in guild {guild_id}: {e}")
         return []
 
 
@@ -158,9 +148,7 @@ async def get_guild_mod_logs(guild_id: int, limit: int = 50) -> List[Dict[str, A
         logs = await load_json_file(MODERATION_LOGS_PATH, [])
 
         # Filter logs for the specific guild
-        guild_logs = [
-            log_entry for log_entry in logs if log_entry.get("guild_id") == guild_id
-        ]
+        guild_logs = [log_entry for log_entry in logs if log_entry.get("guild_id") == guild_id]
 
         # Sort by timestamp descending
         guild_logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
@@ -185,9 +173,7 @@ async def update_mod_log_reason(case_id: int, new_reason: str) -> bool:
                         log.info(f"Updated reason for case_id {case_id}")
                         return True
                     else:
-                        log.error(
-                            f"Failed to save updated reason for case_id {case_id}"
-                        )
+                        log.error(f"Failed to save updated reason for case_id {case_id}")
                         return False
 
             log.warning(f"Could not find case_id {case_id} to update reason")
@@ -198,9 +184,7 @@ async def update_mod_log_reason(case_id: int, new_reason: str) -> bool:
             return False
 
 
-async def update_mod_log_message_details(
-    case_id: int, message_id: int, channel_id: int
-) -> bool:
+async def update_mod_log_message_details(case_id: int, message_id: int, channel_id: int) -> bool:
     """Updates the log_message_id and log_channel_id for a specific case."""
     lock = get_file_lock(MODERATION_LOGS_PATH)
     async with lock:
@@ -215,18 +199,14 @@ async def update_mod_log_message_details(
                         log.info(f"Updated message details for case_id {case_id}")
                         return True
                     else:
-                        log.error(
-                            f"Failed to save message details for case_id {case_id}"
-                        )
+                        log.error(f"Failed to save message details for case_id {case_id}")
                         return False
 
             log.warning(f"Could not find case_id {case_id} to update message details")
             return False
 
         except Exception as e:
-            log.exception(
-                f"Error updating mod log message details for case_id {case_id}: {e}"
-            )
+            log.exception(f"Error updating mod log message details for case_id {case_id}: {e}")
             return False
 
 
@@ -241,31 +221,22 @@ async def delete_mod_log(case_id: int, guild_id: int) -> bool:
             logs = [
                 log_entry
                 for log_entry in logs
-                if not (
-                    log_entry.get("case_id") == case_id
-                    and log_entry.get("guild_id") == guild_id
-                )
+                if not (log_entry.get("case_id") == case_id and log_entry.get("guild_id") == guild_id)
             ]
 
             if len(logs) < original_count:
                 if await save_json_file(MODERATION_LOGS_PATH, logs):
-                    log.info(
-                        f"Deleted mod log entry for case_id {case_id} in guild {guild_id}"
-                    )
+                    log.info(f"Deleted mod log entry for case_id {case_id} in guild {guild_id}")
                     return True
                 else:
                     log.error(f"Failed to save after deleting case_id {case_id}")
                     return False
             else:
-                log.warning(
-                    f"Could not find case_id {case_id} in guild {guild_id} to delete"
-                )
+                log.warning(f"Could not find case_id {case_id} in guild {guild_id} to delete")
                 return False
 
         except Exception as e:
-            log.exception(
-                f"Error deleting mod log entry for case_id {case_id} in guild {guild_id}: {e}"
-            )
+            log.exception(f"Error deleting mod log entry for case_id {case_id} in guild {guild_id}: {e}")
             return False
 
 
@@ -280,35 +251,24 @@ async def clear_user_mod_logs(guild_id: int, target_user_id: int) -> int:
             logs = [
                 log_entry
                 for log_entry in logs
-                if not (
-                    log_entry.get("guild_id") == guild_id
-                    and log_entry.get("target_user_id") == target_user_id
-                )
+                if not (log_entry.get("guild_id") == guild_id and log_entry.get("target_user_id") == target_user_id)
             ]
 
             deleted_count = original_count - len(logs)
 
             if deleted_count > 0:
                 if await save_json_file(MODERATION_LOGS_PATH, logs):
-                    log.info(
-                        f"Cleared {deleted_count} mod log entries for user {target_user_id} in guild {guild_id}"
-                    )
+                    log.info(f"Cleared {deleted_count} mod log entries for user {target_user_id} in guild {guild_id}")
                     return deleted_count
                 else:
-                    log.error(
-                        f"Failed to save after clearing logs for user {target_user_id}"
-                    )
+                    log.error(f"Failed to save after clearing logs for user {target_user_id}")
                     return 0
             else:
-                log.info(
-                    f"No mod log entries found to clear for user {target_user_id} in guild {guild_id}"
-                )
+                log.info(f"No mod log entries found to clear for user {target_user_id} in guild {guild_id}")
                 return 0
 
         except Exception as e:
-            log.exception(
-                f"Error clearing mod log entries for user {target_user_id} in guild {guild_id}: {e}"
-            )
+            log.exception(f"Error clearing mod log entries for user {target_user_id} in guild {guild_id}: {e}")
             return 0
 
 
@@ -395,9 +355,7 @@ async def set_logging_webhook(guild_id: int, webhook_url: Optional[str]) -> bool
 # Log Event Toggle Functions
 
 
-async def is_log_event_enabled(
-    guild_id: int, event_key: str, default_enabled: bool = True
-) -> bool:
+async def is_log_event_enabled(guild_id: int, event_key: str, default_enabled: bool = True) -> bool:
     """Checks if a specific log event is enabled for a guild."""
     try:
         toggles = await load_json_file(LOG_EVENT_TOGGLES_PATH, {})
@@ -407,9 +365,7 @@ async def is_log_event_enabled(
             return bool(toggles[guild_str][event_key])
         return default_enabled
     except Exception as e:
-        log.exception(
-            f"Error checking if event '{event_key}' is enabled for guild {guild_id}: {e}"
-        )
+        log.exception(f"Error checking if event '{event_key}' is enabled for guild {guild_id}: {e}")
         return default_enabled
 
 
@@ -427,20 +383,14 @@ async def set_log_event_enabled(guild_id: int, event_key: str, enabled: bool) ->
             toggles[guild_str][event_key] = enabled
 
             if await save_json_file(LOG_EVENT_TOGGLES_PATH, toggles):
-                log.info(
-                    f"Set event '{event_key}' enabled status to {enabled} for guild {guild_id}"
-                )
+                log.info(f"Set event '{event_key}' enabled status to {enabled} for guild {guild_id}")
                 return True
             else:
-                log.error(
-                    f"Failed to save event toggle for '{event_key}' in guild {guild_id}"
-                )
+                log.error(f"Failed to save event toggle for '{event_key}' in guild {guild_id}")
                 return False
 
         except Exception as e:
-            log.exception(
-                f"Error setting event '{event_key}' enabled status for guild {guild_id}: {e}"
-            )
+            log.exception(f"Error setting event '{event_key}' enabled status for guild {guild_id}: {e}")
             return False
 
 
@@ -504,9 +454,7 @@ async def add_mod_log_safe(
     )
 
 
-async def update_mod_log_message_details_safe(
-    bot_instance, case_id: int, message_id: int, channel_id: int
-) -> bool:
+async def update_mod_log_message_details_safe(bot_instance, case_id: int, message_id: int, channel_id: int) -> bool:
     """
     Thread-safe version of update_mod_log_message_details.
     Since we're using JSON files, this is the same as the regular function.

@@ -9,9 +9,7 @@ class CreditsCog(commands.Cog):
 
     @app_commands.command(name="aimodcredits", description="aimod credits")
     async def credits(self, ctx: commands.Context):
-        embed = discord.Embed(
-            title="AI Mod", description="W devs icl", color=discord.Color.blue()
-        )
+        embed = discord.Embed(title="AI Mod", description="W devs icl", color=discord.Color.blue())
         embed.add_field(name="Developer", value="pancakes-proxy", inline=False)
         embed.add_field(name="Developer", value="slipstream", inline=False)
         embed.add_field(name="help from", value="izzy39", inline=False)

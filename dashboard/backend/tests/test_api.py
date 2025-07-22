@@ -3,7 +3,6 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from httpx import AsyncClient
 import asyncio
 from typing import AsyncGenerator
 
@@ -20,9 +19,7 @@ from dashboard.backend.app.schemas import User
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
-)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
 
 
 async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -345,9 +342,7 @@ def test_get_ai_settings(async_client: TestClient, monkeypatch):
             "keyword_rules": [],
         }
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.get_ai_settings", mock_get_ai_settings
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.get_ai_settings", mock_get_ai_settings)
 
     response = async_client.get("/api/guilds/123/config/ai")
     assert response.status_code == 200
@@ -363,9 +358,7 @@ def test_get_channels_settings(async_client: TestClient, monkeypatch):
     async def mock_get_channels_settings(db, guild_id):
         return {"exclusions": ["123"], "rules": {"456": "Be nice"}}
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.get_channels_settings", mock_get_channels_settings
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.get_channels_settings", mock_get_channels_settings)
 
     response = async_client.get("/api/guilds/123/config/channels")
     assert response.status_code == 200
@@ -507,9 +500,7 @@ def test_update_bot_detection_settings(async_client: TestClient, monkeypatch):
     )
 
     update_data = {"enabled": False}
-    response = async_client.put(
-        "/api/guilds/123/config/bot-detection", json=update_data
-    )
+    response = async_client.put("/api/guilds/123/config/bot-detection", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["enabled"] is False
@@ -522,17 +513,13 @@ def test_update_ai_settings(async_client: TestClient, monkeypatch):
 
     async def mock_update_ai_settings(db, guild_id, settings):
         return {
-            "channel_exclusions": {
-                "excluded_channels": settings.channel_exclusions.excluded_channels
-            },
+            "channel_exclusions": {"excluded_channels": settings.channel_exclusions.excluded_channels},
             "channel_rules": {"channel_rules": settings.channel_rules.channel_rules},
             "analysis_mode": settings.analysis_mode,
             "keyword_rules": settings.keyword_rules,
         }
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.update_ai_settings", mock_update_ai_settings
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.update_ai_settings", mock_update_ai_settings)
 
     update_data = {
         "channel_exclusions": {"excluded_channels": ["456"]},
@@ -594,9 +581,7 @@ def test_update_rate_limiting_settings(async_client: TestClient, monkeypatch):
     )
 
     update_data = {"enabled": False, "high_rate_threshold": 20}
-    response = async_client.put(
-        "/api/guilds/123/config/rate-limiting", json=update_data
-    )
+    response = async_client.put("/api/guilds/123/config/rate-limiting", json=update_data)
     assert response.status_code == 200
     settings = response.json()
     assert settings["enabled"] is False
@@ -687,16 +672,12 @@ def test_create_blog_post(async_client: TestClient, monkeypatch):
             "updated_at": "2023-01-01T00:00:00",
         }
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.create_blog_post", mock_create_blog_post
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.create_blog_post", mock_create_blog_post)
 
     async def mock_get_blog_post_by_slug(db, slug):
         return None
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.get_blog_post_by_slug", mock_get_blog_post_by_slug
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.get_blog_post_by_slug", mock_get_blog_post_by_slug)
 
     post_data = {
         "title": "Test Post",
@@ -730,16 +711,12 @@ def test_get_blog_posts(async_client: TestClient, monkeypatch):
             }
         ]
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.get_blog_posts", mock_get_blog_posts
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.get_blog_posts", mock_get_blog_posts)
 
     async def mock_count_blog_posts(db, published_only):
         return 1
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.count_blog_posts", mock_count_blog_posts
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.count_blog_posts", mock_count_blog_posts)
 
     response = async_client.get("/api/blog/posts")
     assert response.status_code == 200
@@ -809,9 +786,7 @@ def test_update_blog_post(async_client: TestClient, monkeypatch):
             "updated_at": "2023-01-01T00:00:00",
         }
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.update_blog_post", mock_update_blog_post
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.update_blog_post", mock_update_blog_post)
 
     update_data = {"title": "Updated Post"}
     response = async_client.put("/api/blog/posts/1", json=update_data)
@@ -834,9 +809,7 @@ def test_delete_blog_post(async_client: TestClient, monkeypatch):
     async def mock_delete_blog_post(db, post_id):
         return True
 
-    monkeypatch.setattr(
-        "dashboard.backend.app.crud.delete_blog_post", mock_delete_blog_post
-    )
+    monkeypatch.setattr("dashboard.backend.app.crud.delete_blog_post", mock_delete_blog_post)
 
     response = async_client.delete("/api/blog/posts/1")
     assert response.status_code == 200

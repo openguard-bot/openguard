@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 import datetime
 import logging
 
@@ -28,9 +27,7 @@ class BanAppealModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         guild = interaction.client.get_guild(self.guild_id)
         if not guild:
-            await interaction.response.send_message(
-                "Server not found. I might have left the guild.", ephemeral=True
-            )
+            await interaction.response.send_message("Server not found. I might have left the guild.", ephemeral=True)
             return
 
         embed = discord.Embed(
@@ -68,9 +65,7 @@ class BanAppealModal(discord.ui.Modal):
                     try:
                         channel = owner.dm_channel or await owner.create_dm()
                     except discord.Forbidden:
-                        log.warning(
-                            f"Could not create DM channel for guild owner {owner.id} in guild {guild.id}."
-                        )
+                        log.warning(f"Could not create DM channel for guild owner {owner.id} in guild {guild.id}.")
                         channel = None
 
             # 3. Determine if we need to ping the moderator role
@@ -87,24 +82,16 @@ class BanAppealModal(discord.ui.Modal):
                 try:
                     await channel.send(content=content, embed=embed)
                 except discord.Forbidden:
-                    log.error(
-                        f"Missing permissions to send ban appeal to channel {channel.id} in guild {guild.id}."
-                    )
+                    log.error(f"Missing permissions to send ban appeal to channel {channel.id} in guild {guild.id}.")
                 except Exception as e:
                     log.error(f"Error sending appeal to channel {channel.id}: {e}")
             else:
-                log.warning(
-                    f"No valid channel or owner DM could be found to send ban appeal for guild {guild.id}."
-                )
+                log.warning(f"No valid channel or owner DM could be found to send ban appeal for guild {guild.id}.")
 
         except Exception as e:
-            log.exception(
-                f"An error occurred during the ban appeal submission process for guild {guild.id}: {e}"
-            )
+            log.exception(f"An error occurred during the ban appeal submission process for guild {guild.id}: {e}")
 
-        await interaction.response.send_message(
-            "Your appeal has been submitted.", ephemeral=True
-        )
+        await interaction.response.send_message("Your appeal has been submitted.", ephemeral=True)
 
 
 class BanAppealView(discord.ui.View):
@@ -115,9 +102,7 @@ class BanAppealView(discord.ui.View):
         self.guild_id = guild_id
 
     @discord.ui.button(label="Appeal Ban", style=discord.ButtonStyle.green)
-    async def appeal_button(
-        self, interaction: discord.Interaction, _: discord.ui.Button
-    ) -> None:
+    async def appeal_button(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
         await interaction.response.send_modal(BanAppealModal(self.guild_id))
 
 

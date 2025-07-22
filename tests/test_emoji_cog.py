@@ -50,11 +50,11 @@ async def test_emojis_command(mock_bot, mock_ctx):
             "ANIMATED_EMOJI": "<a:animatedemoji:222>",
         }
     }
-    with patch("cogs.emoji_cog.yaml.safe_load", return_value=mock_config_data), patch(
-        "builtins.open", MagicMock()
-    ), patch.object(
-        mock_bot, "get_emoji"
-    ) as mock_get_emoji:  # Move this patch here
+    with (
+        patch("cogs.emoji_cog.yaml.safe_load", return_value=mock_config_data),
+        patch("builtins.open", MagicMock()),
+        patch.object(mock_bot, "get_emoji") as mock_get_emoji,
+    ):  # Move this patch here
         # Mock bot.get_emoji to return specific emojis
         mock_emoji1 = MagicMock(spec=discord.Emoji)
         mock_emoji1.name = "testemoji1"
@@ -82,9 +82,7 @@ async def test_emojis_command(mock_bot, mock_ctx):
         cog = EmojiCog(mock_bot)
         await mock_bot.add_cog(cog)
         mock_ctx.command = cog.emojis  # Assign the command to the context
-        with patch.object(
-            cog.emojis, "_prepare_cooldowns", MagicMock()
-        ):  # Bypass cooldown check
+        with patch.object(cog.emojis, "_prepare_cooldowns", MagicMock()):  # Bypass cooldown check
             await cog.emojis.invoke(mock_ctx)
 
         mock_ctx.send.assert_called_once()
@@ -99,15 +97,11 @@ async def test_emojis_command(mock_bot, mock_ctx):
 @pytest.mark.asyncio
 async def test_emojis_command_no_emojis(mock_bot, mock_ctx):
     mock_config_data = {"CustomEmoji": {}}
-    with patch("cogs.emoji_cog.yaml.safe_load", return_value=mock_config_data), patch(
-        "builtins.open", MagicMock()
-    ):
+    with patch("cogs.emoji_cog.yaml.safe_load", return_value=mock_config_data), patch("builtins.open", MagicMock()):
         cog = EmojiCog(mock_bot)
         await mock_bot.add_cog(cog)
         mock_ctx.command = cog.emojis  # Assign the command to the context
-        with patch.object(
-            cog.emojis, "_prepare_cooldowns", MagicMock()
-        ):  # Bypass cooldown check
+        with patch.object(cog.emojis, "_prepare_cooldowns", MagicMock()):  # Bypass cooldown check
             await cog.emojis.invoke(mock_ctx)
 
         mock_ctx.send.assert_called_once()
@@ -120,15 +114,11 @@ async def test_emojis_command_no_emojis(mock_bot, mock_ctx):
 async def test_emojis_command_emoji_not_found(mock_bot, mock_ctx):
     with patch.object(mock_bot, "get_emoji", return_value=None):
         mock_config_data = {"CustomEmoji": {"UNKNOWN_EMOJI": 999}}
-        with patch(
-            "cogs.emoji_cog.yaml.safe_load", return_value=mock_config_data
-        ), patch("builtins.open", MagicMock()):
+        with patch("cogs.emoji_cog.yaml.safe_load", return_value=mock_config_data), patch("builtins.open", MagicMock()):
             cog = EmojiCog(mock_bot)  # Moved outside with statement
             await mock_bot.add_cog(cog)
             mock_ctx.command = cog.emojis  # Assign the command to the context
-            with patch.object(
-                cog.emojis, "_prepare_cooldowns", MagicMock()
-            ):  # Bypass cooldown check
+            with patch.object(cog.emojis, "_prepare_cooldowns", MagicMock()):  # Bypass cooldown check
                 await cog.emojis.invoke(mock_ctx)
 
         mock_ctx.send.assert_called_once()

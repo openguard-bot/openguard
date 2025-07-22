@@ -68,9 +68,7 @@ async def update_mod_log_reason(pool, case_id: int, new_reason: str) -> bool:
     return await _update_mod_log_reason(case_id, new_reason)
 
 
-async def update_mod_log_message_details(
-    pool, case_id: int, message_id: int, channel_id: int
-) -> bool:
+async def update_mod_log_message_details(pool, case_id: int, message_id: int, channel_id: int) -> bool:
     """Updates the log_message_id and log_channel_id for a specific case."""
     _ = pool  # Suppress unused parameter warning
     return await _update_mod_log_message_details(case_id, message_id, channel_id)
@@ -82,17 +80,13 @@ async def get_mod_log(pool, case_id: int) -> Optional[Dict[str, Any]]:
     return await _get_mod_log(case_id)
 
 
-async def get_user_mod_logs(
-    pool, guild_id: int, target_user_id: int, limit: int = 50
-) -> List[Dict[str, Any]]:
+async def get_user_mod_logs(pool, guild_id: int, target_user_id: int, limit: int = 50) -> List[Dict[str, Any]]:
     """Retrieves moderation logs for a specific user in a guild, ordered by timestamp descending."""
     _ = pool  # Suppress unused parameter warning
     return await _get_user_mod_logs(guild_id, target_user_id, limit)
 
 
-async def get_guild_mod_logs(
-    pool, guild_id: int, limit: int = 50
-) -> List[Dict[str, Any]]:
+async def get_guild_mod_logs(pool, guild_id: int, limit: int = 50) -> List[Dict[str, Any]]:
     """Retrieves the latest moderation logs for a guild, ordered by timestamp descending."""
     _ = pool  # Suppress unused parameter warning
     return await _get_guild_mod_logs(guild_id, limit)
@@ -138,9 +132,7 @@ async def add_mod_log_safe(
     )
 
 
-async def update_mod_log_message_details_safe(
-    bot_instance, case_id: int, message_id: int, channel_id: int
-) -> bool:
+async def update_mod_log_message_details_safe(bot_instance, case_id: int, message_id: int, channel_id: int) -> bool:
     """
     Thread-safe version of update_mod_log_message_details.
     Since we're using JSON files, this is the same as the regular function.

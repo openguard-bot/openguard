@@ -2,7 +2,6 @@ import pytest
 import discord
 from discord.ext import commands
 from cogs.human_moderation_cog import HumanModerationCog
-import datetime
 from datetime import timedelta
 
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
@@ -120,9 +119,7 @@ async def test_moderate_ban_callback_success(mock_bot, mock_ctx, mock_member):
             send_dm=False,
         )
 
-        mock_ctx.guild.ban.assert_called_once_with(
-            mock_member, reason="Test ban reason", delete_message_days=7
-        )
+        mock_ctx.guild.ban.assert_called_once_with(mock_member, reason="Test ban reason", delete_message_days=7)
         mock_log_instance.log_action.assert_called_once()
         mock_ctx.send.assert_called_once()
         assert "Banned" in mock_ctx.send.call_args[0][0]
@@ -131,51 +128,36 @@ async def test_moderate_ban_callback_success(mock_bot, mock_ctx, mock_member):
 @pytest.mark.asyncio
 async def test_moderate_ban_callback_member_not_found(mock_bot, mock_ctx):
     cog = HumanModerationCog(mock_bot)
-    mock_bot.fetch_user = AsyncMock(
-        side_effect=discord.NotFound(MagicMock(), "Unknown User")
-    )
+    mock_bot.fetch_user = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Unknown User"))
     mock_ctx.guild.ban.side_effect = discord.NotFound(MagicMock(), "Unknown User")
 
-    await cog.moderate_ban_callback.callback(
-        cog, ctx=mock_ctx, user_id="12345", reason="Test ban reason"
-    )
+    await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, user_id="12345", reason="Test ban reason")
 
     mock_ctx.send.assert_called_once()
     assert "Could not find a user with the ID" in mock_ctx.send.call_args[0][0]
 
 
 @pytest.mark.asyncio
-async def test_moderate_ban_callback_bot_has_no_permissions(
-    mock_bot, mock_ctx, mock_member
-):
+async def test_moderate_ban_callback_bot_has_no_permissions(mock_bot, mock_ctx, mock_member):
     cog = HumanModerationCog(mock_bot)
     mock_ctx.guild.me.guild_permissions.ban_members = False
 
-    await cog.moderate_ban_callback.callback(
-        cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason"
-    )
+    await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason")
 
     mock_ctx.send.assert_called_once()
     assert "I don't have permission to ban members." in mock_ctx.send.call_args[0][0]
 
 
 @pytest.mark.asyncio
-async def test_moderate_ban_callback_cannot_ban_higher_role(
-    mock_bot, mock_ctx, mock_member
-):
+async def test_moderate_ban_callback_cannot_ban_higher_role(mock_bot, mock_ctx, mock_member):
     cog = HumanModerationCog(mock_bot)
     mock_ctx.guild.me.top_role = create_mock_role(5)
     mock_member.top_role = create_mock_role(10)
 
-    await cog.moderate_ban_callback.callback(
-        cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason"
-    )
+    await cog.moderate_ban_callback.callback(cog, ctx=mock_ctx, member=mock_member, reason="Test ban reason")
 
     mock_ctx.send.assert_called_once()
-    assert (
-        "I cannot ban someone with a higher or equal role than me."
-        in mock_ctx.send.call_args[0][0]
-    )
+    assert "I cannot ban someone with a higher or equal role than me." in mock_ctx.send.call_args[0][0]
 
 
 @pytest.mark.asyncio
@@ -233,9 +215,7 @@ async def test_moderate_unban_callback_success(mock_bot, mock_ctx, mock_user):
             cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason"
         )
 
-        mock_ctx.guild.unban.assert_called_once_with(
-            mock_user, reason="Test unban reason"
-        )
+        mock_ctx.guild.unban.assert_called_once_with(mock_user, reason="Test unban reason")
         mock_log_instance.log_action.assert_called_once()
         mock_ctx.send.assert_called_once()
         assert "Unbanned" in mock_ctx.send.call_args[0][0]
@@ -244,28 +224,20 @@ async def test_moderate_unban_callback_success(mock_bot, mock_ctx, mock_user):
 @pytest.mark.asyncio
 async def test_moderate_unban_callback_user_not_banned(mock_bot, mock_ctx, mock_user):
     cog = HumanModerationCog(mock_bot)
-    mock_ctx.guild.fetch_ban.side_effect = discord.NotFound(
-        MagicMock(), "User not found"
-    )
+    mock_ctx.guild.fetch_ban.side_effect = discord.NotFound(MagicMock(), "User not found")
 
-    await cog.moderate_unban_callback.callback(
-        cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason"
-    )
+    await cog.moderate_unban_callback.callback(cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason")
 
     mock_ctx.send.assert_called_once()
     assert "This user is not banned." in mock_ctx.send.call_args[0][0]
 
 
 @pytest.mark.asyncio
-async def test_moderate_unban_callback_bot_has_no_permissions(
-    mock_bot, mock_ctx, mock_user
-):
+async def test_moderate_unban_callback_bot_has_no_permissions(mock_bot, mock_ctx, mock_user):
     cog = HumanModerationCog(mock_bot)
     mock_ctx.guild.me.guild_permissions.ban_members = False
 
-    await cog.moderate_unban_callback.callback(
-        cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason"
-    )
+    await cog.moderate_unban_callback.callback(cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason")
 
     mock_ctx.send.assert_called_once()
     assert "I don't have permission to unban users." in mock_ctx.send.call_args[0][0]
@@ -277,15 +249,9 @@ async def test_moderate_unban_callback_fetch_ban_error(mock_bot, mock_ctx, mock_
     # Correctly instantiate the HTTPException
     mock_response = MagicMock()
     mock_response.status = 500
-    mock_ctx.guild.fetch_ban.side_effect = discord.HTTPException(
-        mock_response, "Fetch ban error"
-    )
+    mock_ctx.guild.fetch_ban.side_effect = discord.HTTPException(mock_response, "Fetch ban error")
 
-    await cog.moderate_unban_callback.callback(
-        cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason"
-    )
+    await cog.moderate_unban_callback.callback(cog, ctx=mock_ctx, user_id=str(mock_user.id), reason="Test unban reason")
 
     mock_ctx.send.assert_called_once()
-    assert (
-        "An error occurred while checking the ban list" in mock_ctx.send.call_args[0][0]
-    )
+    assert "An error occurred while checking the ban list" in mock_ctx.send.call_args[0][0]

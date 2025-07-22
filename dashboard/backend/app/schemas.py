@@ -33,83 +33,47 @@ class CommandLog(BaseModel):
 
 
 class ModerationSettings(BaseModel):
-    mod_log_channel_id: Optional[str] = Field(
-        None, description="The channel ID for moderation logs."
-    )
-    moderator_role_id: Optional[str] = Field(
-        None, description="The role ID for moderators."
-    )
-    server_rules: Optional[str] = Field(
-        None, description="A URL or text for server rules."
-    )
+    mod_log_channel_id: Optional[str] = Field(None, description="The channel ID for moderation logs.")
+    moderator_role_id: Optional[str] = Field(None, description="The role ID for moderators.")
+    server_rules: Optional[str] = Field(None, description="A URL or text for server rules.")
     action_confirmation_settings: Optional[Dict[str, str]] = Field(
         default_factory=dict,
         description="A mapping of action types to confirmation modes ('automatic' or 'manual').",
     )
-    confirmation_ping_role_id: Optional[str] = Field(
-        None, description="The role ID to ping for manual confirmations."
-    )
+    confirmation_ping_role_id: Optional[str] = Field(None, description="The role ID to ping for manual confirmations.")
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class ModerationSettingsUpdate(BaseModel):
-    mod_log_channel_id: Optional[str] = Field(
-        None, description="The channel ID for moderation logs."
-    )
-    moderator_role_id: Optional[str] = Field(
-        None, description="The role ID for moderators."
-    )
-    server_rules: Optional[str] = Field(
-        None, description="A URL or text for server rules."
-    )
+    mod_log_channel_id: Optional[str] = Field(None, description="The channel ID for moderation logs.")
+    moderator_role_id: Optional[str] = Field(None, description="The role ID for moderators.")
+    server_rules: Optional[str] = Field(None, description="A URL or text for server rules.")
     action_confirmation_settings: Optional[Dict[str, str]] = Field(
         None,
         description="A mapping of action types to confirmation modes ('automatic' or 'manual').",
     )
-    confirmation_ping_role_id: Optional[str] = Field(
-        None, description="The role ID to ping for manual confirmations."
-    )
+    confirmation_ping_role_id: Optional[str] = Field(None, description="The role ID to ping for manual confirmations.")
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class LoggingSettings(BaseModel):
-    log_channel_id: Optional[str] = Field(
-        None, description="The channel ID for general logs."
-    )
-    message_delete_logging: bool = Field(
-        False, description="Enable logging of deleted messages."
-    )
-    message_edit_logging: bool = Field(
-        False, description="Enable logging of edited messages."
-    )
-    member_join_logging: bool = Field(
-        False, description="Enable logging when a new member joins."
-    )
-    member_leave_logging: bool = Field(
-        False, description="Enable logging when a member leaves."
-    )
+    log_channel_id: Optional[str] = Field(None, description="The channel ID for general logs.")
+    message_delete_logging: bool = Field(False, description="Enable logging of deleted messages.")
+    message_edit_logging: bool = Field(False, description="Enable logging of edited messages.")
+    member_join_logging: bool = Field(False, description="Enable logging when a new member joins.")
+    member_leave_logging: bool = Field(False, description="Enable logging when a member leaves.")
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class LoggingSettingsUpdate(BaseModel):
-    log_channel_id: Optional[str] = Field(
-        None, description="The channel ID for general logs."
-    )
-    message_delete_logging: Optional[bool] = Field(
-        None, description="Enable logging of deleted messages."
-    )
-    message_edit_logging: Optional[bool] = Field(
-        None, description="Enable logging of edited messages."
-    )
-    member_join_logging: Optional[bool] = Field(
-        None, description="Enable logging when a new member joins."
-    )
-    member_leave_logging: Optional[bool] = Field(
-        None, description="Enable logging when a member leaves."
-    )
+    log_channel_id: Optional[str] = Field(None, description="The channel ID for general logs.")
+    message_delete_logging: Optional[bool] = Field(None, description="Enable logging of deleted messages.")
+    message_edit_logging: Optional[bool] = Field(None, description="Enable logging of edited messages.")
+    member_join_logging: Optional[bool] = Field(None, description="Enable logging when a new member joins.")
+    member_leave_logging: Optional[bool] = Field(None, description="Enable logging when a member leaves.")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -401,15 +365,9 @@ class SecuritySettingsUpdate(BaseModel):
 
 
 class VanityURLSettings(BaseModel):
-    lock_code: Optional[str] = Field(
-        None, description="The vanity URL code to enforce for this guild."
-    )
-    notify_channel_id: Optional[str] = Field(
-        None, description="Channel ID to send vanity change alerts."
-    )
-    notify_target_id: Optional[str] = Field(
-        None, description="Role or member ID to mention in alerts."
-    )
+    lock_code: Optional[str] = Field(None, description="The vanity URL code to enforce for this guild.")
+    notify_channel_id: Optional[str] = Field(None, description="Channel ID to send vanity change alerts.")
+    notify_target_id: Optional[str] = Field(None, description="Role or member ID to mention in alerts.")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -566,6 +524,6 @@ class RawTableRowUpdate(BaseModel):
 class RawTableRowDelete(BaseModel):
     pk_values: Dict[str, Any]
 
+
 class AIRegexRequest(BaseModel):
     description: str
-

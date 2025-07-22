@@ -49,9 +49,7 @@ class VanityLockCog(commands.Cog):
     async def vanity_lock(self, ctx: commands.Context, code: str):
         guild = ctx.guild
         if guild.owner_id != ctx.author.id:
-            await ctx.send(
-                "Only the server owner can use this command.", ephemeral=True
-            )
+            await ctx.send("Only the server owner can use this command.", ephemeral=True)
             return
         await set_guild_config(guild.id, VANITY_LOCK_KEY, code)
         success = await self._set_vanity_code(guild.id, code)
@@ -59,7 +57,7 @@ class VanityLockCog(commands.Cog):
             await ctx.send(f"Vanity URL locked to `{code}`.", ephemeral=True)
         else:
             await ctx.send(
-                f"Lock saved but failed to set vanity URL. Check bot permissions.",
+                "Lock saved but failed to set vanity URL. Check bot permissions.",
                 ephemeral=True,
             )
 
@@ -67,17 +65,13 @@ class VanityLockCog(commands.Cog):
     async def vanity_unlock(self, ctx: commands.Context):
         guild = ctx.guild
         if guild.owner_id != ctx.author.id:
-            await ctx.send(
-                "Only the server owner can use this command.", ephemeral=True
-            )
+            await ctx.send("Only the server owner can use this command.", ephemeral=True)
             return
         await set_guild_config(guild.id, VANITY_LOCK_KEY, None)
         await ctx.send("Vanity URL lock removed.", ephemeral=True)
 
     @vanity.command(name="notify", description="Set notification channel and ping")
-    @app_commands.describe(
-        channel="Channel for vanity change alerts", target="Member or role to mention"
-    )
+    @app_commands.describe(channel="Channel for vanity change alerts", target="Member or role to mention")
     async def vanity_notify(
         self,
         ctx: commands.Context,
@@ -86,9 +80,7 @@ class VanityLockCog(commands.Cog):
     ):
         guild = ctx.guild
         if guild.owner_id != ctx.author.id:
-            await ctx.send(
-                "Only the server owner can use this command.", ephemeral=True
-            )
+            await ctx.send("Only the server owner can use this command.", ephemeral=True)
             return
         channel_id = channel.id if channel else None
         target_id = target.id if target else None
@@ -104,25 +96,16 @@ class VanityLockCog(commands.Cog):
         if before.vanity_url_code == after.vanity_url_code:
             return
         locked_code = await get_guild_config_async(after.id, VANITY_LOCK_KEY)
-        notify_channel_id = await get_guild_config_async(
-            after.id, VANITY_NOTIFY_CHANNEL_KEY
-        )
-        notify_target_id = await get_guild_config_async(
-            after.id, VANITY_NOTIFY_TARGET_KEY
-        )
+        notify_channel_id = await get_guild_config_async(after.id, VANITY_NOTIFY_CHANNEL_KEY)
+        notify_target_id = await get_guild_config_async(after.id, VANITY_NOTIFY_TARGET_KEY)
 
         changer = None
         if after.me.guild_permissions.view_audit_log:
             try:
-                async for entry in after.audit_logs(
-                    action=discord.AuditLogAction.guild_update, limit=5
-                ):
+                async for entry in after.audit_logs(action=discord.AuditLogAction.guild_update, limit=5):
                     before_change = getattr(entry.before, "vanity_url_code", None)
                     after_change = getattr(entry.after, "vanity_url_code", None)
-                    if (
-                        before_change == before.vanity_url_code
-                        and after_change == after.vanity_url_code
-                    ):
+                    if before_change == before.vanity_url_code and after_change == after.vanity_url_code:
                         changer = entry.user
                         break
             except discord.Forbidden:
@@ -143,9 +126,7 @@ class VanityLockCog(commands.Cog):
 
         mention = ""
         if notify_target_id:
-            target = after.get_role(notify_target_id) or after.get_member(
-                notify_target_id
-            )
+            target = after.get_role(notify_target_id) or after.get_member(notify_target_id)
             if target:
                 mention = target.mention
 

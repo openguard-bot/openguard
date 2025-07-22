@@ -13,7 +13,6 @@ from bot import (
     send_error_dm,
     catch_exceptions,
     ERROR_NOTIFICATION_USER_ID,
-    ERROR_NOTIFICATION_CHANNEL_ID,
     update_bot_guilds_cache,
     update_launch_time_cache,
     prefix_update_listener,
@@ -26,18 +25,13 @@ from bot import (
     on_guild_remove,
     on_shard_ready,
 )
-from database.connection import get_pool, initialize_database, close_pool
-from database.cache import close_redis, set_cache, get_redis_client
 import os
 import io
 import json
-import shutil
 import asyncio
-import sys
 from collections import namedtuple
 from discord import app_commands
 from lists import config
-import traceback
 
 
 # Mock the config.Owners for testing purposes
@@ -149,9 +143,7 @@ async def test_is_owner_false(mock_bot):
 
 @pytest.mark.asyncio
 async def test_is_owner_none_user(mock_bot):
-    with pytest.raises(
-        ValueError, match="User/User ID was None, or user object had no ID property"
-    ):
+    with pytest.raises(ValueError, match="User/User ID was None, or user object had no ID property"):
         await mock_bot.is_owner(None)
 
 
@@ -159,9 +151,7 @@ async def test_is_owner_none_user(mock_bot):
 async def test_is_owner_user_no_id(mock_bot):
     user = MagicMock(spec=discord.User)
     del user.id  # Simulate user object without id
-    with pytest.raises(
-        ValueError, match="User/User ID was None, or user object had no ID property"
-    ):
+    with pytest.raises(ValueError, match="User/User ID was None, or user object had no ID property"):
         await mock_bot.is_owner(user)
 
 
@@ -279,9 +269,7 @@ async def test_get_prefix_no_pool(mock_bot):
     mock_message.guild = MagicMock()
     mock_message.guild.id = 98765
 
-    with patch(
-        "bot.get_pool", new_callable=AsyncMock, return_value=None
-    ) as mock_get_pool:
+    with patch("bot.get_pool", new_callable=AsyncMock, return_value=None) as mock_get_pool:
         prefix = await get_prefix(mock_bot, mock_message)
         assert prefix == "o!"
         mock_get_pool.assert_called_once()
@@ -309,10 +297,10 @@ async def test_prefix_update_listener_updates_cache():
     get_message_mock.call_count = 0
     mock_pubsub.get_message.side_effect = get_message_mock
 
-    with patch(
-        "bot.get_redis_client", new_callable=AsyncMock, return_value=mock_redis
-    ), patch("builtins.print") as mock_print:
-
+    with (
+        patch("bot.get_redis_client", new_callable=AsyncMock, return_value=mock_redis),
+        patch("builtins.print") as mock_print,
+    ):
         # We create a task for the listener and then cancel it to stop the infinite loop
         listener_task = asyncio.create_task(prefix_update_listener())
 
@@ -335,13 +323,12 @@ async def test_prefix_update_listener_updates_cache():
 
 @pytest.mark.asyncio
 async def test_prefix_update_listener_no_redis():
-    with patch(
-        "bot.get_redis_client", new_callable=AsyncMock, return_value=None
-    ) as mock_get_redis_client, patch("builtins.print") as mock_print:
+    with (
+        patch("bot.get_redis_client", new_callable=AsyncMock, return_value=None) as mock_get_redis_client,
+        patch("builtins.print") as mock_print,
+    ):
         await prefix_update_listener()
-        mock_print.assert_called_once_with(
-            "Redis not available, prefix update listener will not run."
-        )
+        mock_print.assert_called_once_with("Redis not available, prefix update listener will not run.")
         mock_get_redis_client.assert_called_once()
 
 
@@ -365,10 +352,10 @@ async def test_prefix_update_listener_handles_error():
     get_message_error_mock.call_count = 0
     mock_pubsub.get_message.side_effect = get_message_error_mock
 
-    with patch(
-        "bot.get_redis_client", new_callable=AsyncMock, return_value=mock_redis
-    ), patch("builtins.print") as mock_print:
-
+    with (
+        patch("bot.get_redis_client", new_callable=AsyncMock, return_value=mock_redis),
+        patch("builtins.print") as mock_print,
+    ):
         listener_task = asyncio.create_task(prefix_update_listener())
 
         # The internal mock will now raise CancelledError, so we just await the task.
@@ -377,9 +364,7 @@ async def test_prefix_update_listener_handles_error():
         except (asyncio.TimeoutError, asyncio.CancelledError):
             pass  # Task is expected to be cancelled or finish
 
-        mock_print.assert_any_call(
-            "Error in prefix_update_listener: Simulated pubsub error"
-        )
+        mock_print.assert_any_call("Error in prefix_update_listener: Simulated pubsub error")
         assert prefix_cache[123] == "new_prefix!"
 
 
@@ -396,9 +381,7 @@ async def test_send_error_dm_success(mock_bot):
     context_info = "Context details."
 
     with patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
-        await send_error_dm(
-            mock_bot, error_type, error_message, error_traceback, context_info
-        )
+        await send_error_dm(mock_bot, error_type, error_message, error_traceback, context_info)
 
     mock_bot.fetch_user.assert_called_once_with(ERROR_NOTIFICATION_USER_ID)
     expected_content = (
@@ -414,9 +397,7 @@ async def test_send_error_dm_success(mock_bot):
 async def test_send_error_dm_no_user(mock_bot):
     mock_bot.fetch_user = AsyncMock(return_value=None)  # Simulate user not found
 
-    with patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None), patch(
-        "builtins.print"
-    ) as mock_print:
+    with patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None), patch("builtins.print") as mock_print:
         await send_error_dm(mock_bot, "Type", "Message")
 
     mock_bot.fetch_user.assert_called_once_with(ERROR_NOTIFICATION_USER_ID)
@@ -462,9 +443,7 @@ async def test_send_error_dm_sends_to_channel(mock_bot):
     mock_bot.fetch_channel = AsyncMock(return_value=mock_channel_obj)
     mock_bot.fetch_user = AsyncMock()
 
-    with patch("bot.bot", new=mock_bot), patch(
-        "bot.ERROR_NOTIFICATION_CHANNEL_ID", 999
-    ):
+    with patch("bot.bot", new=mock_bot), patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", 999):
         await send_error_dm(mock_bot, "Type", "Message")
 
     mock_bot.get_channel.assert_called_once_with(999)
@@ -502,15 +481,15 @@ async def test_catch_exceptions_sends_dm_on_error(mock_bot):
     mock_user_obj.send = AsyncMock()
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
-    with patch("bot.bot", new=mock_bot), patch(
-        "bot.ERROR_NOTIFICATION_CHANNEL_ID", None
-    ), patch(
-        "sys.exc_info", return_value=(ValueError, ValueError("Test exception"), None)
-    ), patch(
-        "traceback.format_exception",
-        return_value=["Traceback line 1\n", "Traceback line 2\n"],
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None),
+        patch("sys.exc_info", return_value=(ValueError, ValueError("Test exception"), None)),
+        patch(
+            "traceback.format_exception",
+            return_value=["Traceback line 1\n", "Traceback line 2\n"],
+        ),
     ):
-
         with pytest.raises(ValueError, match="Test exception"):
             await wrapped_func()
 
@@ -522,9 +501,7 @@ async def test_catch_exceptions_sends_dm_on_error(mock_bot):
     assert (
         "**Context:** Function: mock_func, Module: test_bot" in sent_content
     )  # Module name changes based on where test is run
-    assert (
-        "**Traceback:**\n```\nTraceback line 1\nTraceback line 2\n```" in sent_content
-    )
+    assert "**Traceback:**\n```\nTraceback line 1\nTraceback line 2\n```" in sent_content
 
 
 @pytest.mark.asyncio
@@ -543,9 +520,7 @@ async def test_catch_exceptions_with_self_and_bot_attribute(mock_bot):
     mock_user_obj.send = AsyncMock()
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
-    with patch("bot.bot", new=mock_bot), patch(
-        "bot.ERROR_NOTIFICATION_CHANNEL_ID", None
-    ):
+    with patch("bot.bot", new=mock_bot), patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
         with pytest.raises(TypeError, match="Cog error"):
             await cog_instance.my_method()
 
@@ -553,10 +528,7 @@ async def test_catch_exceptions_with_self_and_bot_attribute(mock_bot):
     sent_content = mock_user_obj.send.call_args[0][0]
     assert "**Error Type:** TypeError" in sent_content
     assert "**Error Message:** Cog error" in sent_content
-    assert (
-        "**Context:** Function: my_method, Module: tests.test_bot, Class: MockCog"
-        in sent_content
-    )
+    assert "**Context:** Function: my_method, Module: tests.test_bot, Class: MockCog" in sent_content
 
 
 @pytest.mark.asyncio
@@ -567,17 +539,13 @@ async def test_catch_exceptions_with_bot_instance_as_arg(mock_bot):
         """A docstring."""
         raise IndexError("List out of bounds")
 
-    my_function.__module__ = (
-        "test_bot"  # Manually set module for consistent test results
-    )
+    my_function.__module__ = "test_bot"  # Manually set module for consistent test results
 
     mock_user_obj = AsyncMock(spec=discord.User)
     mock_user_obj.send = AsyncMock()
     mock_bot.fetch_user = AsyncMock(return_value=mock_user_obj)
 
-    with patch("bot.bot", new=mock_bot), patch(
-        "bot.ERROR_NOTIFICATION_CHANNEL_ID", None
-    ):
+    with patch("bot.bot", new=mock_bot), patch("bot.ERROR_NOTIFICATION_CHANNEL_ID", None):
         with pytest.raises(IndexError, match="List out of bounds"):
             await my_function(mock_bot)
 
@@ -599,15 +567,14 @@ async def test_load_cogs_success(mock_bot, temp_cogs_dir):
     (temp_cogs_dir / "aimod.py").write_text("# excluded cog")
     (temp_cogs_dir / "_ignored.py").write_text("# ignored cog")
 
-    with patch("bot.bot", new=mock_bot), patch("builtins.print") as mock_print, patch(
-        "bot.send_error_dm", new=AsyncMock()
-    ) as mock_send_error_dm:
-
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("builtins.print") as mock_print,
+        patch("bot.send_error_dm", new=AsyncMock()) as mock_send_error_dm,
+    ):
         await load_cogs()
 
-        mock_bot.load_extension.assert_has_calls(
-            [call("cogs.test_cog1"), call("cogs.test_cog2")], any_order=True
-        )
+        mock_bot.load_extension.assert_has_calls([call("cogs.test_cog1"), call("cogs.test_cog2")], any_order=True)
         assert mock_bot.load_extension.call_count == 2
         mock_print.assert_any_call("Loaded cog: test_cog1")
         mock_print.assert_any_call("Loaded cog: test_cog2")
@@ -620,10 +587,11 @@ async def test_load_cogs_failure(mock_bot, temp_cogs_dir):
 
     (temp_cogs_dir / "failing_cog.py").write_text("# dummy failing cog")
 
-    with patch("bot.bot", new=mock_bot), patch("builtins.print") as mock_print, patch(
-        "bot.send_error_dm", new=AsyncMock()
-    ) as mock_send_error_dm:
-
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("builtins.print") as mock_print,
+        patch("bot.send_error_dm", new=AsyncMock()) as mock_send_error_dm,
+    ):
         await load_cogs()
 
         mock_bot.load_extension.assert_called_once_with("cogs.failing_cog")
@@ -641,33 +609,30 @@ async def test_load_cogs_send_error_dm_failure(mock_bot, temp_cogs_dir):
 
     (temp_cogs_dir / "failing_cog.py").write_text("# dummy failing cog")
 
-    with patch("bot.bot", new=mock_bot), patch("builtins.print") as mock_print, patch(
-        "bot.send_error_dm", new=AsyncMock(side_effect=Exception("DM error"))
-    ) as mock_send_error_dm:
-
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("builtins.print") as mock_print,
+        patch("bot.send_error_dm", new=AsyncMock(side_effect=Exception("DM error"))) as mock_send_error_dm,
+    ):
         await load_cogs()
 
         mock_send_error_dm.assert_called_once()
-        mock_print.assert_any_call(
-            "Failed to send error DM for cog loading error: DM error"
-        )
+        mock_print.assert_any_call("Failed to send error DM for cog loading error: DM error")
 
 
 # --- on_error Tests ---
 @pytest.mark.asyncio
 async def test_on_error_sends_dm(mock_bot):
     mock_send_error_dm = AsyncMock()
-    mock_sys_exc_info = MagicMock(
-        return_value=(ValueError, ValueError("Event error"), MagicMock())
-    )
+    mock_sys_exc_info = MagicMock(return_value=(ValueError, ValueError("Event error"), MagicMock()))
     mock_traceback_format_exception = MagicMock(return_value=["Event Traceback\n"])
 
-    with patch("bot.send_error_dm", new=mock_send_error_dm), patch(
-        "sys.exc_info", new=mock_sys_exc_info
-    ), patch("traceback.format_exception", new=mock_traceback_format_exception), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with (
+        patch("bot.send_error_dm", new=mock_send_error_dm),
+        patch("sys.exc_info", new=mock_sys_exc_info),
+        patch("traceback.format_exception", new=mock_traceback_format_exception),
+        patch("builtins.print") as mock_print,
+    ):
         # We need to patch the global bot object for the event handler to use it
         with patch("bot.bot", new=mock_bot):
             await on_error("on_message", "arg1", kwarg1="val1")
@@ -678,10 +643,7 @@ async def test_on_error_sends_dm(mock_bot):
         sent_args, sent_kwargs = mock_send_error_dm.call_args
         assert sent_kwargs["error_type"] == "ValueError"
         assert sent_kwargs["error_message"] == "Event error"
-        assert (
-            "Event: on_message, Args: ('arg1',), Kwargs: {'kwarg1': 'val1'}"
-            in sent_kwargs["context_info"]
-        )
+        assert "Event: on_message, Args: ('arg1',), Kwargs: {'kwarg1': 'val1'}" in sent_kwargs["context_info"]
         assert sent_kwargs["error_traceback"] == "Event Traceback\n"
 
 
@@ -692,9 +654,7 @@ async def test_on_error_sends_dm(mock_bot):
     [
         (commands.CommandNotFound("test"), "Command `test_command` not found.", False),
         (
-            commands.MissingRequiredArgument(
-                param=namedtuple("Param", "name displayed_name")("arg", "arg")
-            ),
+            commands.MissingRequiredArgument(param=namedtuple("Param", "name displayed_name")("arg", "arg")),
             "Missing required argument: `arg`.",
             False,
         ),
@@ -751,10 +711,7 @@ async def test_on_command_error_handles_known_errors(
     mock_bot, mock_context, error_type, user_message_part, should_notify
 ):
     mock_send_error_dm = AsyncMock()
-    with patch("bot.send_error_dm", new=mock_send_error_dm), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with patch("bot.send_error_dm", new=mock_send_error_dm), patch("builtins.print") as mock_print:
         await on_command_error(mock_context, error_type)
 
         mock_context.send.assert_called_once()
@@ -765,9 +722,7 @@ async def test_on_command_error_handles_known_errors(
             sent_args, sent_kwargs = mock_send_error_dm.call_args
             assert sent_kwargs["error_type"] == type(error_type).__name__
             assert sent_kwargs["error_message"] == str(error_type)
-            assert (
-                f"Command: {mock_context.command.name}" in sent_kwargs["context_info"]
-            )
+            assert f"Command: {mock_context.command.name}" in sent_kwargs["context_info"]
             assert f"Author: {mock_context.author}" in sent_kwargs["context_info"]
         else:
             mock_send_error_dm.assert_not_called()
@@ -778,10 +733,7 @@ async def test_on_command_error_send_message_failure(mock_bot, mock_context):
     mock_context.send.side_effect = Exception("Send message error")
     mock_send_error_dm = AsyncMock()
 
-    with patch("bot.send_error_dm", new=mock_send_error_dm), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with patch("bot.send_error_dm", new=mock_send_error_dm), patch("builtins.print") as mock_print:
         await on_command_error(mock_context, commands.CommandNotFound("test"))
 
         mock_context.send.assert_called_once()
@@ -795,10 +747,7 @@ async def test_on_command_error_original_error(mock_bot, mock_context):
     error_with_original = commands.CommandInvokeError(original_error)
 
     mock_send_error_dm = AsyncMock()
-    with patch("bot.send_error_dm", new=mock_send_error_dm), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with patch("bot.send_error_dm", new=mock_send_error_dm), patch("builtins.print") as mock_print:
         await on_command_error(mock_context, error_with_original)
 
         mock_context.send.assert_called_once()
@@ -855,9 +804,7 @@ async def test_on_command_error_original_error(mock_bot, mock_context):
             False,
         ),
         (
-            commands.MissingRequiredArgument(
-                param=namedtuple("Param", "name displayed_name")("arg", "arg")
-            ),
+            commands.MissingRequiredArgument(param=namedtuple("Param", "name displayed_name")("arg", "arg")),
             "Missing required argument: `arg`.",
             False,
         ),
@@ -878,28 +825,20 @@ async def test_on_app_command_error_handles_known_errors(
     mock_bot, mock_interaction, error_type, user_message_part, should_notify
 ):
     mock_send_error_dm = AsyncMock()
-    with patch("bot.send_error_dm", new=mock_send_error_dm), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with patch("bot.send_error_dm", new=mock_send_error_dm), patch("builtins.print") as mock_print:
         # We need to patch the global bot object for the event handler to use it
         with patch("bot.bot", new=mock_bot):
             await on_app_command_error(mock_interaction, error_type)
 
         mock_interaction.response.send_message.assert_called_once()
-        assert (
-            user_message_part in mock_interaction.response.send_message.call_args[0][0]
-        )
+        assert user_message_part in mock_interaction.response.send_message.call_args[0][0]
 
         if should_notify:
             mock_send_error_dm.assert_called_once()
             sent_args, sent_kwargs = mock_send_error_dm.call_args
             assert sent_kwargs["error_type"] == type(error_type).__name__
             assert sent_kwargs["error_message"] == str(error_type)
-            assert (
-                f"Command: {mock_interaction.command.name}"
-                in sent_kwargs["context_info"]
-            )
+            assert f"Command: {mock_interaction.command.name}" in sent_kwargs["context_info"]
             assert f"Author: {mock_interaction.user}" in sent_kwargs["context_info"]
         else:
             mock_send_error_dm.assert_not_called()
@@ -907,26 +846,16 @@ async def test_on_app_command_error_handles_known_errors(
 
 @pytest.mark.asyncio
 async def test_on_app_command_error_already_responded(mock_bot, mock_interaction):
-    mock_interaction.response.is_done.return_value = (
-        True  # Simulate response already done
-    )
+    mock_interaction.response.is_done.return_value = True  # Simulate response already done
     mock_send_error_dm = AsyncMock()
 
-    with patch("bot.send_error_dm", new=mock_send_error_dm), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with patch("bot.send_error_dm", new=mock_send_error_dm), patch("builtins.print") as mock_print:
         with patch("bot.bot", new=mock_bot):
-            await on_app_command_error(
-                mock_interaction, app_commands.CheckFailure("check failed")
-            )
+            await on_app_command_error(mock_interaction, app_commands.CheckFailure("check failed"))
 
         mock_interaction.response.send_message.assert_not_called()
         mock_interaction.followup.send.assert_called_once()
-        assert (
-            "You don't have permission"
-            in mock_interaction.followup.send.call_args[0][0]
-        )
+        assert "You don't have permission" in mock_interaction.followup.send.call_args[0][0]
         mock_send_error_dm.assert_not_called()
 
 
@@ -935,14 +864,9 @@ async def test_on_app_command_error_send_message_failure(mock_bot, mock_interact
     mock_interaction.response.send_message.side_effect = Exception("Send message error")
     mock_send_error_dm = AsyncMock()
 
-    with patch("bot.send_error_dm", new=mock_send_error_dm), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with patch("bot.send_error_dm", new=mock_send_error_dm), patch("builtins.print") as mock_print:
         with patch("bot.bot", new=mock_bot):
-            await on_app_command_error(
-                mock_interaction, app_commands.CommandNotFound("test", parents=[])
-            )
+            await on_app_command_error(mock_interaction, app_commands.CommandNotFound("test", parents=[]))
 
         mock_interaction.response.send_message.assert_called_once()
         # No error should be re-raised, just print
@@ -955,18 +879,12 @@ async def test_on_app_command_error_original_error(mock_bot, mock_interaction):
     error_with_original = app_commands.AppCommandError(original_error)
 
     mock_send_error_dm = AsyncMock()
-    with patch("bot.send_error_dm", new=mock_send_error_dm), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with patch("bot.send_error_dm", new=mock_send_error_dm), patch("builtins.print") as mock_print:
         with patch("bot.bot", new=mock_bot):
             await on_app_command_error(mock_interaction, error_with_original)
 
         mock_interaction.response.send_message.assert_called_once()
-        assert (
-            "An error occurred"
-            in mock_interaction.response.send_message.call_args[0][0]
-        )
+        assert "An error occurred" in mock_interaction.response.send_message.call_args[0][0]
 
         mock_send_error_dm.assert_called_once()
         sent_args, sent_kwargs = mock_send_error_dm.call_args
@@ -980,16 +898,14 @@ async def test_on_ready_success(mock_bot):
     mock_bot.tree.sync = AsyncMock()
     mock_bot.launch_time = discord.utils.utcnow()
 
-    with patch.object(
-        type(mock_bot), "guilds", [MagicMock(id=1), MagicMock(id=2)]
-    ), patch("bot.bot", new=mock_bot), patch("builtins.print") as mock_print, patch(
-        "bot.send_error_dm", new=AsyncMock()
-    ) as mock_send_error_dm, patch(
-        "bot.update_bot_guilds_cache", new=AsyncMock()
-    ) as mock_update_guilds, patch(
-        "bot.update_launch_time_cache", new=AsyncMock()
-    ) as mock_update_launch_time:
-
+    with (
+        patch.object(type(mock_bot), "guilds", [MagicMock(id=1), MagicMock(id=2)]),
+        patch("bot.bot", new=mock_bot),
+        patch("builtins.print") as mock_print,
+        patch("bot.send_error_dm", new=AsyncMock()) as mock_send_error_dm,
+        patch("bot.update_bot_guilds_cache", new=AsyncMock()) as mock_update_guilds,
+        patch("bot.update_launch_time_cache", new=AsyncMock()) as mock_update_launch_time,
+    ):
         await on_ready()
 
         mock_bot.tree.sync.assert_called_once()
@@ -1006,14 +922,13 @@ async def test_on_ready_sync_failure(mock_bot):
     mock_bot.tree.sync = AsyncMock(side_effect=Exception("Sync error"))
     mock_bot.launch_time = discord.utils.utcnow()
 
-    with patch.object(type(mock_bot), "guilds", []), patch(
-        "bot.bot", new=mock_bot
-    ), patch("builtins.print") as mock_print, patch(
-        "bot.send_error_dm", new=AsyncMock()
-    ) as mock_send_error_dm, patch(
-        "bot.update_bot_guilds_cache", new=AsyncMock()
-    ), patch(
-        "bot.update_launch_time_cache", new=AsyncMock()
+    with (
+        patch.object(type(mock_bot), "guilds", []),
+        patch("bot.bot", new=mock_bot),
+        patch("builtins.print") as mock_print,
+        patch("bot.send_error_dm", new=AsyncMock()) as mock_send_error_dm,
+        patch("bot.update_bot_guilds_cache", new=AsyncMock()),
+        patch("bot.update_launch_time_cache", new=AsyncMock()),
     ):
         # patch('bot.bot.loop.create_task') as mock_create_task: # This is now handled by the global fixture
 
@@ -1025,10 +940,7 @@ async def test_on_ready_sync_failure(mock_bot):
         sent_args, sent_kwargs = mock_send_error_dm.call_args
         assert sent_kwargs["error_type"] == "Exception"
         assert sent_kwargs["error_message"] == "Sync error"
-        assert (
-            "Error occurred during command sync in on_ready event"
-            in sent_kwargs["context_info"]
-        )
+        assert "Error occurred during command sync in on_ready event" in sent_kwargs["context_info"]
         # mock_create_task.assert_called_once() # This is now handled by the global fixture
 
 
@@ -1037,14 +949,12 @@ async def test_on_ready_sync_failure(mock_bot):
 async def test_update_bot_guilds_cache(mock_bot):
     mock_set_cache = AsyncMock()
 
-    with patch.object(
-        type(mock_bot), "guilds", [MagicMock(id=123), MagicMock(id=456)]
-    ), patch("bot.bot", new=mock_bot), patch(
-        "bot.set_cache", new=mock_set_cache
-    ), patch(
-        "builtins.print"
-    ) as mock_print:
-
+    with (
+        patch.object(type(mock_bot), "guilds", [MagicMock(id=123), MagicMock(id=456)]),
+        patch("bot.bot", new=mock_bot),
+        patch("bot.set_cache", new=mock_set_cache),
+        patch("builtins.print") as mock_print,
+    ):
         await update_bot_guilds_cache()
 
         mock_set_cache.assert_called_once_with("bot_guilds", [123, 456])
@@ -1057,15 +967,14 @@ async def test_update_launch_time_cache(mock_bot):
     mock_bot.launch_time = discord.utils.utcnow()
     mock_set_cache = AsyncMock()
 
-    with patch("bot.bot", new=mock_bot), patch(
-        "bot.set_cache", new=mock_set_cache
-    ), patch("builtins.print") as mock_print:
-
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("bot.set_cache", new=mock_set_cache),
+        patch("builtins.print") as mock_print,
+    ):
         await update_launch_time_cache()
 
-        mock_set_cache.assert_called_once_with(
-            "bot_launch_time", mock_bot.launch_time.timestamp()
-        )
+        mock_set_cache.assert_called_once_with("bot_launch_time", mock_bot.launch_time.timestamp())
         mock_print.assert_called_once_with("Updated bot launch time cache.")
 
 
@@ -1077,10 +986,11 @@ async def test_on_guild_join(mock_bot):
     mock_guild.id = 789
     mock_update_bot_guilds_cache = AsyncMock()
 
-    with patch("bot.bot", new=mock_bot), patch(
-        "bot.update_bot_guilds_cache", new=AsyncMock()
-    ) as mock_update_bot_guilds_cache, patch("builtins.print") as mock_print:
-
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("bot.update_bot_guilds_cache", new=AsyncMock()) as mock_update_bot_guilds_cache,
+        patch("builtins.print") as mock_print,
+    ):
         await on_guild_join(mock_guild)
 
         mock_print.assert_any_call(f"Joined guild: {mock_guild.name} ({mock_guild.id})")
@@ -1095,15 +1005,14 @@ async def test_on_guild_remove(mock_bot):
     mock_guild.id = 1011
     mock_update_bot_guilds_cache = AsyncMock()
 
-    with patch("bot.bot", new=mock_bot), patch(
-        "bot.update_bot_guilds_cache", new=mock_update_bot_guilds_cache
-    ), patch("builtins.print") as mock_print:
-
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("bot.update_bot_guilds_cache", new=mock_update_bot_guilds_cache),
+        patch("builtins.print") as mock_print,
+    ):
         await on_guild_remove(mock_guild)
 
-        mock_print.assert_any_call(
-            f"Removed from guild: {mock_guild.name} ({mock_guild.id})"
-        )
+        mock_print.assert_any_call(f"Removed from guild: {mock_guild.name} ({mock_guild.id})")
         mock_update_bot_guilds_cache.assert_called_once()
 
 
@@ -1136,14 +1045,10 @@ async def test_test_error_command(mock_context):
         assert command is not None
 
         # Execute the command, which should raise the error
-        with pytest.raises(
-            ValueError, match="This is a test error to verify error handling"
-        ):
+        with pytest.raises(ValueError, match="This is a test error to verify error handling"):
             await command.callback(mock_context)
 
-        mock_context.send.assert_called_once_with(
-            f"Testing error handling in {mock_context.command}..."
-        )
+        mock_context.send.assert_called_once_with(f"Testing error handling in {mock_context.command}...")
 
     finally:
         # Cleanup: remove the command from the global bot
@@ -1156,9 +1061,7 @@ async def test_test_error_slash_command(mock_interaction):
     # Define the slash command function
     @app_commands.command(name="testerror_slash", description="Test slash command")
     async def test_error_slash(interaction: discord.Interaction):
-        await interaction.response.send_message(
-            "Testing error handling in slash command..."
-        )
+        await interaction.response.send_message("Testing error handling in slash command...")
         raise ValueError("This is a test error to verify slash command error handling")
 
     # The on_app_command_error handler uses the global `bot` object's tree, so we add the command there
@@ -1177,9 +1080,7 @@ async def test_test_error_slash_command(mock_interaction):
         ):
             await command.callback(mock_interaction)
 
-        mock_interaction.response.send_message.assert_called_once_with(
-            "Testing error handling in slash command..."
-        )
+        mock_interaction.response.send_message.assert_called_once_with("Testing error handling in slash command...")
 
     finally:
         # Cleanup: remove the command from the global bot's tree
@@ -1189,22 +1090,15 @@ async def test_test_error_slash_command(mock_interaction):
 # --- main function tests ---
 @pytest.mark.asyncio
 async def test_main_success():
-    with patch(
-        "bot.initialize_database", new_callable=AsyncMock, return_value=True
-    ) as mock_init_db, patch(
-        "bot.load_cogs", new_callable=AsyncMock
-    ) as mock_load_cogs, patch(
-        "bot.bot.start", new_callable=AsyncMock
-    ) as mock_bot_start, patch(
-        "bot.close_pool", new_callable=AsyncMock
-    ) as mock_close_pool, patch(
-        "bot.close_redis", new_callable=AsyncMock
-    ) as mock_close_redis, patch(
-        "builtins.print"
-    ) as mock_print, patch(
-        "os.getenv"
-    ) as mock_getenv:
-
+    with (
+        patch("bot.initialize_database", new_callable=AsyncMock, return_value=True) as mock_init_db,
+        patch("bot.load_cogs", new_callable=AsyncMock) as mock_load_cogs,
+        patch("bot.bot.start", new_callable=AsyncMock) as mock_bot_start,
+        patch("bot.close_pool", new_callable=AsyncMock) as mock_close_pool,
+        patch("bot.close_redis", new_callable=AsyncMock) as mock_close_redis,
+        patch("builtins.print") as mock_print,
+        patch("os.getenv") as mock_getenv,
+    ):
         mock_getenv.return_value = "FAKE_TOKEN"
         await main()
 
@@ -1221,22 +1115,15 @@ async def test_main_success():
 
 @pytest.mark.asyncio
 async def test_main_db_init_failure():
-    with patch(
-        "bot.initialize_database", new_callable=AsyncMock, return_value=False
-    ) as mock_init_db, patch(
-        "bot.load_cogs", new_callable=AsyncMock
-    ) as mock_load_cogs, patch(
-        "bot.bot.start", new_callable=AsyncMock
-    ) as mock_bot_start, patch(
-        "bot.close_pool", new_callable=AsyncMock
-    ) as mock_close_pool, patch(
-        "bot.close_redis", new_callable=AsyncMock
-    ) as mock_close_redis, patch(
-        "builtins.print"
-    ) as mock_print, patch(
-        "os.getenv", return_value="FAKE_TOKEN"
+    with (
+        patch("bot.initialize_database", new_callable=AsyncMock, return_value=False) as mock_init_db,
+        patch("bot.load_cogs", new_callable=AsyncMock) as mock_load_cogs,
+        patch("bot.bot.start", new_callable=AsyncMock) as mock_bot_start,
+        patch("bot.close_pool", new_callable=AsyncMock) as mock_close_pool,
+        patch("bot.close_redis", new_callable=AsyncMock) as mock_close_redis,
+        patch("builtins.print") as mock_print,
+        patch("os.getenv", return_value="FAKE_TOKEN"),
     ):
-
         await main()
 
         mock_init_db.assert_called_once()
@@ -1249,20 +1136,18 @@ async def test_main_db_init_failure():
 
 @pytest.mark.asyncio
 async def test_main_bot_start_failure():
-    with patch(
-        "bot.initialize_database", new_callable=AsyncMock, return_value=True
-    ), patch("bot.load_cogs", new_callable=AsyncMock), patch(
-        "bot.bot.start",
-        new_callable=AsyncMock,
-        side_effect=Exception("Bot start error"),
-    ) as mock_bot_start, patch(
-        "bot.close_pool", new_callable=AsyncMock
-    ) as mock_close_pool, patch(
-        "bot.close_redis", new_callable=AsyncMock
-    ) as mock_close_redis, patch(
-        "os.getenv", return_value="FAKE_TOKEN"
+    with (
+        patch("bot.initialize_database", new_callable=AsyncMock, return_value=True),
+        patch("bot.load_cogs", new_callable=AsyncMock),
+        patch(
+            "bot.bot.start",
+            new_callable=AsyncMock,
+            side_effect=Exception("Bot start error"),
+        ) as mock_bot_start,
+        patch("bot.close_pool", new_callable=AsyncMock) as mock_close_pool,
+        patch("bot.close_redis", new_callable=AsyncMock) as mock_close_redis,
+        patch("os.getenv", return_value="FAKE_TOKEN"),
     ):
-
         # The exception should propagate from main
         with pytest.raises(Exception, match="Bot start error"):
             await main()

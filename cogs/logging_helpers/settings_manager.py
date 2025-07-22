@@ -4,15 +4,9 @@ Provides database-backed settings management for the logging system.
 """
 
 import logging
-from typing import Dict, Any, Optional
 from .postgresql_db import (
     get_setting,
     set_setting,
-    get_logging_webhook,
-    set_logging_webhook,
-    is_log_event_enabled,
-    set_log_event_enabled,
-    get_all_log_event_toggles,
     setup_moderation_log_table,
 )
 

@@ -6,7 +6,6 @@ from typing import List, Dict, Any, Optional
 
 # Import database operations
 from database.operations import (
-    get_botdetect_config,
     set_botdetect_config,
     get_all_botdetect_config,
 )
@@ -183,9 +182,7 @@ class BotDetectCog(commands.Cog):
         """Bot detection commands."""
         await ctx.send_help(ctx.command)
 
-    @botdetect.command(
-        name="config", description="Configure bot detection settings for this server."
-    )
+    @botdetect.command(name="config", description="Configure bot detection settings for this server.")
     @app_commands.describe(
         action="Action to take when bot is detected",
         keywords="Comma-separated list of keywords to detect (leave empty to view current)",
@@ -284,19 +281,13 @@ class BotDetectCog(commands.Cog):
 
             embed.add_field(
                 name="Keywords",
-                value=(
-                    ", ".join(config["keywords"])
-                    if config["keywords"]
-                    else "None configured"
-                ),
+                value=(", ".join(config["keywords"]) if config["keywords"] else "None configured"),
                 inline=False,
             )
 
             if config["log_channel"]:
                 log_channel_obj = ctx.guild.get_channel(config["log_channel"])
-                log_channel_name = (
-                    log_channel_obj.mention if log_channel_obj else "Unknown Channel"
-                )
+                log_channel_name = log_channel_obj.mention if log_channel_obj else "Unknown Channel"
             else:
                 log_channel_name = "None"
 
@@ -353,21 +344,15 @@ class BotDetectCog(commands.Cog):
                         ephemeral=True,
                     )
                 else:
-                    await ctx.send(
-                        "Timeout duration must be between 1 second and 28 days (2419200 seconds)."
-                    )
+                    await ctx.send("Timeout duration must be between 1 second and 28 days (2419200 seconds).")
                 return
             config["timeout_duration"] = timeout_duration
             changes.append(f"Timeout duration: {timeout_duration} seconds")
 
         if keywords is not None:
-            keyword_list = [
-                kw.strip().lower() for kw in keywords.split(",") if kw.strip()
-            ]
+            keyword_list = [kw.strip().lower() for kw in keywords.split(",") if kw.strip()]
             config["keywords"] = keyword_list
-            changes.append(
-                f"Keywords: {', '.join(keyword_list) if keyword_list else 'None'}"
-            )
+            changes.append(f"Keywords: {', '.join(keyword_list) if keyword_list else 'None'}")
 
         if add_keyword is not None:
             keyword = add_keyword.strip().lower()
@@ -406,26 +391,20 @@ class BotDetectCog(commands.Cog):
         if remove_whitelist_role is not None:
             if remove_whitelist_role.id in config["whitelist_roles"]:
                 config["whitelist_roles"].remove(remove_whitelist_role.id)
-                changes.append(
-                    f"Removed whitelisted role: {remove_whitelist_role.mention}"
-                )
+                changes.append(f"Removed whitelisted role: {remove_whitelist_role.mention}")
             else:
                 changes.append(f"Role {remove_whitelist_role.mention} not in whitelist")
 
         if remove_whitelist_user is not None:
             if remove_whitelist_user.id in config["whitelist_users"]:
                 config["whitelist_users"].remove(remove_whitelist_user.id)
-                changes.append(
-                    f"Removed whitelisted user: {remove_whitelist_user.mention}"
-                )
+                changes.append(f"Removed whitelisted user: {remove_whitelist_user.mention}")
             else:
                 changes.append(f"User {remove_whitelist_user.mention} not in whitelist")
 
         if load_default_keywords is not None and load_default_keywords:
             config["keywords"] = DEFAULT_SCAM_KEYWORDS.copy()
-            changes.append(
-                f"Loaded {len(DEFAULT_SCAM_KEYWORDS)} default scam detection keywords"
-            )
+            changes.append(f"Loaded {len(DEFAULT_SCAM_KEYWORDS)} default scam detection keywords")
 
         if clear_keywords is not None and clear_keywords:
             config["keywords"] = []
@@ -449,9 +428,7 @@ class BotDetectCog(commands.Cog):
         else:
             await ctx.send(embed=embed)
 
-    @botdetect.command(
-        name="defaults", description="View the default scam bot keywords available."
-    )
+    @botdetect.command(name="defaults", description="View the default scam bot keywords available.")
     async def botdetect_defaults(self, ctx: commands.Context):
         """Show the default scam bot keywords that can be loaded."""
 
@@ -463,14 +440,8 @@ class BotDetectCog(commands.Cog):
 
         # Group keywords by category for better readability
         categories = {
-            "Discord Nitro Scams": [
-                kw for kw in DEFAULT_SCAM_KEYWORDS if "nitro" in kw or "discord" in kw
-            ],
-            "Steam/Gaming Scams": [
-                kw
-                for kw in DEFAULT_SCAM_KEYWORDS
-                if "steam" in kw or "skin" in kw or "cs" in kw
-            ],
+            "Discord Nitro Scams": [kw for kw in DEFAULT_SCAM_KEYWORDS if "nitro" in kw or "discord" in kw],
+            "Steam/Gaming Scams": [kw for kw in DEFAULT_SCAM_KEYWORDS if "steam" in kw or "skin" in kw or "cs" in kw],
             "Crypto/Investment": [
                 kw
                 for kw in DEFAULT_SCAM_KEYWORDS
@@ -520,18 +491,12 @@ class BotDetectCog(commands.Cog):
             "Support Impersonation": [
                 kw
                 for kw in DEFAULT_SCAM_KEYWORDS
-                if any(
-                    word in kw
-                    for word in ["support", "admin", "staff", "official", "team"]
-                )
+                if any(word in kw for word in ["support", "admin", "staff", "official", "team"])
             ],
             "Suspicious Domains": [
                 kw
                 for kw in DEFAULT_SCAM_KEYWORDS
-                if any(
-                    word in kw
-                    for word in ["bit.ly", "tinyurl", "discrod", "steampowered"]
-                )
+                if any(word in kw for word in ["bit.ly", "tinyurl", "discrod", "steampowered"])
             ],
         }
 
@@ -550,10 +515,7 @@ class BotDetectCog(commands.Cog):
                 # Limit to first 10 keywords per category to avoid embed limits
                 display_keywords = keywords[:10]
                 if len(keywords) > 10:
-                    keyword_text = (
-                        ", ".join(display_keywords)
-                        + f"\n*...and {len(keywords) - 10} more*"
-                    )
+                    keyword_text = ", ".join(display_keywords) + f"\n*...and {len(keywords) - 10} more*"
                 else:
                     keyword_text = ", ".join(display_keywords)
 
@@ -666,17 +628,13 @@ class BotDetectCog(commands.Cog):
         # Status indicator
         status_emoji = "🟢" if config["enabled"] else "🔴"
         status_text = "Enabled" if config["enabled"] else "Disabled"
-        embed.add_field(
-            name="Status", value=f"{status_emoji} **{status_text}**", inline=True
-        )
+        embed.add_field(name="Status", value=f"{status_emoji} **{status_text}**", inline=True)
 
         # Action
         embed.add_field(name="Action", value=config["action"].title(), inline=True)
 
         # Keywords count
-        embed.add_field(
-            name="Keywords", value=f"{len(config['keywords'])} configured", inline=True
-        )
+        embed.add_field(name="Keywords", value=f"{len(config['keywords'])} configured", inline=True)
 
         # Log channel
         if config["log_channel"]:
@@ -750,9 +708,7 @@ class BotDetectCog(commands.Cog):
         if detected_keywords:
             await self._handle_bot_detection(message, detected_keywords, config)
 
-    async def _handle_bot_detection(
-        self, message: discord.Message, keywords: List[str], config: Dict[str, Any]
-    ):
+    async def _handle_bot_detection(self, message: discord.Message, keywords: List[str], config: Dict[str, Any]):
         """Handle detected bot message based on configuration."""
 
         action = config["action"]
@@ -776,7 +732,7 @@ class BotDetectCog(commands.Cog):
                 try:
                     embed = discord.Embed(
                         title="⚠️ Bot Detection Warning",
-                        description=f"Your message was flagged as potential bot activity and has been removed.",
+                        description="Your message was flagged as potential bot activity and has been removed.",
                         color=discord.Color.orange(),
                     )
                     embed.add_field(
@@ -792,9 +748,7 @@ class BotDetectCog(commands.Cog):
             elif action == "kick":
                 if guild.me.guild_permissions.kick_members:
                     try:
-                        await member.kick(
-                            reason=f"Bot detection: keywords detected: {', '.join(keywords)}"
-                        )
+                        await member.kick(reason=f"Bot detection: keywords detected: {', '.join(keywords)}")
                     except discord.Forbidden:
                         pass  # No permission or can't kick this user
 
@@ -813,9 +767,7 @@ class BotDetectCog(commands.Cog):
                     try:
                         import datetime
 
-                        timeout_until = discord.utils.utcnow() + datetime.timedelta(
-                            seconds=config["timeout_duration"]
-                        )
+                        timeout_until = discord.utils.utcnow() + datetime.timedelta(seconds=config["timeout_duration"])
                         await member.timeout(
                             timeout_until,
                             reason=f"Bot detection: keywords detected: {', '.join(keywords)}",
@@ -848,7 +800,7 @@ class BotDetectCog(commands.Cog):
         try:
             embed = discord.Embed(
                 title="🤖 Bot Detection Alert",
-                description=f"Potential bot activity detected and action taken.",
+                description="Potential bot activity detected and action taken.",
                 color=discord.Color.red(),
                 timestamp=discord.utils.utcnow(),
             )
@@ -863,9 +815,7 @@ class BotDetectCog(commands.Cog):
 
             embed.add_field(name="Action Taken", value=action.title(), inline=True)
 
-            embed.add_field(
-                name="Detected Keywords", value=", ".join(keywords), inline=False
-            )
+            embed.add_field(name="Detected Keywords", value=", ".join(keywords), inline=False)
 
             # Truncate message content if too long
             content = message.content

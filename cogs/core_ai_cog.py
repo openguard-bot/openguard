@@ -4,7 +4,6 @@ from discord.ext import commands
 from discord import app_commands
 import collections
 import datetime
-import os
 
 from lists import config
 from .aimod_helpers.config_manager import (
@@ -14,7 +13,6 @@ from .aimod_helpers.config_manager import (
     save_global_bans,
     save_user_infractions,
     get_guild_config_async,
-    set_guild_config,
     is_channel_excluded,
     get_channel_rules,
     get_analysis_mode,
@@ -54,9 +52,7 @@ class DecisionPaginator(discord.ui.View):
         return interaction.user.id == self.author_id
 
     @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
-    async def previous(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.index > 0:
             self.index -= 1
         await self.update_message(interaction)
@@ -68,9 +64,7 @@ class DecisionPaginator(discord.ui.View):
         await self.update_message(interaction)
 
     async def update_message(self, interaction: discord.Interaction):
-        embed = CoreAICog.build_decision_embed(
-            self.decisions[self.index], self.index + 1, len(self.decisions)
-        )
+        embed = CoreAICog.build_decision_embed(self.decisions[self.index], self.index + 1, len(self.decisions))
         await interaction.response.edit_message(embed=embed, view=self)
 
 
@@ -108,9 +102,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     try:
                         ban_reason = "Globally banned for severe universal violation. (Auto-enforced on cog load)"
                         await guild.ban(member, reason=ban_reason)
-                        print(
-                            f"[GLOBAL BAN] Auto-banned {member} ({member.id}) from {guild.name} on cog load."
-                        )
+                        print(f"[GLOBAL BAN] Auto-banned {member} ({member.id}) from {guild.name} on cog load.")
                         try:
                             dm_channel = await member.create_dm()
                             await dm_channel.send(
@@ -119,18 +111,12 @@ class CoreAICog(commands.Cog, name="Core AI"):
                         except Exception as e:
                             print(f"Could not DM globally banned user {member}: {e}")
                         # Optionally log to mod log channel
-                        log_channel_id = await get_guild_config_async(
-                            guild.id, "ai_actions_log_channel_id"
-                        )
-                        log_channel = (
-                            self.bot.get_channel(log_channel_id)
-                            if log_channel_id
-                            else None
-                        )
+                        log_channel_id = await get_guild_config_async(guild.id, "ai_actions_log_channel_id")
+                        log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                         if log_channel:
                             embed = discord.Embed(
                                 title="🚨 Global Ban Enforcement 🚨",
-                                description=f"Globally banned user was present and has been auto-banned.",
+                                description="Globally banned user was present and has been auto-banned.",
                                 color=discord.Color.dark_red(),
                             )
                             embed.add_field(
@@ -143,9 +129,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                                 value="Automatically Banned (Global Ban List)",
                                 inline=False,
                             )
-                            embed.add_field(
-                                name="Reason", value=ban_reason, inline=False
-                            )
+                            embed.add_field(name="Reason", value=ban_reason, inline=False)
                             embed.timestamp = discord.utils.utcnow()
                             try:
                                 await log_channel.send(embed=embed)
@@ -212,9 +196,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
         try:
             user_id = int(userid)
         except ValueError:
-            await ctx.reply(
-                "Invalid user ID. Please provide a numerical user ID.", ephemeral=True
-            )
+            await ctx.reply("Invalid user ID. Please provide a numerical user ID.", ephemeral=True)
             return
 
         global GLOBAL_BANS
@@ -226,9 +208,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     f"User ID `{user_id}` added to the global ban list. Reason {globalbanreason}",
                     ephemeral=False,
                 )
-                print(
-                    f"[MODERATION] User ID {user_id} added to global ban list by {ctx.author} ({ctx.author.id})."
-                )
+                print(f"[MODERATION] User ID {user_id} added to global ban list by {ctx.author} ({ctx.author.id}).")
             else:
                 await ctx.reply(
                     f"User ID `{user_id}` is already in the global ban list.",
@@ -242,18 +222,14 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     f"User ID `{user_id}` removed from the global ban list. {globalbanreason}",
                     ephemeral=False,
                 )
-                print(
-                    f"[MODERATION] User ID {user_id} removed from global ban list by {ctx.author} ({ctx.author.id})."
-                )
+                print(f"[MODERATION] User ID {user_id} removed from global ban list by {ctx.author} ({ctx.author.id}).")
             else:
                 await ctx.reply(
                     f"User ID `{user_id}` is not in the global ban list.",
                     ephemeral=True,
                 )
         else:
-            await ctx.reply(
-                "Invalid action. Please choose 'add' or 'remove'.", ephemeral=True
-            )
+            await ctx.reply("Invalid action. Please choose 'add' or 'remove'.", ephemeral=True)
 
     @commands.hybrid_command(name="stats", description="Show bot stats")
     async def stats(self, ctx: commands.Context):
@@ -270,9 +246,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
         embed.set_thumbnail(url=bot_user.display_avatar.url)
         await ctx.reply(embed=embed, ephemeral=False)
 
-    @app_commands.command(
-        name="testlog", description="Send a test moderation log embed."
-    )
+    @app_commands.command(name="testlog", description="Send a test moderation log embed.")
     @app_commands.describe(
         language="The language code for the embed (e.g., 'en', 'es', 'ja')",
         action="The action to simulate ('timeout', 'kick', 'ban')",
@@ -293,9 +267,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
     ):
         """Sends a test moderation log embed."""
         if not interaction.guild:
-            await interaction.response.send_message(
-                "This command can only be used in a server.", ephemeral=True
-            )
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
 
         simulated_user_name = "test"
@@ -336,7 +308,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
 
         notification_embed = discord.Embed(
             title="🚨 Rule Violation Detected (TEST) 🚨",
-            description=f"AI analysis detected a violation of server rules.",
+            description="AI analysis detected a violation of server rules.",
             color=discord.Color.red(),
         )
         notification_embed.add_field(
@@ -344,26 +316,16 @@ class CoreAICog(commands.Cog, name="Core AI"):
             value=f"{dummy_author.mention} (`{dummy_author.id}`)",
             inline=False,
         )
-        notification_embed.add_field(
-            name="Channel", value=interaction.channel.mention, inline=False
-        )
-        notification_embed.add_field(
-            name="Rule Violated", value=f"**{simulated_rule}**", inline=True
-        )
-        notification_embed.add_field(
-            name="AI Suggested Action", value=f"`{simulated_action}`", inline=True
-        )
-        notification_embed.add_field(
-            name="AI Reasoning", value=f"_{simulated_reasoning}_", inline=False
-        )
+        notification_embed.add_field(name="Channel", value=interaction.channel.mention, inline=False)
+        notification_embed.add_field(name="Rule Violated", value=f"**{simulated_rule}**", inline=True)
+        notification_embed.add_field(name="AI Suggested Action", value=f"`{simulated_action}`", inline=True)
+        notification_embed.add_field(name="AI Reasoning", value=f"_{simulated_reasoning}_", inline=False)
         notification_embed.add_field(
             name="Message Link",
             value=f"[Jump to Message]({dummy_message.jump_url})",
             inline=False,
         )
-        notification_embed.add_field(
-            name="Message Content", value=dummy_message.content, inline=False
-        )
+        notification_embed.add_field(name="Message Content", value=dummy_message.content, inline=False)
 
         if simulated_action == "BAN":
             notification_embed.color = discord.Color.dark_red()
@@ -372,15 +334,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
         elif simulated_action == "TIMEOUT":
             notification_embed.color = discord.Color.blue()
 
-        footer_text = (
-            f"Test Log | Language: {language} | Simulated Action: {simulated_action}"
-        )
+        footer_text = f"Test Log | Language: {language} | Simulated Action: {simulated_action}"
         notification_embed.set_footer(text=footer_text)
         notification_embed.timestamp = discord.utils.utcnow()
 
-        await interaction.response.send_message(
-            embed=notification_embed, ephemeral=False
-        )
+        await interaction.response.send_message(embed=notification_embed, ephemeral=False)
 
     @infractions.command(
         name="view",
@@ -388,12 +346,8 @@ class CoreAICog(commands.Cog, name="Core AI"):
     )
     @app_commands.describe(user="The user to view infractions for")
     async def viewinfractions(self, ctx: commands.Context, user: discord.Member):
-        moderator_role_id = await get_guild_config_async(
-            ctx.guild.id, "MODERATOR_ROLE_ID"
-        )
-        moderator_role = (
-            ctx.guild.get_role(moderator_role_id) if moderator_role_id else None
-        )
+        moderator_role_id = await get_guild_config_async(ctx.guild.id, "MODERATOR_ROLE_ID")
+        moderator_role = ctx.guild.get_role(moderator_role_id) if moderator_role_id else None
 
         has_permission = ctx.author.guild_permissions.administrator or (
             moderator_role and moderator_role in ctx.author.roles
@@ -409,9 +363,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
         infractions = get_user_infraction_history(ctx.guild.id, user.id)
 
         if not infractions:
-            await ctx.reply(
-                f"{user.mention} has no recorded infractions.", ephemeral=False
-            )
+            await ctx.reply(f"{user.mention} has no recorded infractions.", ephemeral=False)
             return
 
         embed = discord.Embed(
@@ -421,9 +373,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
         )
 
         for i, infraction in enumerate(infractions, 1):
-            timestamp = infraction.get("timestamp", "Unknown date")[:19].replace(
-                "T", " "
-            )
+            timestamp = infraction.get("timestamp", "Unknown date")[:19].replace("T", " ")
             rule = infraction.get("rule_violated", "Unknown rule")
             action = infraction.get("action_taken", "Unknown action")
             reason = infraction.get("reasoning", "No reason provided")
@@ -447,18 +397,14 @@ class CoreAICog(commands.Cog, name="Core AI"):
     @app_commands.checks.has_permissions(administrator=True)
     async def clearinfractions(self, ctx: commands.Context, user: discord.Member):
         if not ctx.author.guild_permissions.administrator:
-            await ctx.reply(
-                "You must be an administrator to use this command.", ephemeral=True
-            )
+            await ctx.reply("You must be an administrator to use this command.", ephemeral=True)
             return
 
         key = f"{ctx.guild.id}_{user.id}"
         infractions = USER_INFRACTIONS.get(key, [])
 
         if not infractions:
-            await ctx.reply(
-                f"{user.mention} has no recorded infractions to clear.", ephemeral=False
-            )
+            await ctx.reply(f"{user.mention} has no recorded infractions to clear.", ephemeral=False)
             return
 
         USER_INFRACTIONS[key] = []
@@ -476,13 +422,9 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 f"Your infraction history in **{ctx.guild.name}** has been cleared by an administrator."
             )
         except discord.Forbidden:
-            print(
-                f"[MODERATION] Could not DM user {user} about infraction clearance (DMs disabled)."
-            )
+            print(f"[MODERATION] Could not DM user {user} about infraction clearance (DMs disabled).")
         except Exception as e:
-            print(
-                f"[MODERATION] Error DMing user {user} about infraction clearance: {e}"
-            )
+            print(f"[MODERATION] Error DMing user {user} about infraction clearance: {e}")
 
         await ctx.reply(
             f"Cleared {len(infractions)} infraction(s) for {user.mention}.",
@@ -505,9 +447,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
 
         api_key = None
         auth_info = None
-        model_used = await get_guild_config_async(
-            guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL
-        )
+        model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
 
         if guild_api_key:
             if guild_api_key.api_provider == "github_copilot":
@@ -516,9 +456,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 # For other providers, the key is the api_key
                 api_key = guild_api_key.api_key
                 # The model is still taken from the guild config, not overridden by the provider name
-                model_used = await get_guild_config_async(
-                    guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL
-                )
+                model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
 
         if custom_rules_text is not None:
             rules_text = custom_rules_text
@@ -528,17 +466,13 @@ class CoreAICog(commands.Cog, name="Core AI"):
             channel_rules = await get_channel_rules(guild_id, message.channel.id)
             if channel_rules:
                 rules_text = channel_rules
-                print(
-                    f"Using channel-specific rules for channel {message.channel.name} (ID: {message.channel.id})"
-                )
+                print(f"Using channel-specific rules for channel {message.channel.name} (ID: {message.channel.id})")
             else:
                 rules_text = await self.get_server_rules(guild_id)
                 if rules_text == "No rules set.":
                     print("No server rules set; skipping analysis.")
                     return None
-                print(
-                    f"Using server default rules for channel {message.channel.name} (ID: {message.channel.id})"
-                )
+                print(f"Using server default rules for channel {message.channel.name} (ID: {message.channel.id})")
 
         system_prompt_text = SYSTEM_PROMPT_TEMPLATE.format(rules_text=rules_text)
 
@@ -551,28 +485,20 @@ class CoreAICog(commands.Cog, name="Core AI"):
             user_role = "Server Owner"
 
         # Get user's top 10 roles, highest first
-        user_role_list = [
-            role.name
-            for role in reversed(message.author.roles)
-            if not role.is_default()
-        ]
+        user_role_list = [role.name for role in reversed(message.author.roles) if not role.is_default()]
         top_10_roles = user_role_list[:10]
-        user_roles_text = (
-            ", ".join(top_10_roles) if top_10_roles else "User has no roles."
-        )
+        user_roles_text = ", ".join(top_10_roles) if top_10_roles else "User has no roles."
 
-        channel_category = (
-            message.channel.category.name if message.channel.category else "No Category"
-        )
+        channel_category = message.channel.category.name if message.channel.category else "No Category"
         is_nsfw_channel = getattr(message.channel, "nsfw", False)
 
         replied_to_content = ""
         if message.reference and message.reference.message_id:
             try:
-                replied_message = await message.channel.fetch_message(
-                    message.reference.message_id
+                replied_message = await message.channel.fetch_message(message.reference.message_id)
+                replied_to_content = (
+                    f"Replied-to Message: {replied_message.author.display_name}: {replied_message.content[:200]}"
                 )
-                replied_to_content = f"Replied-to Message: {replied_message.author.display_name}: {replied_message.content[:200]}"
             except Exception:
                 replied_to_content = "Replied-to Message: [Could not fetch]"
 
@@ -580,17 +506,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
         try:
             async for hist_message in message.channel.history(limit=4, before=message):
                 if not hist_message.author.bot:
-                    recent_history.append(
-                        f"{hist_message.author.display_name}: {hist_message.content[:100]}"
-                    )
+                    recent_history.append(f"{hist_message.author.display_name}: {hist_message.content[:100]}")
         except Exception:
             recent_history = ["[Could not fetch recent history]"]
 
-        recent_history_text = (
-            "\n".join(recent_history[:3])
-            if recent_history
-            else "No recent history available."
-        )
+        recent_history_text = "\n".join(recent_history[:3]) if recent_history else "No recent history available."
 
         user_prompt = f"""
 **Context Information:**
@@ -621,15 +541,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
             # LiteLLM/OpenRouter vision support may vary by model
             image_descriptions = []
             for mime_type, image_bytes, attachment_type, filename in image_data_list:
-                image_descriptions.append(
-                    f"[{attachment_type.upper()} ATTACHMENT: {filename}]"
-                )
+                image_descriptions.append(f"[{attachment_type.upper()} ATTACHMENT: {filename}]")
                 print(f"Added {attachment_type} attachment to AI analysis: {filename}")
 
             if image_descriptions:
-                messages[-1]["content"] += "\n\nAttachments:\n" + "\n".join(
-                    image_descriptions
-                )
+                messages[-1]["content"] += "\n\nAttachments:\n" + "\n".join(image_descriptions)
 
         try:
             response = await self.genai_client.generate_content(
@@ -650,9 +566,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
             try:
                 json_start_index = ai_response_text.find("{")
                 if json_start_index == -1:
-                    print(
-                        "Error: Could not find the start of the JSON object in AI response."
-                    )
+                    print("Error: Could not find the start of the JSON object in AI response.")
                     print(f"Raw AI response: {ai_response_text}")
                     return None
 
@@ -668,9 +582,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
 
                 required_keys = ["reasoning", "violation", "rule_violated", "action"]
                 if not all(key in ai_decision for key in required_keys):
-                    print(
-                        f"Error: AI response missing required keys. Got: {ai_decision}"
-                    )
+                    print(f"Error: AI response missing required keys. Got: {ai_decision}")
                     return None
 
                 print(f"AI Decision: {ai_decision}")
@@ -684,17 +596,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
             print(f"Exception during LiteLLM API call: {e}")
             return None
 
-    async def _execute_ban(
-        self, message: discord.Message, reason: str, rule_violated: str
-    ):
+    async def _execute_ban(self, message: discord.Message, reason: str, rule_violated: str):
         """Helper function to execute a ban."""
         ban_reason = f"AI Mod: Rule {rule_violated}. Reason: {reason}"
-        await message.guild.ban(
-            message.author, reason=ban_reason, delete_message_days=1
-        )
-        print(
-            f"[MODERATION] BANNED user {message.author} for violating rule {rule_violated}."
-        )
+        await message.guild.ban(message.author, reason=ban_reason, delete_message_days=1)
+        print(f"[MODERATION] BANNED user {message.author} for violating rule {rule_violated}.")
         await add_user_infraction(
             message.guild.id,
             message.author.id,
@@ -713,15 +619,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
         except Exception as e:
             print(f"Could not DM banned user: {e}")
 
-    async def _execute_kick(
-        self, message: discord.Message, reason: str, rule_violated: str
-    ):
+    async def _execute_kick(self, message: discord.Message, reason: str, rule_violated: str):
         """Helper function to execute a kick."""
         kick_reason = f"AI Mod: Rule {rule_violated}. Reason: {reason}"
         await message.author.kick(reason=kick_reason)
-        print(
-            f"[MODERATION] KICKED user {message.author} for violating rule {rule_violated}."
-        )
+        print(f"[MODERATION] KICKED user {message.author} for violating rule {rule_violated}.")
         await add_user_infraction(
             message.guild.id,
             message.author.id,
@@ -776,13 +678,9 @@ class CoreAICog(commands.Cog, name="Core AI"):
         except Exception as e:
             print(f"Could not DM timed out user: {e}")
 
-    async def _execute_warn(
-        self, message: discord.Message, reason: str, rule_violated: str
-    ):
+    async def _execute_warn(self, message: discord.Message, reason: str, rule_violated: str):
         """Helper function to execute a warn."""
-        print(
-            f"[MODERATION] DELETED message from {message.author} (AI suggested WARN for rule {rule_violated})."
-        )
+        print(f"[MODERATION] DELETED message from {message.author} (AI suggested WARN for rule {rule_violated}).")
         try:
             await message.author.send(
                 f"Your recent message in **{message.guild.name}** was removed for violating Rule **{rule_violated}**. "
@@ -810,22 +708,12 @@ class CoreAICog(commands.Cog, name="Core AI"):
         user_id = message.author.id
 
         # --- Configuration Fetching ---
-        test_mode_enabled = await get_guild_config_async(
-            guild_id, "TEST_MODE_ENABLED", False
-        )
-        confirmation_settings = await get_guild_config_async(
-            guild_id, "ACTION_CONFIRMATION_SETTINGS", {}
-        )
-        ping_role_id = await get_guild_config_async(
-            guild_id, "CONFIRMATION_PING_ROLE_ID"
-        )
+        test_mode_enabled = await get_guild_config_async(guild_id, "TEST_MODE_ENABLED", False)
+        confirmation_settings = await get_guild_config_async(guild_id, "ACTION_CONFIRMATION_SETTINGS", {})
+        ping_role_id = await get_guild_config_async(guild_id, "CONFIRMATION_PING_ROLE_ID")
         moderator_role_id = await get_guild_config_async(guild_id, "MODERATOR_ROLE_ID")
-        log_channel_id = await get_guild_config_async(
-            guild_id, "ai_actions_log_channel_id"
-        )
-        model_used = await get_guild_config_async(
-            guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL
-        )
+        log_channel_id = await get_guild_config_async(guild_id, "ai_actions_log_channel_id")
+        model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
 
         # --- Decision and Context Setup ---
         rule_violated = ai_decision.get("rule_violated", "Unknown")
@@ -844,27 +732,17 @@ class CoreAICog(commands.Cog, name="Core AI"):
             value=f"{message.author.mention} (`{user_id}`)",
             inline=False,
         )
-        notification_embed.add_field(
-            name="Channel", value=message.channel.mention, inline=False
-        )
-        notification_embed.add_field(
-            name="Rule Violated", value=f"**Rule {rule_violated}**", inline=True
-        )
-        notification_embed.add_field(
-            name="AI Suggested Action", value=f"`{action}`", inline=True
-        )
-        notification_embed.add_field(
-            name="AI Reasoning", value=f"_{reasoning}_", inline=False
-        )
+        notification_embed.add_field(name="Channel", value=message.channel.mention, inline=False)
+        notification_embed.add_field(name="Rule Violated", value=f"**Rule {rule_violated}**", inline=True)
+        notification_embed.add_field(name="AI Suggested Action", value=f"`{action}`", inline=True)
+        notification_embed.add_field(name="AI Reasoning", value=f"_{reasoning}_", inline=False)
         notification_embed.add_field(
             name="Message Link",
             value=f"[Jump to Message]({message.jump_url})",
             inline=False,
         )
         msg_content = message.content if message.content else "*No text content*"
-        notification_embed.add_field(
-            name="Message Content", value=msg_content[:1024], inline=False
-        )
+        notification_embed.add_field(name="Message Content", value=msg_content[:1024], inline=False)
         notification_embed.set_footer(text=f"AI Model: {model_used}")
         notification_embed.timestamp = discord.utils.utcnow()
 
@@ -910,9 +788,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
 
         if confirmation_mode == "manual" and action_function:
             notification_embed.title = "Moderator Approval Required"
-            notification_embed.description = (
-                "The AI has suggested an action that requires manual approval."
-            )
+            notification_embed.description = "The AI has suggested an action that requires manual approval."
             notification_embed.color = discord.Color.gold()
 
             async def confirm_action():
@@ -946,19 +822,13 @@ class CoreAICog(commands.Cog, name="Core AI"):
 
             try:
                 await action_function(*action_args)
-                action_taken_message = (
-                    f"Action Taken: **{action.replace('_', ' ').title()}** (Automatic)"
-                )
-                notification_embed.add_field(
-                    name="Status", value=action_taken_message, inline=False
-                )
+                action_taken_message = f"Action Taken: **{action.replace('_', ' ').title()}** (Automatic)"
+                notification_embed.add_field(name="Status", value=action_taken_message, inline=False)
                 await log_channel.send(embed=notification_embed)
             except discord.Forbidden as e:
                 print(f"Permission error executing {action}: {e}")
                 # Notify mods of permission failure
-                mod_ping = (
-                    f"<@&{moderator_role_id}>" if moderator_role_id else "Moderators"
-                )
+                mod_ping = f"<@&{moderator_role_id}>" if moderator_role_id else "Moderators"
                 await log_channel.send(
                     f"{mod_ping} **PERMISSION ERROR!** Could not perform action `{action}` on {message.author.mention}. Please check bot permissions.",
                     embed=notification_embed,
@@ -971,9 +841,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 action_taken_message = "Action Taken: **Moderator review requested.**"
                 notification_embed.color = discord.Color.gold()
             elif action == "SUICIDAL":
-                action_taken_message = (
-                    "Action Taken: **User DMed resources, relevant role notified.**"
-                )
+                action_taken_message = "Action Taken: **User DMed resources, relevant role notified.**"
                 notification_embed.title = "🚨 Suicidal Content Detected 🚨"
                 notification_embed.color = discord.Color.dark_purple()
                 try:
@@ -981,14 +849,10 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 except Exception as e:
                     print(f"Could not DM suicidal help resources: {e}")
             else:
-                action_taken_message = (
-                    "Action Taken: **None** (AI suggested IGNORE or unhandled action)."
-                )
+                action_taken_message = "Action Taken: **None** (AI suggested IGNORE or unhandled action)."
                 notification_embed.color = discord.Color.light_grey()
 
-            notification_embed.add_field(
-                name="Status", value=action_taken_message, inline=False
-            )
+            notification_embed.add_field(name="Status", value=action_taken_message, inline=False)
             await log_channel.send(embed=notification_embed)
 
     def is_globally_banned(self, user_id: int) -> bool:
@@ -1036,16 +900,12 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 except Exception as e:
                     print(f"Could not DM globally banned user {member}: {e}")
 
-                log_channel_id = await get_guild_config_async(
-                    member.guild.id, "ai_actions_log_channel_id"
-                )
-                log_channel = (
-                    self.bot.get_channel(log_channel_id) if log_channel_id else None
-                )
+                log_channel_id = await get_guild_config_async(member.guild.id, "ai_actions_log_channel_id")
+                log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                 if log_channel:
                     embed = discord.Embed(
                         title="🚨 Global Ban Enforcement 🚨",
-                        description=f"Globally banned user attempted to join.",
+                        description="Globally banned user attempted to join.",
                         color=discord.Color.dark_red(),
                     )
                     embed.add_field(
@@ -1073,48 +933,32 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 print(
                     f"WARNING: Missing permissions to ban user {member} ({member.id}) from guild {member.guild.name} ({member.guild.id})."
                 )
-                log_channel_id = await get_guild_config_async(
-                    member.guild.id, "ai_actions_log_channel_id"
-                )
-                log_channel = (
-                    self.bot.get_channel(log_channel_id) if log_channel_id else None
-                )
+                log_channel_id = await get_guild_config_async(member.guild.id, "ai_actions_log_channel_id")
+                log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                 if log_channel:
-                    mod_role_id = await get_guild_config_async(
-                        member.guild.id, "MODERATOR_ROLE_ID"
-                    )
+                    mod_role_id = await get_guild_config_async(member.guild.id, "MODERATOR_ROLE_ID")
                     mod_ping = f"<@&{mod_role_id}>" if mod_role_id else "Moderators"
                     try:
                         await log_channel.send(
                             f"{mod_ping} **PERMISSION ERROR!** Could not ban globally banned user {member.mention} (`{member.id}`) from this server. Please check bot permissions."
                         )
                     except discord.Forbidden:
-                        print(
-                            f"FATAL: Bot lacks permission to send messages, even permission errors."
-                        )
+                        print("FATAL: Bot lacks permission to send messages, even permission errors.")
             except Exception as e:
                 print(
                     f"An unexpected error occurred during global ban enforcement for user {member} ({member.id}) in guild {member.guild.name}: {e}"
                 )
-                log_channel_id = await get_guild_config_async(
-                    member.guild.id, "ai_actions_log_channel_id"
-                )
-                log_channel = (
-                    self.bot.get_channel(log_channel_id) if log_channel_id else None
-                )
+                log_channel_id = await get_guild_config_async(member.guild.id, "ai_actions_log_channel_id")
+                log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                 if log_channel:
-                    mod_role_id = await get_guild_config_async(
-                        member.guild.id, "MODERATOR_ROLE_ID"
-                    )
+                    mod_role_id = await get_guild_config_async(member.guild.id, "MODERATOR_ROLE_ID")
                     mod_ping = f"<@&{mod_role_id}>" if mod_role_id else "Moderators"
                     try:
                         await log_channel.send(
                             f"{mod_ping} **UNEXPECTED ERROR!** An error occurred while enforcing global ban for user {member.mention} (`{member.id}`). Please check bot logs."
                         )
                     except discord.Forbidden:
-                        print(
-                            f"FATAL: Bot lacks permission to send messages, even error notifications."
-                        )
+                        print("FATAL: Bot lacks permission to send messages, even error notifications.")
             return
 
     @commands.Cog.listener(name="on_message")
@@ -1131,9 +975,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
             print(f"Ignoring message {message.id} from DM.")
             return
         if not await get_guild_config_async(message.guild.id, "ENABLED", True):
-            print(
-                f"Moderation disabled for guild {message.guild.id}. Ignoring message {message.id}."
-            )
+            print(f"Moderation disabled for guild {message.guild.id}. Ignoring message {message.id}.")
             return
 
         # Check if channel is excluded from AI moderation
@@ -1148,9 +990,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
             )
             try:
                 ban_reason = "Globally banned user sent message."
-                await message.guild.ban(
-                    message.author, reason=ban_reason, delete_message_days=1
-                )
+                await message.guild.ban(message.author, reason=ban_reason, delete_message_days=1)
                 print(
                     f"Successfully banned globally banned user {message.author} from guild {message.guild.name} after they sent a message."
                 )
@@ -1158,48 +998,32 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 print(
                     f"WARNING: Missing permissions to ban globally banned user {message.author} ({message.author.id}) from guild {message.guild.name} after they sent a message."
                 )
-                log_channel_id = await get_guild_config_async(
-                    message.guild.id, "ai_actions_log_channel_id"
-                )
-                log_channel = (
-                    self.bot.get_channel(log_channel_id) if log_channel_id else None
-                )
+                log_channel_id = await get_guild_config_async(message.guild.id, "ai_actions_log_channel_id")
+                log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                 if log_channel:
-                    mod_role_id = await get_guild_config_async(
-                        message.guild.id, "MODERATOR_ROLE_ID"
-                    )
+                    mod_role_id = await get_guild_config_async(message.guild.id, "MODERATOR_ROLE_ID")
                     mod_ping = f"<@&{mod_role_id}>" if mod_role_id else "Moderators"
                     try:
                         await log_channel.send(
                             f"{mod_ping} **PERMISSION ERROR!** Globally banned user {message.author.mention} (`{message.author.id}`) sent a message but could not be banned from this server. Please check bot permissions."
                         )
                     except discord.Forbidden:
-                        print(
-                            f"FATAL: Bot lacks permission to send messages, even error notifications."
-                        )
+                        print("FATAL: Bot lacks permission to send messages, even error notifications.")
             except Exception as e:
                 print(
                     f"An unexpected error occurred when banning globally banned user {message.author} ({message.author.id}) after they sent a message: {e}"
                 )
-                log_channel_id = await get_guild_config_async(
-                    message.guild.id, "ai_actions_log_channel_id"
-                )
-                log_channel = (
-                    self.bot.get_channel(log_channel_id) if log_channel_id else None
-                )
+                log_channel_id = await get_guild_config_async(message.guild.id, "ai_actions_log_channel_id")
+                log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
                 if log_channel:
-                    mod_role_id = await get_guild_config_async(
-                        message.guild.id, "MODERATOR_ROLE_ID"
-                    )
+                    mod_role_id = await get_guild_config_async(message.guild.id, "MODERATOR_ROLE_ID")
                     mod_ping = f"<@&{mod_role_id}>" if mod_role_id else "Moderators"
                     try:
                         await log_channel.send(
                             f"{mod_ping} **UNEXPECTED ERROR!** An error occurred while banning globally banned user {message.author.mention} (`{message.author.id}`) after they sent a message. Please check bot logs."
                         )
                     except discord.Forbidden:
-                        print(
-                            f"FATAL: Bot lacks permission to send messages, even error notifications."
-                        )
+                        print("FATAL: Bot lacks permission to send messages, even error notifications.")
             return
 
         analysis_mode = await get_analysis_mode(message.guild.id)
@@ -1218,32 +1042,20 @@ class CoreAICog(commands.Cog, name="Core AI"):
         image_data_list = []
         if message.attachments:
             for attachment in message.attachments:
-                mime_type, image_bytes, attachment_type = (
-                    await self.media_processor.process_attachment(attachment)
-                )
+                mime_type, image_bytes, attachment_type = await self.media_processor.process_attachment(attachment)
                 if mime_type and image_bytes and attachment_type:
-                    image_data_list.append(
-                        (mime_type, image_bytes, attachment_type, attachment.filename)
-                    )
-                    print(
-                        f"Processed attachment: {attachment.filename} as {attachment_type}"
-                    )
+                    image_data_list.append((mime_type, image_bytes, attachment_type, attachment.filename))
+                    print(f"Processed attachment: {attachment.filename} as {attachment_type}")
 
             if image_data_list:
-                print(
-                    f"Processed {len(image_data_list)} attachments for message {message.id}"
-                )
+                print(f"Processed {len(image_data_list)} attachments for message {message.id}")
 
         if not message_content and not image_data_list:
-            print(
-                f"Ignoring message {message.id} with no content or valid attachments."
-            )
+            print(f"Ignoring message {message.id} with no content or valid attachments.")
             return
 
         if not self.genai_client:
-            print(
-                f"Skipping AI analysis for message {message.id}: LiteLLM Client is not available."
-            )
+            print(f"Skipping AI analysis for message {message.id}: LiteLLM Client is not available.")
             return
 
         infractions = get_user_infraction_history(message.guild.id, message.author.id)
@@ -1254,23 +1066,17 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     f"- Action: {infr.get('action_taken', 'N/A')} for Rule {infr.get('rule_violated', 'N/A')} on {infr.get('timestamp', 'N/A')[:10]}. Reason: {infr.get('reasoning', 'N/A')[:50]}..."
                 )
         user_history_summary = (
-            "\n".join(history_summary_parts)
-            if history_summary_parts
-            else "No prior infractions recorded."
+            "\n".join(history_summary_parts) if history_summary_parts else "No prior infractions recorded."
         )
 
         max_history_len = 500
         if len(user_history_summary) > max_history_len:
             user_history_summary = user_history_summary[: max_history_len - 3] + "..."
 
-        print(
-            f"Analyzing message {message.id} from {message.author} in #{message.channel.name} with history..."
-        )
+        print(f"Analyzing message {message.id} from {message.author} in #{message.channel.name} with history...")
         if image_data_list:
             attachment_types = [data[2] for data in image_data_list]
-            print(
-                f"Including {len(image_data_list)} attachments in analysis: {', '.join(attachment_types)}"
-            )
+            print(f"Including {len(image_data_list)} attachments in analysis: {', '.join(attachment_types)}")
         ai_decision = await self.query_vertex_ai(
             message,
             message_content,
@@ -1287,13 +1093,9 @@ class CoreAICog(commands.Cog, name="Core AI"):
                     "author_name": str(message.author),
                     "author_id": message.author.id,
                     "message_content_snippet": (
-                        message.content[:100] + "..."
-                        if len(message.content) > 100
-                        else message.content
+                        message.content[:100] + "..." if len(message.content) > 100 else message.content
                     ),
-                    "timestamp": datetime.datetime.now(
-                        datetime.timezone.utc
-                    ).isoformat(),
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     "ai_decision": {
                         "error": "Failed to get valid AI decision",
                         "raw_response": None,
@@ -1305,11 +1107,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 message.id,
                 message.author.id,
                 str(message.author),
-                (
-                    message.content[:100] + "..."
-                    if len(message.content) > 100
-                    else message.content
-                ),
+                (message.content[:100] + "..." if len(message.content) > 100 else message.content),
                 {"error": "Failed to get valid AI decision", "raw_response": None},
             )
             return
@@ -1320,9 +1118,7 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 "author_name": str(message.author),
                 "author_id": message.author.id,
                 "message_content_snippet": (
-                    message.content[:100] + "..."
-                    if len(message.content) > 100
-                    else message.content
+                    message.content[:100] + "..." if len(message.content) > 100 else message.content
                 ),
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "ai_decision": ai_decision,
@@ -1333,25 +1129,17 @@ class CoreAICog(commands.Cog, name="Core AI"):
             message.id,
             message.author.id,
             str(message.author),
-            (
-                message.content[:100] + "..."
-                if len(message.content) > 100
-                else message.content
-            ),
+            (message.content[:100] + "..." if len(message.content) > 100 else message.content),
             ai_decision,
         )
 
         if ai_decision.get("violation"):
             notify_mods_message = (
-                ai_decision.get("notify_mods_message")
-                if ai_decision.get("action") == "NOTIFY_MODS"
-                else None
+                ai_decision.get("notify_mods_message") if ai_decision.get("action") == "NOTIFY_MODS" else None
             )
             await self.handle_violation(message, ai_decision, notify_mods_message)
         else:
-            print(
-                f"AI analysis complete for message {message.id}. No violation detected."
-            )
+            print(f"AI analysis complete for message {message.id}. No violation detected.")
 
     @ai.command(name="decisions", description="View recent AI moderation decisions")
     @app_commands.guild_only()
@@ -1369,13 +1157,9 @@ class CoreAICog(commands.Cog, name="Core AI"):
         await ctx.reply(embed=embed, view=view, ephemeral=True)
 
     @ai_last_decisions.error
-    async def ai_last_decisions_error(
-        self, ctx: commands.Context, error: app_commands.AppCommandError
-    ):
+    async def ai_last_decisions_error(self, ctx: commands.Context, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.MissingPermissions):
-            await ctx.reply(
-                "You must be an administrator to use this command.", ephemeral=True
-            )
+            await ctx.reply("You must be an administrator to use this command.", ephemeral=True)
         else:
             await ctx.reply(f"An error occurred: {error}", ephemeral=True)
             print(f"Error in ai_last_decisions command: {error}")

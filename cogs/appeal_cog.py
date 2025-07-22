@@ -23,9 +23,7 @@ class AppealCog(commands.Cog, name="Appeals"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(
-        name="appeal", description="Submit an appeal for a recent moderation action."
-    )
+    @app_commands.command(name="appeal", description="Submit an appeal for a recent moderation action.")
     @app_commands.describe(reason="The reason for your appeal.")
     async def submit_appeal(self, interaction: discord.Interaction, reason: str):
         user_id = interaction.user.id
@@ -87,9 +85,7 @@ class AppealCog(commands.Cog, name="Appeals"):
         admin_user = self.bot.get_user(admin_user_id)
 
         if not admin_user:
-            print(
-                f"CRITICAL: Could not find admin user with ID {admin_user_id} to send appeal."
-            )
+            print(f"CRITICAL: Could not find admin user with ID {admin_user_id} to send appeal.")
             await interaction.response.send_message(
                 "Your appeal has been submitted, but there was an error notifying the admin.",
                 ephemeral=True,
@@ -102,7 +98,7 @@ class AppealCog(commands.Cog, name="Appeals"):
 
         embed = discord.Embed(
             title="New Moderation Appeal",
-            description=f"An appeal has been submitted by a user.",
+            description="An appeal has been submitted by a user.",
             color=discord.Color.yellow(),
         )
         embed.add_field(
@@ -132,17 +128,13 @@ class AppealCog(commands.Cog, name="Appeals"):
                 ephemeral=True,
             )
         except discord.Forbidden:
-            print(
-                f"CRITICAL: Could not DM admin user {admin_user_id}. They may have DMs disabled."
-            )
+            print(f"CRITICAL: Could not DM admin user {admin_user_id}. They may have DMs disabled.")
             await interaction.response.send_message(
                 "Your appeal has been submitted, but there was an error notifying the admin.",
                 ephemeral=True,
             )
         except Exception as e:
-            print(
-                f"CRITICAL: An unexpected error occurred when sending appeal to admin: {e}"
-            )
+            print(f"CRITICAL: An unexpected error occurred when sending appeal to admin: {e}")
             await interaction.response.send_message(
                 "Your appeal has been submitted, but an unexpected error occurred.",
                 ephemeral=True,
@@ -159,9 +151,7 @@ class AppealCog(commands.Cog, name="Appeals"):
 
         admin_user_id = config.Owners.ILIKEPANCAKES
         if interaction.user.id != admin_user_id:
-            await interaction.response.send_message(
-                "You are not authorized to handle this appeal.", ephemeral=True
-            )
+            await interaction.response.send_message("You are not authorized to handle this appeal.", ephemeral=True)
             return
 
         parts = custom_id.split("_")
@@ -189,27 +179,21 @@ class AppealCog(commands.Cog, name="Appeals"):
 
         original_message = interaction.message
         new_embed = original_message.embeds[0]
-        new_embed.color = (
-            discord.Color.green() if action == "accept" else discord.Color.red()
-        )
+        new_embed.color = discord.Color.green() if action == "accept" else discord.Color.red()
 
         if action == "accept":
             appeal_data["status"] = "accepted"
             new_embed.title = "Appeal Accepted"
 
             if not guild:
-                print(
-                    f"Could not find guild {guild_id} to revert action for appeal {appeal_id}"
-                )
+                print(f"Could not find guild {guild_id} to revert action for appeal {appeal_id}")
                 if user_to_notify:
                     try:
                         await user_to_notify.send(
                             f"Your appeal ({appeal_id}) was accepted, but we could not find the original server to revert the action. Please contact an admin."
                         )
                     except discord.Forbidden:
-                        print(
-                            f"Could not DM user {user_id} about accepted appeal with missing guild."
-                        )
+                        print(f"Could not DM user {user_id} about accepted appeal with missing guild.")
             else:
                 action_reverted = False
                 original_action = original_infraction.get("action_taken")
@@ -221,9 +205,7 @@ class AppealCog(commands.Cog, name="Appeals"):
                         )
                         action_reverted = True
                     except Exception as e:
-                        print(
-                            f"Failed to unban user {user_id} in guild {guild_id} for appeal {appeal_id}: {e}"
-                        )
+                        print(f"Failed to unban user {user_id} in guild {guild_id} for appeal {appeal_id}: {e}")
                 elif original_action == "GLOBAL_BAN":
                     if user_id in GLOBAL_BANS:
                         GLOBAL_BANS.remove(user_id)
@@ -241,14 +223,10 @@ class AppealCog(commands.Cog, name="Appeals"):
                 elif "TIMEOUT" in original_action:
                     try:
                         member = await guild.fetch_member(user_id)
-                        await member.timeout(
-                            None, reason=f"Appeal {appeal_id} accepted."
-                        )
+                        await member.timeout(None, reason=f"Appeal {appeal_id} accepted.")
                         action_reverted = True
                     except discord.NotFound:
-                        print(
-                            f"User {user_id} not found in guild {guild_id} to remove timeout for appeal {appeal_id}"
-                        )
+                        print(f"User {user_id} not found in guild {guild_id} to remove timeout for appeal {appeal_id}")
                     except Exception as e:
                         print(
                             f"Failed to remove timeout for user {user_id} in guild {guild_id} for appeal {appeal_id}: {e}"
@@ -272,7 +250,7 @@ class AppealCog(commands.Cog, name="Appeals"):
             new_embed.title = "Appeal Denied"
             if user_to_notify:
                 try:
-                    await user_to_notify.send(f"Your appeal has been **denied**.")
+                    await user_to_notify.send("Your appeal has been **denied**.")
                 except discord.Forbidden:
                     print(f"Could not DM user {user_id} about denied appeal.")
 

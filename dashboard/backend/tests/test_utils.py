@@ -1,4 +1,3 @@
-import asyncio
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -33,9 +32,7 @@ async def test_handle_rate_limit_retries(monkeypatch):
 
 def test_create_access_token():
     api.SECRET_KEY = "secret"
-    token = api.create_access_token(
-        {"sub": "user"}, expires_delta=api.timedelta(minutes=1)
-    )
+    token = api.create_access_token({"sub": "user"}, expires_delta=api.timedelta(minutes=1))
     payload = jose_jwt.decode(token, "secret", algorithms=[api.ALGORITHM])
     assert payload["sub"] == "user"
     assert "exp" in payload
@@ -44,17 +41,13 @@ def test_create_access_token():
 def test_is_blog_admin(monkeypatch):
     monkeypatch.setattr(api.config, "OwnersTuple", (1, 2))
     assert api.is_blog_admin(User(id="1", username="x", discriminator="0", avatar=None))
-    assert not api.is_blog_admin(
-        User(id="3", username="x", discriminator="0", avatar=None)
-    )
+    assert not api.is_blog_admin(User(id="3", username="x", discriminator="0", avatar=None))
 
 
 def test_is_bot_admin(monkeypatch):
     monkeypatch.setattr(api.config, "Owners", SimpleNamespace(OWNER1=1, OWNER2=2))
     assert api.is_bot_admin(User(id="2", username="x", discriminator="0", avatar=None))
-    assert not api.is_bot_admin(
-        User(id="3", username="x", discriminator="0", avatar=None)
-    )
+    assert not api.is_bot_admin(User(id="3", username="x", discriminator="0", avatar=None))
 
 
 @pytest.mark.asyncio

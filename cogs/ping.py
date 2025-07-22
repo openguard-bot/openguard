@@ -1,8 +1,6 @@
-import datetime
 import random
 import socket
 import time
-import asyncio
 
 import discord
 from discord.ext import commands
@@ -48,9 +46,7 @@ class Ping(commands.Cog):
             latencies.append((time.perf_counter() - start) * 1000)
         return sum(latencies) / len(latencies)
 
-    @commands.hybrid_command(
-        name="ping", description="Responds with the bot's latency."
-    )
+    @commands.hybrid_command(name="ping", description="Responds with the bot's latency.")
     async def slash_ping(self, ctx: commands.Context) -> None:
         # Pick the joke first so it doesn't skew timings
         joke = random.choice(jokes)

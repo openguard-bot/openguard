@@ -2,7 +2,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import subprocess
 import sys
 import os
 import asyncio
@@ -39,14 +38,10 @@ class UpdateCog(commands.Cog):
             )
             return
 
-    async def update_bot_internal(
-        self, ctx: commands.Context, force_restart: bool = False
-    ):
+    async def update_bot_internal(self, ctx: commands.Context, force_restart: bool = False):
         """Internal method to handle the bot update process."""
         if ctx.author.id not in AUTHORIZED_USER_IDS:
-            await ctx.send(
-                "❌ You are not authorized to use this command.", ephemeral=True
-            )
+            await ctx.send("❌ You are not authorized to use this command.", ephemeral=True)
             return
 
         status_msg = await ctx.send("🔄 Starting bot update process...")
@@ -59,14 +54,8 @@ class UpdateCog(commands.Cog):
 
         try:
             # 1. Get pre-pull commit hash
-            pre_pull_hash_result = await self._execute_git_command(
-                ["git", "rev-parse", "HEAD"]
-            )
-            pre_pull_hash = (
-                pre_pull_hash_result["output"]
-                if pre_pull_hash_result["success"]
-                else None
-            )
+            pre_pull_hash_result = await self._execute_git_command(["git", "rev-parse", "HEAD"])
+            pre_pull_hash = pre_pull_hash_result["output"] if pre_pull_hash_result["success"] else None
 
             # 2. Execute git pull
             embed.description = "Pulling changes from the Git repository..."
@@ -88,14 +77,8 @@ class UpdateCog(commands.Cog):
                 return
 
             # 3. Get post-pull commit hash and changed files
-            post_pull_hash_result = await self._execute_git_command(
-                ["git", "rev-parse", "HEAD"]
-            )
-            post_pull_hash = (
-                post_pull_hash_result["output"]
-                if post_pull_hash_result["success"]
-                else None
-            )
+            post_pull_hash_result = await self._execute_git_command(["git", "rev-parse", "HEAD"])
+            post_pull_hash = post_pull_hash_result["output"] if post_pull_hash_result["success"] else None
 
             changed_files = []
             if pre_pull_hash and post_pull_hash and pre_pull_hash != post_pull_hash:
@@ -103,9 +86,7 @@ class UpdateCog(commands.Cog):
                     ["git", "diff", "--name-only", pre_pull_hash, post_pull_hash]
                 )
                 if diff_result["success"]:
-                    changed_files = [
-                        f for f in diff_result["output"].strip().split("\n") if f
-                    ]
+                    changed_files = [f for f in diff_result["output"].strip().split("\n") if f]
 
             # 4. Check for dependency changes
             embed.description = "Checking for dependency changes..."
@@ -115,13 +96,9 @@ class UpdateCog(commands.Cog):
             # 5. Decide whether to restart or reload
             critical_files = ["bot.py", "requirements.txt"]
             if force_restart or any(f in changed_files for f in critical_files):
-                await self._perform_full_restart(
-                    status_msg, git_result, deps_result, changed_files, force_restart
-                )
+                await self._perform_full_restart(status_msg, git_result, deps_result, changed_files, force_restart)
             else:
-                await self._perform_cog_reload(
-                    status_msg, git_result, deps_result, changed_files
-                )
+                await self._perform_cog_reload(status_msg, git_result, deps_result, changed_files)
 
         except Exception as e:
             error_embed = discord.Embed(
@@ -165,18 +142,12 @@ class UpdateCog(commands.Cog):
                 "return_code": -1,
             }
 
-    async def _perform_cog_reload(
-        self, status_msg, git_result, deps_result, changed_files
-    ):
+    async def _perform_cog_reload(self, status_msg, git_result, deps_result, changed_files):
         """Handle the cog reloading process and update the user."""
-        embed = discord.Embed(
-            title="🔄 Bot Update: Reloading Cogs", color=discord.Color.orange()
-        )
+        embed = discord.Embed(title="🔄 Bot Update: Reloading Cogs", color=discord.Color.orange())
 
         cogs_to_reload = [
-            f"cogs.{os.path.basename(f)[:-3]}"
-            for f in changed_files
-            if f.startswith("cogs/") and f.endswith(".py")
+            f"cogs.{os.path.basename(f)[:-3]}" for f in changed_files if f.startswith("cogs/") and f.endswith(".py")
         ]
 
         if not cogs_to_reload:
@@ -205,9 +176,7 @@ class UpdateCog(commands.Cog):
             )
 
         if failed_cogs:
-            failed_text = "\n".join(
-                [f"{name}: {err[:100]}" for name, err in failed_cogs]
-            )
+            failed_text = "\n".join([f"{name}: {err[:100]}" for name, err in failed_cogs])
             embed.add_field(
                 name="❌ Failed Cogs",
                 value="```\n" + failed_text + "\n```",
@@ -216,13 +185,9 @@ class UpdateCog(commands.Cog):
 
         await status_msg.edit(embed=embed)
 
-    async def _perform_full_restart(
-        self, status_msg, git_result, deps_result, changed_files, force_restart=False
-    ):
+    async def _perform_full_restart(self, status_msg, git_result, deps_result, changed_files, force_restart=False):
         """Handle the full bot restart process and update the user."""
-        embed = discord.Embed(
-            title="🔄 Bot Update: Restarting", color=discord.Color.orange()
-        )
+        embed = discord.Embed(title="🔄 Bot Update: Restarting", color=discord.Color.orange())
 
         if force_restart:
             reason = "Restart was manually triggered."
@@ -240,20 +205,14 @@ class UpdateCog(commands.Cog):
         )
 
         if deps_result["missing_packages"]:
-            status = (
-                "Successfully installed"
-                if deps_result["install_success"]
-                else "Failed to install"
-            )
+            status = "Successfully installed" if deps_result["install_success"] else "Failed to install"
             embed.add_field(
                 name="Dependencies",
                 value=f"{status} {len(deps_result['missing_packages'])} packages.",
                 inline=False,
             )
 
-        embed.add_field(
-            name="Next Step", value="Restarting in 3 seconds...", inline=False
-        )
+        embed.add_field(name="Next Step", value="Restarting in 3 seconds...", inline=False)
 
         await status_msg.edit(embed=embed)
         await asyncio.sleep(3)
@@ -296,26 +255,16 @@ class UpdateCog(commands.Cog):
 
         # Check if user is authorized
         if ctx.author.id not in AUTHORIZED_USER_IDS:
-            await ctx.reply(
-                "❌ You are not authorized to use this command.", ephemeral=True
-            )
+            await ctx.reply("❌ You are not authorized to use this command.", ephemeral=True)
             return
         async with ctx.typing():
             try:
                 # Get git status
-                status_result = await self._execute_git_command(
-                    ["git", "status", "--porcelain"]
-                )
-                branch_result = await self._execute_git_command(
-                    ["git", "branch", "--show-current"]
-                )
-                commit_result = await self._execute_git_command(
-                    ["git", "log", "-1", "--oneline"]
-                )
+                status_result = await self._execute_git_command(["git", "status", "--porcelain"])
+                branch_result = await self._execute_git_command(["git", "branch", "--show-current"])
+                commit_result = await self._execute_git_command(["git", "log", "-1", "--oneline"])
 
-                embed = discord.Embed(
-                    title="📊 Git Repository Status", color=discord.Color.blue()
-                )
+                embed = discord.Embed(title="📊 Git Repository Status", color=discord.Color.blue())
 
                 # Current branch
                 if branch_result["success"]:
@@ -373,9 +322,7 @@ class UpdateCog(commands.Cog):
 
         # Check if user is authorized
         if ctx.author.id not in AUTHORIZED_USER_IDS:
-            response_func = (
-                ctx.interaction.response.send_message if ctx.interaction else ctx.send
-            )
+            response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
             await response_func(
                 "❌ You are not authorized to use this command.",
                 ephemeral=True if ctx.interaction else False,
@@ -396,9 +343,7 @@ class UpdateCog(commands.Cog):
                     description="requirements.txt file not found",
                     color=discord.Color.red(),
                 )
-                response_func = (
-                    ctx.interaction.followup.send if ctx.interaction else ctx.send
-                )
+                response_func = ctx.interaction.followup.send if ctx.interaction else ctx.send
                 await response_func(embed=embed)
                 return
 
@@ -406,10 +351,7 @@ class UpdateCog(commands.Cog):
             with open(requirements_path, "r", encoding="utf-8") as f:
                 requirements = f.read().strip().split("\n")
 
-            installed_packages = {
-                pkg.project_name.lower(): pkg.version
-                for pkg in pkg_resources.working_set
-            }
+            installed_packages = {pkg.project_name.lower(): pkg.version for pkg in pkg_resources.working_set}
             missing_packages = []
             installed_count = 0
 
@@ -428,16 +370,10 @@ class UpdateCog(commands.Cog):
 
             embed = discord.Embed(
                 title="📦 Dependencies Check",
-                color=(
-                    discord.Color.green()
-                    if not missing_packages
-                    else discord.Color.orange()
-                ),
+                color=(discord.Color.green() if not missing_packages else discord.Color.orange()),
             )
 
-            embed.add_field(
-                name="✅ Installed", value=f"{installed_count} packages", inline=True
-            )
+            embed.add_field(name="✅ Installed", value=f"{installed_count} packages", inline=True)
 
             embed.add_field(
                 name="❌ Missing" if missing_packages else "✅ Missing",
@@ -468,9 +404,7 @@ class UpdateCog(commands.Cog):
                     inline=False,
                 )
 
-            response_func = (
-                ctx.interaction.followup.send if ctx.interaction else ctx.send
-            )
+            response_func = ctx.interaction.followup.send if ctx.interaction else ctx.send
             await response_func(embed=embed)
 
         except Exception as e:
@@ -479,9 +413,7 @@ class UpdateCog(commands.Cog):
                 description=f"Failed to check dependencies: {str(e)}",
                 color=discord.Color.red(),
             )
-            response_func = (
-                ctx.interaction.followup.send if ctx.interaction else ctx.send
-            )
+            response_func = ctx.interaction.followup.send if ctx.interaction else ctx.send
             await response_func(embed=error_embed)
 
     async def _execute_git_command(self, command):
@@ -530,10 +462,7 @@ class UpdateCog(commands.Cog):
 
             # Parse requirements and check which are missing
             missing_packages = []
-            installed_packages = {
-                pkg.project_name.lower(): pkg.version
-                for pkg in pkg_resources.working_set
-            }
+            installed_packages = {pkg.project_name.lower(): pkg.version for pkg in pkg_resources.working_set}
 
             for req_line in requirements:
                 req_line = req_line.strip()

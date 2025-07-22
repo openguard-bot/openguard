@@ -1,5 +1,4 @@
 from discord.ext import commands
-from discord import app_commands
 import subprocess
 
 
@@ -41,9 +40,7 @@ class Shell(commands.Cog):
                 await ctx.send(output)
 
         except subprocess.CalledProcessError as e:
-            await ctx.send(
-                f"**Error executing command:**\n```\n{e}\n```\n**Stderr:**\n```\n{e.stderr}\n```"
-            )
+            await ctx.send(f"**Error executing command:**\n```\n{e}\n```\n**Stderr:**\n```\n{e.stderr}\n```")
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: ```\n{e}\n```")
 
