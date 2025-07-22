@@ -458,7 +458,7 @@ class CaptchaCog(commands.Cog):
             ),
             color=discord.Color.blue(),
         )
-        verification_embed.set_footer(text="Powered by Local Captcha Generation")
+        verification_embed.set_footer(text="OpenGuard Captcha Verification")
 
         # Create verification view
         view = VerificationStartView(self)
