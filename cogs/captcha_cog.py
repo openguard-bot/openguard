@@ -10,10 +10,8 @@ from discord import app_commands
 # pylint: disable=no-member
 import logging
 import traceback
-import os
 import io
 import random
-import string
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 from PIL import Image, ImageDraw, ImageFont
@@ -50,12 +48,12 @@ class LocalCaptchaGenerator:
         """Generate random captcha text."""
         # Use only uppercase letters and numbers, avoiding confusing characters
         chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-        return ''.join(random.choice(chars) for _ in range(length))
+        return "".join(random.choice(chars) for _ in range(length))
 
     def generate_captcha_image(self, text: str) -> io.BytesIO:
         """Generate a captcha image with the given text."""
         # Create image with white background
-        image = Image.new('RGB', (self.width, self.height), 'white')
+        image = Image.new("RGB", (self.width, self.height), "white")
         draw = ImageDraw.Draw(image)
 
         # Try to use a built-in font, fallback to default if not available
@@ -74,7 +72,7 @@ class LocalCaptchaGenerator:
         for _ in range(random.randint(3, 6)):
             x1, y1 = random.randint(0, self.width), random.randint(0, self.height)
             x2, y2 = random.randint(0, self.width), random.randint(0, self.height)
-            draw.line([(x1, y1), (x2, y2)], fill=random.choice(['gray', 'lightgray', 'darkgray']), width=1)
+            draw.line([(x1, y1), (x2, y2)], fill=random.choice(["gray", "lightgray", "darkgray"]), width=1)
 
         # Calculate text position to center it
         bbox = draw.textbbox((0, 0), text, font=font)
@@ -91,7 +89,7 @@ class LocalCaptchaGenerator:
             offset_y = random.randint(-3, 3)
 
             # Random color (dark colors for visibility)
-            color = random.choice(['black', 'darkblue', 'darkred', 'darkgreen', 'purple'])
+            color = random.choice(["black", "darkblue", "darkred", "darkgreen", "purple"])
 
             draw.text((char_x + offset_x, y + offset_y), char, font=font, fill=color)
 
@@ -103,11 +101,11 @@ class LocalCaptchaGenerator:
         # Add some noise dots
         for _ in range(random.randint(20, 40)):
             x, y = random.randint(0, self.width), random.randint(0, self.height)
-            draw.point((x, y), fill=random.choice(['gray', 'lightgray']))
+            draw.point((x, y), fill=random.choice(["gray", "lightgray"]))
 
         # Save to BytesIO
         img_buffer = io.BytesIO()
-        image.save(img_buffer, format='PNG')
+        image.save(img_buffer, format="PNG")
         img_buffer.seek(0)
 
         return img_buffer
@@ -209,7 +207,9 @@ class CaptchaCog(commands.Cog):
         except Exception as e:
             log.error(f"Error cleaning up expired captchas: {e}")
 
-    async def store_captcha(self, guild_id: int, user_id: int, captcha_id: str, captcha_text: str, expires_at: datetime) -> bool:
+    async def store_captcha(
+        self, guild_id: int, user_id: int, captcha_id: str, captcha_text: str, expires_at: datetime
+    ) -> bool:
         """Store a captcha solution with expiration."""
         try:
             from database.connection import execute_query
@@ -238,9 +238,9 @@ class CaptchaCog(commands.Cog):
             result = await execute_query(
                 "SELECT solution FROM captcha_solutions WHERE captcha_id = $1 AND expires_at > CURRENT_TIMESTAMP",
                 captcha_id,
-                fetch_one=True
+                fetch_one=True,
             )
-            return result['solution'] if result else None
+            return result["solution"] if result else None
         except Exception as e:
             log.error(f"Failed to get captcha solution for {captcha_id}: {e}")
             return None
@@ -558,6 +558,7 @@ class CaptchaCog(commands.Cog):
 
             # Generate unique captcha ID
             import uuid
+
             captcha_id = str(uuid.uuid4())
 
             # Store captcha solution in database with 10 minute expiration
