@@ -10,10 +10,8 @@ from discord import app_commands
 # pylint: disable=no-member
 import logging
 import traceback
-import os
 import io
 import random
-import string
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 from PIL import Image, ImageDraw, ImageFont
