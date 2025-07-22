@@ -1,6 +1,6 @@
 """
 Captcha Verification Cog for Discord Bot
-Provides captcha verification using OpenCaptcha API with configurable settings.
+Provides captcha verification using locally generated images.
 """
 
 import discord
@@ -8,12 +8,15 @@ from discord.ext import commands
 from discord import app_commands
 
 # pylint: disable=no-member
-import aiohttp
 import logging
 import traceback
 import os
+import io
+import random
+import string
 from typing import Optional
 from datetime import datetime, timezone, timedelta
+from PIL import Image, ImageDraw, ImageFont
 
 from database.operations import (
     get_captcha_config,
@@ -35,169 +38,234 @@ async def send_error_dm(bot_instance, error_type, error_message, error_traceback
     await _send_error_dm(bot_instance, error_type, error_message, error_traceback, context_info)
 
 
-class HCaptchaVerificationView(discord.ui.View):
-    """View for hCaptcha verification with web interface."""
+class LocalCaptchaGenerator:
+    """Generate captcha images locally using PIL."""
 
-    def __init__(self, cog, user: discord.Member, verification_token: str):
+    def __init__(self):
+        self.width = 200
+        self.height = 80
+        self.font_size = 24
+
+    def generate_captcha_text(self, length: int = 5) -> str:
+        """Generate random captcha text."""
+        # Use only uppercase letters and numbers, avoiding confusing characters
+        chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        return ''.join(random.choice(chars) for _ in range(length))
+
+    def generate_captcha_image(self, text: str) -> io.BytesIO:
+        """Generate a captcha image with the given text."""
+        # Create image with white background
+        image = Image.new('RGB', (self.width, self.height), 'white')
+        draw = ImageDraw.Draw(image)
+
+        # Try to use a built-in font, fallback to default if not available
+        try:
+            # Try to load a system font
+            font = ImageFont.truetype("arial.ttf", self.font_size)
+        except (OSError, IOError):
+            try:
+                # Try alternative font names
+                font = ImageFont.truetype("DejaVuSans.ttf", self.font_size)
+            except (OSError, IOError):
+                # Use default font as fallback
+                font = ImageFont.load_default()
+
+        # Add some noise lines
+        for _ in range(random.randint(3, 6)):
+            x1, y1 = random.randint(0, self.width), random.randint(0, self.height)
+            x2, y2 = random.randint(0, self.width), random.randint(0, self.height)
+            draw.line([(x1, y1), (x2, y2)], fill=random.choice(['gray', 'lightgray', 'darkgray']), width=1)
+
+        # Calculate text position to center it
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        x = (self.width - text_width) // 2
+        y = (self.height - text_height) // 2
+
+        # Draw each character with slight random positioning and rotation
+        char_x = x
+        for char in text:
+            # Add slight random offset
+            offset_x = random.randint(-3, 3)
+            offset_y = random.randint(-3, 3)
+
+            # Random color (dark colors for visibility)
+            color = random.choice(['black', 'darkblue', 'darkred', 'darkgreen', 'purple'])
+
+            draw.text((char_x + offset_x, y + offset_y), char, font=font, fill=color)
+
+            # Move to next character position
+            char_bbox = draw.textbbox((0, 0), char, font=font)
+            char_width = char_bbox[2] - char_bbox[0]
+            char_x += char_width + random.randint(2, 8)
+
+        # Add some noise dots
+        for _ in range(random.randint(20, 40)):
+            x, y = random.randint(0, self.width), random.randint(0, self.height)
+            draw.point((x, y), fill=random.choice(['gray', 'lightgray']))
+
+        # Save to BytesIO
+        img_buffer = io.BytesIO()
+        image.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+
+        return img_buffer
+
+
+class CaptchaVerificationView(discord.ui.View):
+    """View for local captcha verification."""
+
+    def __init__(self, cog, user: discord.Member, captcha_text: str, captcha_id: str):
         super().__init__(timeout=600)  # 10 minute timeout
         self.cog = cog
         self.user = user
-        self.verification_token = verification_token
+        self.captcha_text = captcha_text
+        self.captcha_id = captcha_id
 
-    @discord.ui.button(label="Complete Verification", style=discord.ButtonStyle.primary, emoji="🔐")
-    async def complete_verification(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Open verification page in browser."""
+    @discord.ui.button(label="Enter Solution", style=discord.ButtonStyle.primary, emoji="✏️")
+    async def enter_solution(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Open modal for captcha solution input."""
         if interaction.user.id != self.user.id:
             await interaction.response.send_message("This verification is not for you!", ephemeral=True)
             return
 
-        # Create verification URL using the backend endpoint
-        base_url = os.getenv("BACKEND_URL", "https://openguard.lol")
-        verification_url = (
-            f"{base_url}/api/verify?token={self.verification_token}&user={self.user.id}&guild={interaction.guild.id}"
-        )
-
-        embed = discord.Embed(
-            title="🔐 Complete Verification",
-            description=(
-                f"Click the link below to complete your verification:\n\n"
-                f"[**Open Verification Page**]({verification_url})\n\n"
-                f"**Instructions:**\n"
-                f"1. Click the link above\n"
-                f"2. Complete the hCaptcha challenge\n"
-                f"3. Return here - you'll automatically get your role!\n\n"
-                f"⚠️ **This link expires in 10 minutes**"
-            ),
-            color=discord.Color.blue(),
-        )
-        embed.set_footer(text=f"Verification Token: {self.verification_token[:8]}...")
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    @discord.ui.button(label="Enter hCaptcha Response", style=discord.ButtonStyle.secondary, emoji="📝")
-    async def manual_response(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Allow manual entry of hCaptcha response token."""
-        if interaction.user.id != self.user.id:
-            await interaction.response.send_message("This verification is not for you!", ephemeral=True)
-            return
-
-        modal = HCaptchaResponseModal(self.cog, self.user)
+        modal = CaptchaSolutionModal(self.cog, self.user, self.captcha_text, self.captcha_id)
         await interaction.response.send_modal(modal)
 
 
-class HCaptchaResponseModal(discord.ui.Modal):
-    """Modal for hCaptcha response token input."""
+class CaptchaSolutionModal(discord.ui.Modal):
+    """Modal for captcha solution input."""
 
-    def __init__(self, cog, user: discord.Member):
-        super().__init__(title="Enter hCaptcha Response")
+    def __init__(self, cog, user: discord.Member, captcha_text: str, captcha_id: str):
+        super().__init__(title="Enter Captcha Solution")
         self.cog = cog
         self.user = user
+        self.captcha_text = captcha_text
+        self.captcha_id = captcha_id
 
-        self.response_token = discord.ui.TextInput(
-            label="hCaptcha Response Token:",
-            placeholder="Paste the hCaptcha response token here...",
+        self.solution = discord.ui.TextInput(
+            label="Enter the text from the image:",
+            placeholder="Type what you see in the captcha image...",
             required=True,
-            max_length=2000,
-            style=discord.TextStyle.paragraph,
+            max_length=10,
+            style=discord.TextStyle.short,
         )
-        self.add_item(self.response_token)
+        self.add_item(self.solution)
 
     async def on_submit(self, interaction: discord.Interaction):
-        """Handle hCaptcha response token submission."""
+        """Handle captcha solution submission."""
         await interaction.response.defer(ephemeral=True)
 
-        response_token = self.response_token.value.strip()
+        user_solution = self.solution.value.strip().upper()
 
-        # Verify the hCaptcha response
-        result = await self.cog.verify_hcaptcha_response(response_token)
+        # Get the correct solution from database
+        correct_solution = await self.cog.get_captcha_solution(self.captcha_id)
 
-        if result:
+        if not correct_solution:
+            embed = discord.Embed(
+                title="❌ Captcha Expired",
+                description="This captcha has expired. Please start verification again.",
+                color=discord.Color.red(),
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Verify the solution
+        if user_solution == correct_solution.upper():
             await self.cog.handle_successful_verification(interaction, self.user)
+            # Clean up the captcha from database
+            await self.cog.cleanup_captcha(self.captcha_id)
         else:
             await self.cog.handle_failed_verification(interaction, self.user)
+            # Clean up the captcha from database
+            await self.cog.cleanup_captcha(self.captcha_id)
 
 
 class CaptchaCog(commands.Cog):
-    """Captcha verification system using OpenCaptcha."""
+    """Captcha verification system using locally generated images."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.hcaptcha_verify_url = "https://hcaptcha.com/siteverify"
-        # You'll need to set these environment variables
-        import os
-
-        self.hcaptcha_secret = os.getenv("HCAPTCHA_SECRET_KEY")
-        self.hcaptcha_site_key = os.getenv("HCAPTCHA_SITE_KEY")
-
-        if not self.hcaptcha_secret:
-            print("WARNING: HCAPTCHA_SECRET_KEY environment variable not set!")
-        if not self.hcaptcha_site_key:
-            print("WARNING: HCAPTCHA_SITE_KEY environment variable not set!")
-
-        print("CaptchaCog initialized with hCaptcha.")
+        self.captcha_generator = LocalCaptchaGenerator()
+        print("CaptchaCog initialized with local captcha generation.")
 
     async def cog_load(self):
-        """Initialize HTTP session when cog loads."""
-        if not self.session or self.session.closed:
-            self.session = aiohttp.ClientSession()
-
+        """Initialize when cog loads."""
         # Start cleanup task
         self.cleanup_task.start()
 
     async def cog_unload(self):
-        """Clean up HTTP session when cog unloads."""
-        if self.session and not self.session.closed:
-            await self.session.close()
-
+        """Clean up when cog unloads."""
         # Stop cleanup task
         self.cleanup_task.cancel()
 
     @commands.loop(minutes=30)
     async def cleanup_task(self):
-        """Periodic cleanup of expired verification tokens."""
+        """Periodic cleanup of expired captcha data."""
         try:
-            await self._cleanup_expired_tokens()
-            log.info("Cleaned up expired verification tokens")
+            await self._cleanup_expired_captchas()
+            log.info("Cleaned up expired captcha data")
         except Exception as e:
-            log.error(f"Error cleaning up expired tokens: {e}")
+            log.error(f"Error cleaning up expired captchas: {e}")
 
-    async def _store_verification_token(self, guild_id: int, user_id: int, token: str, expires_at: datetime) -> bool:
-        """Store a verification token with expiration."""
+    async def store_captcha(self, guild_id: int, user_id: int, captcha_id: str, captcha_text: str, expires_at: datetime) -> bool:
+        """Store a captcha solution with expiration."""
         try:
             from database.connection import execute_query
 
             await execute_query(
-                """INSERT INTO verification_tokens (guild_id, user_id, token, expires_at)
-                   VALUES ($1, $2, $3, $4)
+                """INSERT INTO captcha_solutions (guild_id, user_id, captcha_id, solution, expires_at)
+                   VALUES ($1, $2, $3, $4, $5)
                    ON CONFLICT (guild_id, user_id)
-                   DO UPDATE SET token = $3, expires_at = $4, created_at = CURRENT_TIMESTAMP""",
+                   DO UPDATE SET captcha_id = $3, solution = $4, expires_at = $5, created_at = CURRENT_TIMESTAMP""",
                 guild_id,
                 user_id,
-                token,
+                captcha_id,
+                captcha_text,
                 expires_at,
             )
             return True
         except Exception as e:
-            log.error(f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}")
+            log.error(f"Failed to store captcha for user {user_id} in guild {guild_id}: {e}")
             return False
 
-    async def _cleanup_expired_tokens(self) -> bool:
-        """Clean up expired verification tokens."""
+    async def get_captcha_solution(self, captcha_id: str) -> Optional[str]:
+        """Get captcha solution by ID."""
         try:
             from database.connection import execute_query
 
-            await execute_query("DELETE FROM verification_tokens WHERE expires_at <= CURRENT_TIMESTAMP")
+            result = await execute_query(
+                "SELECT solution FROM captcha_solutions WHERE captcha_id = $1 AND expires_at > CURRENT_TIMESTAMP",
+                captcha_id,
+                fetch_one=True
+            )
+            return result['solution'] if result else None
+        except Exception as e:
+            log.error(f"Failed to get captcha solution for {captcha_id}: {e}")
+            return None
+
+    async def cleanup_captcha(self, captcha_id: str) -> bool:
+        """Clean up a specific captcha by ID."""
+        try:
+            from database.connection import execute_query
+
+            await execute_query("DELETE FROM captcha_solutions WHERE captcha_id = $1", captcha_id)
             return True
         except Exception as e:
-            log.error(f"Failed to cleanup expired tokens: {e}")
+            log.error(f"Failed to cleanup captcha {captcha_id}: {e}")
             return False
 
-    async def _ensure_session(self) -> aiohttp.ClientSession:
-        """Ensure HTTP session is available."""
-        if not self.session or self.session.closed:
-            self.session = aiohttp.ClientSession()
-        return self.session
+    async def _cleanup_expired_captchas(self) -> bool:
+        """Clean up expired captcha solutions."""
+        try:
+            from database.connection import execute_query
+
+            await execute_query("DELETE FROM captcha_solutions WHERE expires_at <= CURRENT_TIMESTAMP")
+            return True
+        except Exception as e:
+            log.error(f"Failed to cleanup expired captchas: {e}")
+            return False
 
     @commands.hybrid_group(name="captcha", description="Captcha verification commands.")
     async def captcha(self, ctx: commands.Context):
@@ -385,14 +453,14 @@ class CaptchaCog(commands.Cog):
                 "Welcome to the server! To gain access, you need to complete a captcha verification.\n\n"
                 "**How to verify:**\n"
                 "1. Click the **Start Verification** button below\n"
-                "2. Solve the captcha image that appears\n"
-                "3. Enter your solution in the text box\n"
+                "2. Look at the captcha image that appears\n"
+                "3. Enter the text you see in the image\n"
                 "4. Get your verified role and access to the server!\n\n"
                 "⚠️ **Note:** You have limited attempts, so look carefully at the image."
             ),
             color=discord.Color.blue(),
         )
-        verification_embed.set_footer(text="Powered by OpenCaptcha")
+        verification_embed.set_footer(text="Powered by Local Captcha Generation")
 
         # Create verification view
         view = VerificationStartView(self)
@@ -424,12 +492,12 @@ class CaptchaCog(commands.Cog):
 
     @captcha.command(
         name="verify",
-        description="Manually verify a user with hCaptcha response token.",
+        description="Manually verify a user (admin only).",
     )
-    @app_commands.describe(user="The user to verify", hcaptcha_response="The hCaptcha response token")
+    @app_commands.describe(user="The user to verify")
     @app_commands.checks.has_permissions(administrator=True)
-    async def manual_verify(self, ctx: commands.Context, user: discord.Member, hcaptcha_response: str):
-        """Manually verify a user with hCaptcha response token."""
+    async def manual_verify(self, ctx: commands.Context, user: discord.Member):
+        """Manually verify a user (admin bypass)."""
         guild_id = ctx.guild.id
 
         # Check if captcha is enabled
@@ -444,192 +512,89 @@ class CaptchaCog(commands.Cog):
             await response_func(embed=embed, ephemeral=True)
             return
 
-        # Verify the hCaptcha response
-        result = await self.verify_hcaptcha_response(hcaptcha_response.strip())
+        # Mark as verified and assign role
+        try:
+            await update_captcha_attempt(guild_id, user.id, increment=False, verified=True)
 
-        if result:
-            # Mark as verified and assign role
-            try:
-                await update_captcha_attempt(guild_id, user.id, increment=False, verified=True)
+            if config.verification_role_id:
+                role = ctx.guild.get_role(config.verification_role_id)
+                if role:
+                    await user.add_roles(role, reason="Manual captcha verification by administrator")
 
-                if config.verification_role_id:
-                    role = ctx.guild.get_role(config.verification_role_id)
-                    if role:
-                        await user.add_roles(role, reason="Manual captcha verification by administrator")
-
-                        embed = discord.Embed(
-                            title="✅ User Verified",
-                            description=f"{user.mention} has been successfully verified and given the {role.mention} role.",
-                            color=discord.Color.green(),
-                        )
-                    else:
-                        embed = discord.Embed(
-                            title="✅ User Verified",
-                            description=f"{user.mention} has been verified, but the verification role could not be found.",
-                            color=discord.Color.orange(),
-                        )
+                    embed = discord.Embed(
+                        title="✅ User Verified",
+                        description=f"{user.mention} has been successfully verified and given the {role.mention} role.",
+                        color=discord.Color.green(),
+                    )
                 else:
                     embed = discord.Embed(
                         title="✅ User Verified",
-                        description=f"{user.mention} has been verified. No verification role is configured.",
-                        color=discord.Color.green(),
+                        description=f"{user.mention} has been verified, but the verification role could not be found.",
+                        color=discord.Color.orange(),
                     )
-            except Exception as e:
-                log.error(f"Error in manual verification: {e}")
+            else:
                 embed = discord.Embed(
-                    title="❌ Error",
-                    description="Verification succeeded but there was an error assigning the role.",
-                    color=discord.Color.red(),
+                    title="✅ User Verified",
+                    description=f"{user.mention} has been verified. No verification role is configured.",
+                    color=discord.Color.green(),
                 )
-        else:
+        except Exception as e:
+            log.error(f"Error in manual verification: {e}")
             embed = discord.Embed(
-                title="❌ Verification Failed",
-                description="The hCaptcha response token is invalid or expired.",
+                title="❌ Error",
+                description="There was an error during verification.",
                 color=discord.Color.red(),
             )
 
         response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=embed, ephemeral=False)
 
-    async def verify_hcaptcha_response(self, hcaptcha_response: str, user_ip: Optional[str] = None) -> bool:
-        """Verify hCaptcha response using hCaptcha API."""
-        if not self.hcaptcha_secret:
-            log.error("hCaptcha secret key not configured")
-            return False
-
-        session = await self._ensure_session()
-
-        # Prepare verification payload
-        payload = {
-            "secret": self.hcaptcha_secret,
-            "response": hcaptcha_response,
-        }
-
-        if user_ip:
-            payload["remoteip"] = user_ip
-
+    async def generate_captcha_for_user(self, guild_id: int, user_id: int) -> tuple[discord.File, str]:
+        """Generate a captcha image for a user and return the file and captcha ID."""
         try:
-            async with session.post(self.hcaptcha_verify_url, data=payload) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    success = data.get("success", False)
+            # Generate captcha text and image
+            captcha_text = self.captcha_generator.generate_captcha_text()
+            captcha_image = self.captcha_generator.generate_captcha_image(captcha_text)
 
-                    if not success:
-                        error_codes = data.get("error-codes", [])
-                        log.warning(f"hCaptcha verification failed: {error_codes}")
+            # Generate unique captcha ID
+            import uuid
+            captcha_id = str(uuid.uuid4())
 
-                        # Report specific hCaptcha errors
-                        error_context = f"hCaptcha Verification Failed - Error codes: {error_codes}, Response: {data}"
-
-                        await send_error_dm(
-                            self.bot,
-                            error_type="hCaptchaVerificationFailed",
-                            error_message=f"hCaptcha verification failed with error codes: {error_codes}",
-                            error_traceback=None,
-                            context_info=error_context,
-                        )
-
-                    return success
-                else:
-                    # Detailed error reporting for API errors
-                    error_text = await response.text()
-                    error_context = (
-                        f"hCaptcha API Error - Status: {response.status}, "
-                        f"URL: {self.hcaptcha_verify_url}, "
-                        f"Response: {error_text[:500]}..."
-                    )
-
-                    await send_error_dm(
-                        self.bot,
-                        error_type="hCaptchaAPIError",
-                        error_message=f"Failed to verify hCaptcha - HTTP {response.status}",
-                        error_traceback=None,
-                        context_info=error_context,
-                    )
-
-                    log.error(f"hCaptcha API error: {response.status} - {error_text}")
-                    return False
-        except aiohttp.ClientError as e:
-            # Network/connection errors
-            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_context = f"hCaptcha Network Error - URL: {self.hcaptcha_verify_url}, Error Type: {type(e).__name__}"
-
-            await send_error_dm(
-                self.bot,
-                error_type="hCaptchaNetworkError",
-                error_message=str(e),
-                error_traceback=tb_string,
-                context_info=error_context,
-            )
-
-            log.error(f"Network error verifying hCaptcha: {e}")
-            return False
-        except Exception as e:
-            # Unexpected errors
-            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_context = f"Unexpected error in hCaptcha verification - URL: {self.hcaptcha_verify_url}"
-
-            await send_error_dm(
-                self.bot,
-                error_type=type(e).__name__,
-                error_message=str(e),
-                error_traceback=tb_string,
-                context_info=error_context,
-            )
-
-            log.error(f"Unexpected error verifying hCaptcha: {e}")
-            return False
-
-    def get_hcaptcha_site_key(self) -> Optional[str]:
-        """Get the hCaptcha site key for embedding."""
-        return self.hcaptcha_site_key
-
-    async def create_verification_endpoint(self, guild_id: int, user_id: int, verification_token: str) -> bool:
-        """Store verification token for later validation."""
-        try:
-            # Store in database with expiration (10 minutes)
-            from datetime import datetime, timezone, timedelta
-
+            # Store captcha solution in database with 10 minute expiration
             expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+            await self.store_captcha(guild_id, user_id, captcha_id, captcha_text, expires_at)
 
-            # You could store this in the database or Redis
-            # For now, we'll just log it
-            log.info(
-                f"Created verification token {verification_token} for user {user_id} in guild {guild_id}, expires at {expires_at}"
-            )
-            return True
+            # Create Discord file
+            captcha_file = discord.File(captcha_image, filename=f"captcha_{captcha_id}.png")
+
+            return captcha_file, captcha_id
+
         except Exception as e:
-            log.error(f"Failed to create verification endpoint: {e}")
-            return False
+            log.error(f"Failed to generate captcha for user {user_id}: {e}")
+            raise
 
-    def create_hcaptcha_embed(self, verification_token: str) -> discord.Embed:
-        """Create embed for hCaptcha verification."""
+    def create_captcha_embed(self, captcha_id: str) -> discord.Embed:
+        """Create embed for local captcha verification."""
         embed = discord.Embed(
-            title="🔐 hCaptcha Verification Required",
+            title="🔐 Captcha Verification Required",
             description=(
-                "To complete verification, you need to solve an hCaptcha challenge.\n\n"
-                "**Choose one of the options below:**\n"
-                "• **Complete Verification** - Opens a web page with hCaptcha\n"
-                "• **Enter Response** - Manually enter hCaptcha response token\n\n"
-                "⚠️ **Note:** You must complete this within 10 minutes."
+                "Please look at the image below and enter the text you see.\n\n"
+                "**Instructions:**\n"
+                "• Look carefully at the captcha image\n"
+                "• Enter the text exactly as you see it\n"
+                "• Click **Enter Solution** when ready\n\n"
+                "⚠️ **Note:** This captcha will expire in 10 minutes."
             ),
             color=discord.Color.blue(),
         )
 
-        if self.hcaptcha_site_key:
-            embed.add_field(
-                name="Site Key",
-                value=f"`{self.hcaptcha_site_key}`",
-                inline=False,
-            )
-
         embed.add_field(
-            name="Verification Token",
-            value=f"`{verification_token}`",
+            name="Tips",
+            value="• The text is case-insensitive\n• Look for letters and numbers\n• Ignore background noise",
             inline=False,
         )
 
-        embed.set_footer(text="Powered by hCaptcha • This verification will expire in 10 minutes")
+        embed.set_footer(text="Powered by Local Captcha Generation • This verification will expire in 10 minutes")
         return embed
 
     async def handle_successful_verification(self, interaction: discord.Interaction, user: discord.Member):
@@ -845,29 +810,24 @@ class VerificationStartView(discord.ui.View):
 
         await interaction.response.defer(ephemeral=True)
 
-        # Generate a unique verification token for this user
-        import uuid
+        try:
+            # Generate captcha image and get captcha ID
+            captcha_file, captcha_id = await self.cog.generate_captcha_for_user(guild_id, user.id)
 
-        verification_token = str(uuid.uuid4())
+            # Create captcha embed and view
+            embed = self.cog.create_captcha_embed(captcha_id)
+            view = CaptchaVerificationView(self.cog, user, "", captcha_id)  # captcha_text will be retrieved from DB
 
-        # Store the verification token in database with 10 minute expiration
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-        success = await self._store_verification_token(guild_id, user.id, verification_token, expires_at)
+            await interaction.followup.send(embed=embed, file=captcha_file, view=view, ephemeral=True)
 
-        if not success:
+        except Exception as e:
+            log.error(f"Failed to generate captcha for user {user.id}: {e}")
             embed = discord.Embed(
                 title="❌ Error",
-                description="Failed to create verification session. Please try again.",
+                description="Failed to generate captcha. Please try again.",
                 color=discord.Color.red(),
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-
-        # Create hCaptcha embed and view
-        embed = self.cog.create_hcaptcha_embed(verification_token)
-        view = HCaptchaVerificationView(self.cog, user, verification_token)
-
-        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
