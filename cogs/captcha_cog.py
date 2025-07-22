@@ -4,7 +4,7 @@ Provides captcha verification using locally generated images.
 """
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
 
 # pylint: disable=no-member
@@ -14,6 +14,7 @@ import os
 import io
 import random
 import string
+import uuid
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 from PIL import Image, ImageDraw, ImageFont
@@ -116,11 +117,10 @@ class LocalCaptchaGenerator:
 class CaptchaVerificationView(discord.ui.View):
     """View for local captcha verification."""
 
-    def __init__(self, cog, user: discord.Member, captcha_text: str, captcha_id: str):
+    def __init__(self, cog, user: discord.Member, captcha_id: str):
         super().__init__(timeout=600)  # 10 minute timeout
         self.cog = cog
         self.user = user
-        self.captcha_text = captcha_text
         self.captcha_id = captcha_id
 
     @discord.ui.button(label="Enter Solution", style=discord.ButtonStyle.primary, emoji="✏️")
@@ -130,18 +130,17 @@ class CaptchaVerificationView(discord.ui.View):
             await interaction.response.send_message("This verification is not for you!", ephemeral=True)
             return
 
-        modal = CaptchaSolutionModal(self.cog, self.user, self.captcha_text, self.captcha_id)
+        modal = CaptchaSolutionModal(self.cog, self.user, self.captcha_id)
         await interaction.response.send_modal(modal)
 
 
 class CaptchaSolutionModal(discord.ui.Modal):
     """Modal for captcha solution input."""
 
-    def __init__(self, cog, user: discord.Member, captcha_text: str, captcha_id: str):
+    def __init__(self, cog, user: discord.Member, captcha_id: str):
         super().__init__(title="Enter Captcha Solution")
         self.cog = cog
         self.user = user
-        self.captcha_text = captcha_text
         self.captcha_id = captcha_id
 
         self.solution = discord.ui.TextInput(
@@ -200,7 +199,7 @@ class CaptchaCog(commands.Cog):
         # Stop cleanup task
         self.cleanup_task.cancel()
 
-    @commands.loop(minutes=30)
+    @tasks.loop(minutes=30)
     async def cleanup_task(self):
         """Periodic cleanup of expired captcha data."""
         try:
@@ -557,7 +556,6 @@ class CaptchaCog(commands.Cog):
             captcha_image = self.captcha_generator.generate_captcha_image(captcha_text)
 
             # Generate unique captcha ID
-            import uuid
             captcha_id = str(uuid.uuid4())
 
             # Store captcha solution in database with 10 minute expiration
@@ -816,7 +814,7 @@ class VerificationStartView(discord.ui.View):
 
             # Create captcha embed and view
             embed = self.cog.create_captcha_embed(captcha_id)
-            view = CaptchaVerificationView(self.cog, user, "", captcha_id)  # captcha_text will be retrieved from DB
+            view = CaptchaVerificationView(self.cog, user, captcha_id)
 
             await interaction.followup.send(embed=embed, file=captcha_file, view=view, ephemeral=True)
 
