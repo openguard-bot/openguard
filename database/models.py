@@ -384,6 +384,18 @@ CREATE TABLE IF NOT EXISTS verification_tokens (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(guild_id, user_id)
 );
+
+-- Captcha solutions table
+CREATE TABLE IF NOT EXISTS captcha_solutions (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    captcha_id VARCHAR(255) NOT NULL UNIQUE,
+    solution VARCHAR(50) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(guild_id, user_id)
+);
 """
 
 # Index creation SQL
