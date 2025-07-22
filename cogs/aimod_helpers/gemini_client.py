@@ -1,5 +1,5 @@
 import os
-from litellm import acompletion
+import litellm
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -10,7 +10,7 @@ async def generate_content(messages, model: str = DEFAULT_GEMINI_MODEL, **kwargs
     """Generate text using Google's Gemini via LiteLLM."""
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY environment variable not set")
-    response = await acompletion(model=model, messages=messages, api_key=GEMINI_API_KEY, **kwargs)
+    response = await litellm.acompletion(model=model, messages=messages, api_key=GEMINI_API_KEY, **kwargs)
     if hasattr(response, "choices") and response.choices:
         choice = response.choices[0]
         if hasattr(choice, "message") and hasattr(choice.message, "content"):
