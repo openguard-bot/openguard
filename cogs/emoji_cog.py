@@ -2,7 +2,6 @@
 
 import os
 import yaml
-import re
 from discord.ext import commands
 
 
@@ -13,9 +12,7 @@ class EmojiCog(commands.Cog):
         self._load_emojis_from_config()
 
     def _load_emojis_from_config(self):
-        config_path = os.path.join(
-            os.path.dirname(__file__), "..", "configs", "config.yaml"
-        )
+        config_path = os.path.join(os.path.dirname(__file__), "..", "configs", "config.yaml")
         with open(config_path, "r") as file:
             config_data = yaml.safe_load(file)
             if "CustomEmoji" in config_data:

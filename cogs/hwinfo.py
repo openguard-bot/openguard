@@ -1,12 +1,9 @@
 # pylint: disable=import-error
-import os
 import platform
 import psutil
 import discord
 from discord.ext import commands
-from discord import app_commands
 import asyncio
-import logging
 import time
 import GPUtil
 import distro
@@ -28,9 +25,7 @@ class HwInfo(commands.Cog):
         """System related commands."""
         await ctx.send_help(ctx.command)
 
-    @system.command(
-        name="check", description="Shows detailed system and bot information."
-    )
+    @system.command(name="check", description="Shows detailed system and bot information.")
     async def systemcheck(self, ctx: commands.Context):
         """Check the bot and system status."""
         if ctx.interaction:  # Check if it's an application command
@@ -46,9 +41,7 @@ class HwInfo(commands.Cog):
         except Exception as e:
             print(f"Error in systemcheck command: {e}")
             if ctx.interaction:
-                await ctx.interaction.followup.send(
-                    f"An error occurred while checking system status: {e}"
-                )
+                await ctx.interaction.followup.send(f"An error occurred while checking system status: {e}")
             else:
                 await ctx.send(f"An error occurred while checking system status: {e}")
 
@@ -128,7 +121,7 @@ class HwInfo(commands.Cog):
         motherboard_info = self._get_motherboard_info()
 
         memory = psutil.virtual_memory()
-        ram_usage = f"{memory.used // (1024 ** 2)} MB / {memory.total // (1024 ** 2)} MB ({memory.percent}%)"
+        ram_usage = f"{memory.used // (1024**2)} MB / {memory.total // (1024**2)} MB ({memory.percent}%)"
 
         gpu_info_lines = []
         try:
@@ -136,7 +129,7 @@ class HwInfo(commands.Cog):
             if gpus:
                 for gpu in gpus:
                     gpu_info_lines.append(
-                        f"{gpu.name} ({gpu.load*100:.1f}% Load, {gpu.memoryUsed:.0f}/{gpu.memoryTotal:.0f} MB VRAM)"
+                        f"{gpu.name} ({gpu.load * 100:.1f}% Load, {gpu.memoryUsed:.0f}/{gpu.memoryTotal:.0f} MB VRAM)"
                     )
                 gpu_info = "\n".join(gpu_info_lines)
             else:
@@ -179,9 +172,7 @@ class HwInfo(commands.Cog):
 
         embed.add_field(
             name="🖥️ System Information",
-            value=f"**OS:** {os_info}{distro_info_str}\n"
-            f"**Hostname:** {hostname}\n"
-            f"**Uptime:** {uptime}",
+            value=f"**OS:** {os_info}{distro_info_str}\n**Hostname:** {hostname}\n**Uptime:** {uptime}",
             inline=False,
         )
 
@@ -196,9 +187,7 @@ class HwInfo(commands.Cog):
         )
 
         if user:
-            embed.set_footer(
-                text=f"Requested by: {user.display_name}", icon_url=avatar_url
-            )
+            embed.set_footer(text=f"Requested by: {user.display_name}", icon_url=avatar_url)
 
         embed.timestamp = discord.utils.utcnow()
         return embed
@@ -242,11 +231,7 @@ class HwInfo(commands.Cog):
             )
             stdout, stderr = await process.communicate()
 
-            output = (
-                stdout.decode("utf-8").strip()
-                or stderr.decode("utf-8").strip()
-                or "No output."
-            )
+            output = stdout.decode("utf-8").strip() or stderr.decode("utf-8").strip() or "No output."
         except Exception as e:
             output = f"Error executing sensors command: {e}"
 

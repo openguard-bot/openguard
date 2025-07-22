@@ -27,16 +27,12 @@ from database.models import CaptchaConfig
 log = logging.getLogger(__name__)
 
 
-async def send_error_dm(
-    bot_instance, error_type, error_message, error_traceback=None, context_info=None
-):
+async def send_error_dm(bot_instance, error_type, error_message, error_traceback=None, context_info=None):
     """Import the send_error_dm function from bot.py for error reporting."""
     # Import here to avoid circular imports
     from bot import send_error_dm as _send_error_dm
 
-    await _send_error_dm(
-        bot_instance, error_type, error_message, error_traceback, context_info
-    )
+    await _send_error_dm(bot_instance, error_type, error_message, error_traceback, context_info)
 
 
 class HCaptchaVerificationView(discord.ui.View):
@@ -48,22 +44,18 @@ class HCaptchaVerificationView(discord.ui.View):
         self.user = user
         self.verification_token = verification_token
 
-    @discord.ui.button(
-        label="Complete Verification", style=discord.ButtonStyle.primary, emoji="🔐"
-    )
-    async def complete_verification(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    @discord.ui.button(label="Complete Verification", style=discord.ButtonStyle.primary, emoji="🔐")
+    async def complete_verification(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Open verification page in browser."""
         if interaction.user.id != self.user.id:
-            await interaction.response.send_message(
-                "This verification is not for you!", ephemeral=True
-            )
+            await interaction.response.send_message("This verification is not for you!", ephemeral=True)
             return
 
         # Create verification URL using the backend endpoint
         base_url = os.getenv("BACKEND_URL", "https://openguard.lol")
-        verification_url = f"{base_url}/api/verify?token={self.verification_token}&user={self.user.id}&guild={interaction.guild.id}"
+        verification_url = (
+            f"{base_url}/api/verify?token={self.verification_token}&user={self.user.id}&guild={interaction.guild.id}"
+        )
 
         embed = discord.Embed(
             title="🔐 Complete Verification",
@@ -82,17 +74,11 @@ class HCaptchaVerificationView(discord.ui.View):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(
-        label="Enter hCaptcha Response", style=discord.ButtonStyle.secondary, emoji="📝"
-    )
-    async def manual_response(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    @discord.ui.button(label="Enter hCaptcha Response", style=discord.ButtonStyle.secondary, emoji="📝")
+    async def manual_response(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Allow manual entry of hCaptcha response token."""
         if interaction.user.id != self.user.id:
-            await interaction.response.send_message(
-                "This verification is not for you!", ephemeral=True
-            )
+            await interaction.response.send_message("This verification is not for you!", ephemeral=True)
             return
 
         modal = HCaptchaResponseModal(self.cog, self.user)
@@ -176,9 +162,7 @@ class CaptchaCog(commands.Cog):
         except Exception as e:
             log.error(f"Error cleaning up expired tokens: {e}")
 
-    async def _store_verification_token(
-        self, guild_id: int, user_id: int, token: str, expires_at: datetime
-    ) -> bool:
+    async def _store_verification_token(self, guild_id: int, user_id: int, token: str, expires_at: datetime) -> bool:
         """Store a verification token with expiration."""
         try:
             from database.connection import execute_query
@@ -195,9 +179,7 @@ class CaptchaCog(commands.Cog):
             )
             return True
         except Exception as e:
-            log.error(
-                f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}"
-            )
+            log.error(f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}")
             return False
 
     async def _cleanup_expired_tokens(self) -> bool:
@@ -205,9 +187,7 @@ class CaptchaCog(commands.Cog):
         try:
             from database.connection import execute_query
 
-            await execute_query(
-                "DELETE FROM verification_tokens WHERE expires_at <= CURRENT_TIMESTAMP"
-            )
+            await execute_query("DELETE FROM verification_tokens WHERE expires_at <= CURRENT_TIMESTAMP")
             return True
         except Exception as e:
             log.error(f"Failed to cleanup expired tokens: {e}")
@@ -225,9 +205,7 @@ class CaptchaCog(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @captcha.command(
-        name="enable", description="Enable captcha verification for this server."
-    )
+    @captcha.command(name="enable", description="Enable captcha verification for this server.")
     @app_commands.checks.has_permissions(administrator=True)
     async def enable_captcha(self, ctx: commands.Context):
         """Enable captcha verification system."""
@@ -259,9 +237,7 @@ class CaptchaCog(commands.Cog):
                 color=discord.Color.red(),
             )
 
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=embed, ephemeral=False)
 
     @captcha.group(name="config", description="Configure captcha settings.")
@@ -271,20 +247,14 @@ class CaptchaCog(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @config.command(
-        name="roleset", description="Set the role given after successful verification."
-    )
-    @app_commands.describe(
-        role="The role to give users after they complete captcha verification"
-    )
+    @config.command(name="roleset", description="Set the role given after successful verification.")
+    @app_commands.describe(role="The role to give users after they complete captcha verification")
     @app_commands.checks.has_permissions(administrator=True)
     async def set_verification_role(self, ctx: commands.Context, role: discord.Role):
         """Set the verification role."""
         guild_id = ctx.guild.id
 
-        success = await update_captcha_config_field(
-            guild_id, "verification_role_id", role.id
-        )
+        success = await update_captcha_config_field(guild_id, "verification_role_id", role.id)
 
         if success:
             embed = discord.Embed(
@@ -299,9 +269,7 @@ class CaptchaCog(commands.Cog):
                 color=discord.Color.red(),
             )
 
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=embed, ephemeral=False)
 
     @config.command(
@@ -336,23 +304,17 @@ class CaptchaCog(commands.Cog):
                 description="Attempts must be between 1 and 10.",
                 color=discord.Color.red(),
             )
-            response_func = (
-                ctx.interaction.response.send_message if ctx.interaction else ctx.send
-            )
+            response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
             await response_func(embed=embed, ephemeral=True)
             return
 
-        if punishment.value == "timeout" and (
-            not timeout_duration or timeout_duration < 60
-        ):
+        if punishment.value == "timeout" and (not timeout_duration or timeout_duration < 60):
             embed = discord.Embed(
                 title="❌ Invalid Input",
                 description="Timeout duration must be at least 60 seconds when using timeout punishment.",
                 color=discord.Color.red(),
             )
-            response_func = (
-                ctx.interaction.response.send_message if ctx.interaction else ctx.send
-            )
+            response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
             await response_func(embed=embed, ephemeral=True)
             return
 
@@ -363,9 +325,7 @@ class CaptchaCog(commands.Cog):
 
         config.max_attempts = attempts
         config.fail_action = punishment.value
-        config.timeout_duration = (
-            timeout_duration if punishment.value == "timeout" else None
-        )
+        config.timeout_duration = timeout_duration if punishment.value == "timeout" else None
 
         success = await set_captcha_config(guild_id, config)
 
@@ -386,9 +346,7 @@ class CaptchaCog(commands.Cog):
                 color=discord.Color.red(),
             )
 
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=embed, ephemeral=False)
 
     @captcha.group(name="embed", description="Manage captcha verification embeds.")
@@ -398,14 +356,10 @@ class CaptchaCog(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @embed_group.command(
-        name="send", description="Send captcha verification embed to a channel."
-    )
+    @embed_group.command(name="send", description="Send captcha verification embed to a channel.")
     @app_commands.describe(channel="The channel to send the verification embed to")
     @app_commands.checks.has_permissions(administrator=True)
-    async def send_verification_embed(
-        self, ctx: commands.Context, channel: discord.TextChannel
-    ):
+    async def send_verification_embed(self, ctx: commands.Context, channel: discord.TextChannel):
         """Send verification embed to specified channel."""
         guild_id = ctx.guild.id
 
@@ -417,16 +371,12 @@ class CaptchaCog(commands.Cog):
                 description="Please enable captcha verification first using `/captcha enable`.",
                 color=discord.Color.red(),
             )
-            response_func = (
-                ctx.interaction.response.send_message if ctx.interaction else ctx.send
-            )
+            response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
             await response_func(embed=embed, ephemeral=True)
             return
 
         # Update verification channel in config
-        await update_captcha_config_field(
-            guild_id, "verification_channel_id", channel.id
-        )
+        await update_captcha_config_field(guild_id, "verification_channel_id", channel.id)
 
         # Create verification embed
         verification_embed = discord.Embed(
@@ -469,22 +419,16 @@ class CaptchaCog(commands.Cog):
                 color=discord.Color.red(),
             )
 
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=success_embed, ephemeral=False)
 
     @captcha.command(
         name="verify",
         description="Manually verify a user with hCaptcha response token.",
     )
-    @app_commands.describe(
-        user="The user to verify", hcaptcha_response="The hCaptcha response token"
-    )
+    @app_commands.describe(user="The user to verify", hcaptcha_response="The hCaptcha response token")
     @app_commands.checks.has_permissions(administrator=True)
-    async def manual_verify(
-        self, ctx: commands.Context, user: discord.Member, hcaptcha_response: str
-    ):
+    async def manual_verify(self, ctx: commands.Context, user: discord.Member, hcaptcha_response: str):
         """Manually verify a user with hCaptcha response token."""
         guild_id = ctx.guild.id
 
@@ -496,9 +440,7 @@ class CaptchaCog(commands.Cog):
                 description="Please enable captcha verification first using `/captcha enable`.",
                 color=discord.Color.red(),
             )
-            response_func = (
-                ctx.interaction.response.send_message if ctx.interaction else ctx.send
-            )
+            response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
             await response_func(embed=embed, ephemeral=True)
             return
 
@@ -508,16 +450,12 @@ class CaptchaCog(commands.Cog):
         if result:
             # Mark as verified and assign role
             try:
-                await update_captcha_attempt(
-                    guild_id, user.id, increment=False, verified=True
-                )
+                await update_captcha_attempt(guild_id, user.id, increment=False, verified=True)
 
                 if config.verification_role_id:
                     role = ctx.guild.get_role(config.verification_role_id)
                     if role:
-                        await user.add_roles(
-                            role, reason="Manual captcha verification by administrator"
-                        )
+                        await user.add_roles(role, reason="Manual captcha verification by administrator")
 
                         embed = discord.Embed(
                             title="✅ User Verified",
@@ -550,14 +488,10 @@ class CaptchaCog(commands.Cog):
                 color=discord.Color.red(),
             )
 
-        response_func = (
-            ctx.interaction.response.send_message if ctx.interaction else ctx.send
-        )
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=embed, ephemeral=False)
 
-    async def verify_hcaptcha_response(
-        self, hcaptcha_response: str, user_ip: Optional[str] = None
-    ) -> bool:
+    async def verify_hcaptcha_response(self, hcaptcha_response: str, user_ip: Optional[str] = None) -> bool:
         """Verify hCaptcha response using hCaptcha API."""
         if not self.hcaptcha_secret:
             log.error("hCaptcha secret key not configured")
@@ -585,11 +519,7 @@ class CaptchaCog(commands.Cog):
                         log.warning(f"hCaptcha verification failed: {error_codes}")
 
                         # Report specific hCaptcha errors
-                        error_context = (
-                            f"hCaptcha Verification Failed - "
-                            f"Error codes: {error_codes}, "
-                            f"Response: {data}"
-                        )
+                        error_context = f"hCaptcha Verification Failed - Error codes: {error_codes}, Response: {data}"
 
                         await send_error_dm(
                             self.bot,
@@ -622,10 +552,7 @@ class CaptchaCog(commands.Cog):
         except aiohttp.ClientError as e:
             # Network/connection errors
             tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_context = (
-                f"hCaptcha Network Error - URL: {self.hcaptcha_verify_url}, "
-                f"Error Type: {type(e).__name__}"
-            )
+            error_context = f"hCaptcha Network Error - URL: {self.hcaptcha_verify_url}, Error Type: {type(e).__name__}"
 
             await send_error_dm(
                 self.bot,
@@ -657,9 +584,7 @@ class CaptchaCog(commands.Cog):
         """Get the hCaptcha site key for embedding."""
         return self.hcaptcha_site_key
 
-    async def create_verification_endpoint(
-        self, guild_id: int, user_id: int, verification_token: str
-    ) -> bool:
+    async def create_verification_endpoint(self, guild_id: int, user_id: int, verification_token: str) -> bool:
         """Store verification token for later validation."""
         try:
             # Store in database with expiration (10 minutes)
@@ -704,29 +629,20 @@ class CaptchaCog(commands.Cog):
             inline=False,
         )
 
-        embed.set_footer(
-            text="Powered by hCaptcha • This verification will expire in 10 minutes"
-        )
+        embed.set_footer(text="Powered by hCaptcha • This verification will expire in 10 minutes")
         return embed
 
-    async def handle_successful_verification(
-        self, interaction: discord.Interaction, user: discord.Member
-    ):
+    async def handle_successful_verification(self, interaction: discord.Interaction, user: discord.Member):
         """Handle successful captcha verification."""
         guild_id = interaction.guild.id
 
         # Mark as verified in database
         try:
-            await update_captcha_attempt(
-                guild_id, user.id, increment=False, verified=True
-            )
+            await update_captcha_attempt(guild_id, user.id, increment=False, verified=True)
         except Exception as e:
             # Report database error but continue with role assignment
             tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_context = (
-                f"Database error marking user as verified - Guild: {guild_id}, "
-                f"User: {user.id} ({user})"
-            )
+            error_context = f"Database error marking user as verified - Guild: {guild_id}, User: {user.id} ({user})"
 
             await send_error_dm(
                 self.bot,
@@ -773,24 +689,17 @@ class CaptchaCog(commands.Cog):
 
         await interaction.followup.send(embed=embed, ephemeral=True)
 
-    async def handle_failed_verification(
-        self, interaction: discord.Interaction, user: discord.Member
-    ):
+    async def handle_failed_verification(self, interaction: discord.Interaction, user: discord.Member):
         """Handle failed captcha verification."""
         guild_id = interaction.guild.id
 
         # Update attempt count
         try:
-            await update_captcha_attempt(
-                guild_id, user.id, increment=True, verified=False
-            )
+            await update_captcha_attempt(guild_id, user.id, increment=True, verified=False)
         except Exception as e:
             # Report database error
             tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_context = (
-                f"Database error updating failed attempt - Guild: {guild_id}, "
-                f"User: {user.id} ({user})"
-            )
+            error_context = f"Database error updating failed attempt - Guild: {guild_id}, User: {user.id} ({user})"
 
             await send_error_dm(
                 self.bot,
@@ -809,10 +718,7 @@ class CaptchaCog(commands.Cog):
         except Exception as e:
             # Report database error
             tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_context = (
-                f"Database error retrieving captcha data - Guild: {guild_id}, "
-                f"User: {user.id} ({user})"
-            )
+            error_context = f"Database error retrieving captcha data - Guild: {guild_id}, User: {user.id} ({user})"
 
             await send_error_dm(
                 self.bot,
@@ -865,19 +771,13 @@ class CaptchaCog(commands.Cog):
         """Apply punishment for failed verification attempts."""
         try:
             if config.fail_action == "kick":
-                await user.kick(
-                    reason="Failed captcha verification - maximum attempts exceeded"
-                )
+                await user.kick(reason="Failed captcha verification - maximum attempts exceeded")
                 action_text = "kicked from the server"
             elif config.fail_action == "ban":
-                await user.ban(
-                    reason="Failed captcha verification - maximum attempts exceeded"
-                )
+                await user.ban(reason="Failed captcha verification - maximum attempts exceeded")
                 action_text = "banned from the server"
             elif config.fail_action == "timeout" and config.timeout_duration:
-                timeout_until = datetime.now(timezone.utc) + timedelta(
-                    seconds=config.timeout_duration
-                )
+                timeout_until = datetime.now(timezone.utc) + timedelta(seconds=config.timeout_duration)
                 await user.timeout(
                     timeout_until,
                     reason="Failed captcha verification - maximum attempts exceeded",
@@ -915,12 +815,8 @@ class VerificationStartView(discord.ui.View):
         super().__init__(timeout=None)  # Persistent view
         self.cog = cog
 
-    @discord.ui.button(
-        label="Start Verification", style=discord.ButtonStyle.primary, emoji="🔐"
-    )
-    async def start_verification(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    @discord.ui.button(label="Start Verification", style=discord.ButtonStyle.primary, emoji="🔐")
+    async def start_verification(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Start the verification process for a user."""
         user = interaction.user
         guild_id = interaction.guild.id
@@ -938,11 +834,7 @@ class VerificationStartView(discord.ui.View):
 
         # Check if user has exceeded attempts
         config = await get_captcha_config(guild_id)
-        if (
-            config
-            and attempt_record
-            and attempt_record.attempt_count >= config.max_attempts
-        ):
+        if config and attempt_record and attempt_record.attempt_count >= config.max_attempts:
             embed = discord.Embed(
                 title="❌ Maximum Attempts Exceeded",
                 description="You have exceeded the maximum number of verification attempts.",
@@ -960,9 +852,7 @@ class VerificationStartView(discord.ui.View):
 
         # Store the verification token in database with 10 minute expiration
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-        success = await self._store_verification_token(
-            guild_id, user.id, verification_token, expires_at
-        )
+        success = await self._store_verification_token(guild_id, user.id, verification_token, expires_at)
 
         if not success:
             embed = discord.Embed(

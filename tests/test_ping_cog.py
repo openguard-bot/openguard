@@ -34,9 +34,7 @@ async def test_ping_cog_init(mock_bot):
 @pytest.mark.asyncio
 async def test_ping_cog_initialize(mock_bot):
     cog = Ping(mock_bot)
-    with patch(
-        "cogs.ping.get_redis", new_callable=AsyncMock, return_value=AsyncMock()
-    ) as mock_get_redis:
+    with patch("cogs.ping.get_redis", new_callable=AsyncMock, return_value=AsyncMock()) as mock_get_redis:
         await cog.initialize()
         mock_get_redis.assert_called_once()
         assert cog.redis is not None
@@ -45,9 +43,7 @@ async def test_ping_cog_initialize(mock_bot):
 @pytest.mark.asyncio
 async def test_ping_cog_initialize_redis_fail(mock_bot):
     cog = Ping(mock_bot)
-    with patch(
-        "cogs.ping.get_redis", new_callable=AsyncMock, return_value=None
-    ) as mock_get_redis:
+    with patch("cogs.ping.get_redis", new_callable=AsyncMock, return_value=None) as mock_get_redis:
         await cog.initialize()
         mock_get_redis.assert_called_once()
         assert cog.redis is None
@@ -64,9 +60,7 @@ async def test_sample_pg(mock_bot):
 
     # Mock time.perf_counter to control latency calculation
     with patch("time.perf_counter", side_effect=[0, 0.001]):  # 1ms
-        with patch(
-            "cogs.ping.get_connection", return_value=mock_get_connection_context
-        ):
+        with patch("cogs.ping.get_connection", return_value=mock_get_connection_context):
             latency = await cog._sample_pg(samples=1)
             assert latency == pytest.approx(1.0)  # Should be in ms
 
@@ -91,9 +85,7 @@ async def test_sample_redis(mock_bot):
     cog.redis.ping.return_value = True
 
     # Mock time.perf_counter to control elapsed time
-    with patch(
-        "time.perf_counter", side_effect=[0, 0.01, 0.01, 0.02, 0.02, 0.03]
-    ):  # Simulate 10ms per ping
+    with patch("time.perf_counter", side_effect=[0, 0.01, 0.01, 0.02, 0.02, 0.03]):  # Simulate 10ms per ping
         latency = await cog._sample_redis(samples=3)
         assert latency == pytest.approx(10.0)
 
@@ -109,34 +101,23 @@ async def test_sample_redis_no_redis(mock_bot):
 @pytest.mark.asyncio
 async def test_slash_ping_command(mock_bot, mock_ctx):
     cog = Ping(mock_bot)
-    mock_bot.launch_time = datetime.datetime.now(
-        datetime.timezone.utc
-    ) - datetime.timedelta(hours=1)
+    mock_bot.launch_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
 
     # Mock the send method to capture the message and return a mock message object
     mock_message = AsyncMock(spec=discord.Message)
     mock_ctx.send.return_value = mock_message
 
-    with patch.object(
-        type(mock_bot), "latency", new_callable=PropertyMock, return_value=0.123
-    ), patch.object(
-        cog, "_sample_pg", new_callable=AsyncMock, return_value=50.0
-    ), patch.object(
-        cog, "_sample_redis", new_callable=AsyncMock, return_value=20.0
-    ), patch(
-        "psutil.Process"
-    ) as mock_process, patch(
-        "psutil.cpu_percent"
-    ) as mock_cpu, patch(
-        "socket.gethostname", return_value="TestHost"
-    ), patch(
-        "humanize.naturaldelta", return_value="1 hour"
+    with (
+        patch.object(type(mock_bot), "latency", new_callable=PropertyMock, return_value=0.123),
+        patch.object(cog, "_sample_pg", new_callable=AsyncMock, return_value=50.0),
+        patch.object(cog, "_sample_redis", new_callable=AsyncMock, return_value=20.0),
+        patch("psutil.Process") as mock_process,
+        patch("psutil.cpu_percent") as mock_cpu,
+        patch("socket.gethostname", return_value="TestHost"),
+        patch("humanize.naturaldelta", return_value="1 hour"),
     ):
-
         # Configure psutil mocks
-        mock_process.return_value.memory_info.return_value.rss = (
-            256 * 1024 * 1024
-        )  # 256 MB
+        mock_process.return_value.memory_info.return_value.rss = 256 * 1024 * 1024  # 256 MB
         mock_cpu.return_value = 55.5
 
         # A hybrid command's callback must be called with the cog instance
@@ -164,10 +145,10 @@ async def test_slash_ping_command_pg_fail(mock_bot, mock_ctx):
     mock_message = AsyncMock(spec=discord.Message)
     mock_ctx.send.return_value = mock_message
 
-    with patch.object(
-        cog, "_sample_pg", new_callable=AsyncMock, return_value=float("inf")
-    ), patch.object(cog, "_sample_redis", new_callable=AsyncMock, return_value=20.0):
-
+    with (
+        patch.object(cog, "_sample_pg", new_callable=AsyncMock, return_value=float("inf")),
+        patch.object(cog, "_sample_redis", new_callable=AsyncMock, return_value=20.0),
+    ):
         await cog.slash_ping.callback(cog, mock_ctx)
 
         edited_content = mock_message.edit.call_args[1]["content"]

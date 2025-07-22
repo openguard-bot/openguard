@@ -110,9 +110,7 @@ class UserInfoCog(commands.Cog):
         description="Display comprehensive info about a user or yourself.",
     )
     @app_commands.describe(user="The user to get info about (optional)")
-    async def aboutuser(
-        self, ctx: commands.Context, user: Optional[discord.Member] = None
-    ):
+    async def aboutuser(self, ctx: commands.Context, user: Optional[discord.Member] = None):
         member = user or ctx.author
         if ctx.guild:
             member = ctx.guild.get_member(member.id) or member
@@ -165,11 +163,7 @@ class UserInfoCog(commands.Cog):
         activity_str = self._truncate_field_value(activity_str)
         roles_str = "None"
         if is_guild_member and member.roles:
-            roles = [
-                role.mention
-                for role in reversed(member.roles)
-                if role.name != "@everyone"
-            ]
+            roles = [role.mention for role in reversed(member.roles) if role.name != "@everyone"]
             if roles:
                 roles_str = ", ".join(roles)
                 # Truncate if too long for Discord embed field limit
@@ -232,9 +226,7 @@ class UserInfoCog(commands.Cog):
                 notes_str = self._truncate_field_value(notes_str)
                 embed.add_field(name="📋 Admin Notes", value=notes_str, inline=False)
         embed.add_field(name="Nickname", value=member.nick or "None", inline=True)
-        embed.add_field(
-            name="Username", value=f"{member.name}#{member.discriminator}", inline=True
-        )
+        embed.add_field(name="Username", value=f"{member.name}#{member.discriminator}", inline=True)
         embed.add_field(name="User ID", value=member.id, inline=True)
         embed.add_field(name="Status", value=status, inline=True)
         embed.add_field(name="Device", value=device_str, inline=True)
@@ -259,9 +251,7 @@ class UserInfoCog(commands.Cog):
             )
         embed.set_footer(
             text=f"Requested by {user_data['interaction_user_id']}",
-            icon_url=self.bot.get_user(
-                user_data["interaction_user_id"]
-            ).display_avatar.url,
+            icon_url=self.bot.get_user(user_data["interaction_user_id"]).display_avatar.url,
         )
         view = discord.ui.View()
         view.add_item(
@@ -307,9 +297,7 @@ class UserInfoCog(commands.Cog):
 
         value = value.strip()
         if not value or len(value) > 500:
-            await ctx.reply(
-                "❌ Value must be between 1-500 characters.", ephemeral=True
-            )
+            await ctx.reply("❌ Value must be between 1-500 characters.", ephemeral=True)
             return
 
         await self.set_custom_user_value(user.id, key, value)
@@ -323,17 +311,11 @@ class UserInfoCog(commands.Cog):
         user="The user to remove a note from.",
         key="The title/key of the note to remove.",
     )
-    async def remove_custom_value(
-        self, ctx: commands.Context, user: discord.Member, key: str
-    ):
+    async def remove_custom_value(self, ctx: commands.Context, user: discord.Member, key: str):
         if await self.remove_custom_user_value(user.id, key):
-            await ctx.reply(
-                f"✅ Removed note '{key}' for {user.mention}", ephemeral=True
-            )
+            await ctx.reply(f"✅ Removed note '{key}' for {user.mention}", ephemeral=True)
         else:
-            await ctx.reply(
-                f"❌ No note with key '{key}' found for {user.mention}", ephemeral=True
-            )
+            await ctx.reply(f"❌ No note with key '{key}' found for {user.mention}", ephemeral=True)
 
     @usernote.command(name="list", description="List all notes for a user.")
     @app_commands.describe(user="The user to list notes for.")
@@ -364,24 +346,18 @@ class UserInfoCog(commands.Cog):
 
             success = await delete_user_data(user.id)
             if success:
-                await ctx.reply(
-                    f"✅ Cleared all custom data for {user.mention}", ephemeral=True
-                )
+                await ctx.reply(f"✅ Cleared all custom data for {user.mention}", ephemeral=True)
             else:
-                await ctx.reply(
-                    f"❌ No custom data found for {user.mention}", ephemeral=True
-                )
+                await ctx.reply(f"❌ No custom data found for {user.mention}", ephemeral=True)
         except Exception as e:
             print(f"Failed to clear custom data for user {user.id}: {e}")
-            await ctx.reply(
-                f"❌ Error clearing custom data for {user.mention}", ephemeral=True
-            )
+            await ctx.reply(f"❌ Error clearing custom data for {user.mention}", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
-        if interaction.type == discord.InteractionType.component and interaction.data[
-            "custom_id"
-        ].startswith("userinfo_"):
+        if interaction.type == discord.InteractionType.component and interaction.data["custom_id"].startswith(
+            "userinfo_"
+        ):
             custom_id_parts = interaction.data["custom_id"].split("_")
             action = custom_id_parts[1]
             user_id = int(custom_id_parts[2])
@@ -391,16 +367,12 @@ class UserInfoCog(commands.Cog):
 
     async def show_permissions(self, interaction: discord.Interaction, user_id: int):
         if not interaction.guild:
-            await interaction.response.send_message(
-                "This command can only be used in a server.", ephemeral=True
-            )
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
 
         member = interaction.guild.get_member(user_id)
         if not member:
-            await interaction.response.send_message(
-                "Could not find that member in this server.", ephemeral=True
-            )
+            await interaction.response.send_message("Could not find that member in this server.", ephemeral=True)
             return
 
         permissions = member.guild_permissions
@@ -437,9 +409,7 @@ class UserInfoCog(commands.Cog):
 
         for i in range(3):
             if columns[i]:
-                embed.add_field(
-                    name=f"Permissions {i+1}", value="".join(columns[i]), inline=True
-                )
+                embed.add_field(name=f"Permissions {i + 1}", value="".join(columns[i]), inline=True)
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 

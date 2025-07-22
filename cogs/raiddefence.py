@@ -1,15 +1,11 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import asyncio
 import datetime
-import json
-import os
 from collections import defaultdict, deque
 from .aimod_helpers.config_manager import (
     get_guild_config_async,
     set_guild_config,
-    save_guild_config,
 )
 
 
@@ -23,14 +19,10 @@ class RaidDefenceView(discord.ui.View):
         self.cog = cog
 
     @discord.ui.button(label="Stop Raid", style=discord.ButtonStyle.danger, emoji="🛡️")
-    async def stop_raid(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def stop_raid(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Check if user is guild owner
         if interaction.user.id != interaction.guild.owner_id:
-            await interaction.response.send_message(
-                "Only the server owner can stop raids.", ephemeral=True
-            )
+            await interaction.response.send_message("Only the server owner can stop raids.", ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -48,14 +40,10 @@ class RaidDefenceView(discord.ui.View):
                         delete_message_days=1,
                     )
                     banned_count += 1
-                    print(
-                        f"[RAID DEFENSE] Banned user {user} ({user_id}) from guild {interaction.guild.name}"
-                    )
+                    print(f"[RAID DEFENSE] Banned user {user} ({user_id}) from guild {interaction.guild.name}")
             except discord.Forbidden:
                 failed_bans.append(user_id)
-                print(
-                    f"[RAID DEFENSE] Failed to ban user {user_id} - insufficient permissions"
-                )
+                print(f"[RAID DEFENSE] Failed to ban user {user_id} - insufficient permissions")
             except discord.HTTPException as e:
                 failed_bans.append(user_id)
                 print(f"[RAID DEFENSE] Failed to ban user {user_id} - HTTP error: {e}")
@@ -68,15 +56,12 @@ class RaidDefenceView(discord.ui.View):
         )
         embed.add_field(name="Users Banned", value=str(banned_count), inline=True)
         embed.add_field(name="Failed Bans", value=str(len(failed_bans)), inline=True)
-        embed.add_field(
-            name="Total Processed", value=str(len(self.suspicious_users)), inline=True
-        )
+        embed.add_field(name="Total Processed", value=str(len(self.suspicious_users)), inline=True)
 
         if failed_bans:
             embed.add_field(
                 name="Failed Ban User IDs",
-                value=", ".join(str(uid) for uid in failed_bans[:10])
-                + ("..." if len(failed_bans) > 10 else ""),
+                value=", ".join(str(uid) for uid in failed_bans[:10]) + ("..." if len(failed_bans) > 10 else ""),
                 inline=False,
             )
 
@@ -90,9 +75,7 @@ class RaidDefenceView(discord.ui.View):
         await interaction.followup.send(embed=embed, ephemeral=False)
 
         # Log to aimod log if configured
-        await self.cog.log_raid_action(
-            interaction.guild, banned_count, len(failed_bans)
-        )
+        await self.cog.log_raid_action(interaction.guild, banned_count, len(failed_bans))
 
 
 class RaidDefenceCog(commands.Cog):
@@ -100,15 +83,11 @@ class RaidDefenceCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.join_tracking = defaultdict(
-            lambda: deque(maxlen=50)
-        )  # Track last 50 joins per guild
+        self.join_tracking = defaultdict(lambda: deque(maxlen=50))  # Track last 50 joins per guild
         self.raid_cooldowns = defaultdict(float)  # Prevent spam alerts
 
     # Security command group
-    @commands.hybrid_group(
-        name="security", description="Security and raid defense commands."
-    )
+    @commands.hybrid_group(name="security", description="Security and raid defense commands.")
     async def security(self, ctx: commands.Context):
         """Security and raid defense commands."""
         await ctx.send_help(ctx.command)
@@ -135,15 +114,11 @@ class RaidDefenceCog(commands.Cog):
         """Configure raid defense settings for the guild"""
 
         if threshold < 3 or threshold > 50:
-            await interaction.response.send_message(
-                "Threshold must be between 3 and 50 users.", ephemeral=True
-            )
+            await interaction.response.send_message("Threshold must be between 3 and 50 users.", ephemeral=True)
             return
 
         if timeframe < 30 or timeframe > 300:
-            await interaction.response.send_message(
-                "Timeframe must be between 30 and 300 seconds.", ephemeral=True
-            )
+            await interaction.response.send_message("Timeframe must be between 30 and 300 seconds.", ephemeral=True)
             return
 
         guild_id = interaction.guild.id
@@ -158,9 +133,7 @@ class RaidDefenceCog(commands.Cog):
             color=discord.Color.green() if enable else discord.Color.red(),
             timestamp=discord.utils.utcnow(),
         )
-        embed.add_field(
-            name="Status", value="Enabled" if enable else "Disabled", inline=True
-        )
+        embed.add_field(name="Status", value="Enabled" if enable else "Disabled", inline=True)
         embed.add_field(name="Threshold", value=f"{threshold} users", inline=True)
         embed.add_field(name="Timeframe", value=f"{timeframe} seconds", inline=True)
 
@@ -194,18 +167,14 @@ class RaidDefenceCog(commands.Cog):
             {
                 "user_id": member.id,
                 "timestamp": current_time,
-                "account_age": (
-                    datetime.datetime.now(datetime.timezone.utc) - member.created_at
-                ).total_seconds(),
+                "account_age": (datetime.datetime.now(datetime.timezone.utc) - member.created_at).total_seconds(),
             }
         )
 
         # Check for raid pattern
         await self.check_raid_pattern(member.guild, threshold, timeframe)
 
-    async def check_raid_pattern(
-        self, guild: discord.Guild, threshold: int, timeframe: int
-    ):
+    async def check_raid_pattern(self, guild: discord.Guild, threshold: int, timeframe: int):
         """Check if current join pattern indicates a raid"""
         guild_id = guild.id
         current_time = datetime.datetime.utcnow().timestamp()
@@ -215,22 +184,14 @@ class RaidDefenceCog(commands.Cog):
             return
 
         # Get recent joins within timeframe
-        recent_joins = [
-            join
-            for join in self.join_tracking[guild_id]
-            if current_time - join["timestamp"] <= timeframe
-        ]
+        recent_joins = [join for join in self.join_tracking[guild_id] if current_time - join["timestamp"] <= timeframe]
 
         if len(recent_joins) >= threshold:
             # Analyze suspiciousness
             suspicious_users = self.analyze_suspicious_joins(recent_joins)
 
-            if len(suspicious_users) >= max(
-                3, threshold // 2
-            ):  # At least 3 or half the threshold
-                await self.trigger_raid_alert(
-                    guild, suspicious_users, len(recent_joins)
-                )
+            if len(suspicious_users) >= max(3, threshold // 2):  # At least 3 or half the threshold
+                await self.trigger_raid_alert(guild, suspicious_users, len(recent_joins))
                 self.raid_cooldowns[guild_id] = current_time
 
     def analyze_suspicious_joins(self, recent_joins: list) -> list:
@@ -256,9 +217,7 @@ class RaidDefenceCog(commands.Cog):
 
         return suspicious_users
 
-    async def trigger_raid_alert(
-        self, guild: discord.Guild, suspicious_users: list, total_joins: int
-    ):
+    async def trigger_raid_alert(self, guild: discord.Guild, suspicious_users: list, total_joins: int):
         """Trigger raid alert and send notifications"""
         print(
             f"[RAID DEFENSE] Potential raid detected in guild {guild.name}: {total_joins} joins, {len(suspicious_users)} suspicious"
@@ -272,9 +231,7 @@ class RaidDefenceCog(commands.Cog):
             timestamp=discord.utils.utcnow(),
         )
         embed.add_field(name="Total Recent Joins", value=str(total_joins), inline=True)
-        embed.add_field(
-            name="Suspicious Users", value=str(len(suspicious_users)), inline=True
-        )
+        embed.add_field(name="Suspicious Users", value=str(len(suspicious_users)), inline=True)
         embed.add_field(name="Server", value=guild.name, inline=True)
         embed.set_footer(text="Click 'Stop Raid' to ban all suspicious users")
 
@@ -291,17 +248,15 @@ class RaidDefenceCog(commands.Cog):
             print(f"[RAID DEFENSE] Could not DM guild owner {guild.owner}")
 
         # Send to mod log channel if configured
-        mod_log_channel_id = await get_guild_config_async(
-            guild.id, "MOD_LOG_CHANNEL_ID"
-        )
+        mod_log_channel_id = await get_guild_config_async(guild.id, "MOD_LOG_CHANNEL_ID")
         if mod_log_channel_id:
             mod_log_channel = guild.get_channel(mod_log_channel_id)
             if mod_log_channel:
                 try:
                     await mod_log_channel.send(embed=embed, view=view)
-                    print(f"[RAID DEFENSE] Alert sent to mod log channel")
+                    print("[RAID DEFENSE] Alert sent to mod log channel")
                 except discord.Forbidden:
-                    print(f"[RAID DEFENSE] Could not send to mod log channel")
+                    print("[RAID DEFENSE] Could not send to mod log channel")
 
         # Send to general channel as fallback
         general_channel = discord.utils.get(guild.text_channels, name="general")
@@ -312,17 +267,13 @@ class RaidDefenceCog(commands.Cog):
                     embed=embed,
                     view=view,
                 )
-                print(f"[RAID DEFENSE] Alert sent to general channel")
+                print("[RAID DEFENSE] Alert sent to general channel")
             except discord.Forbidden:
-                print(f"[RAID DEFENSE] Could not send to general channel")
+                print("[RAID DEFENSE] Could not send to general channel")
 
-    async def log_raid_action(
-        self, guild: discord.Guild, banned_count: int, failed_count: int
-    ):
+    async def log_raid_action(self, guild: discord.Guild, banned_count: int, failed_count: int):
         """Log raid defense action to aimod log"""
-        mod_log_channel_id = await get_guild_config_async(
-            guild.id, "MOD_LOG_CHANNEL_ID"
-        )
+        mod_log_channel_id = await get_guild_config_async(guild.id, "MOD_LOG_CHANNEL_ID")
         if mod_log_channel_id:
             mod_log_channel = guild.get_channel(mod_log_channel_id)
             if mod_log_channel:
@@ -331,12 +282,8 @@ class RaidDefenceCog(commands.Cog):
                     color=discord.Color.orange(),
                     timestamp=discord.utils.utcnow(),
                 )
-                embed.add_field(
-                    name="Users Banned", value=str(banned_count), inline=True
-                )
-                embed.add_field(
-                    name="Failed Bans", value=str(failed_count), inline=True
-                )
+                embed.add_field(name="Users Banned", value=str(banned_count), inline=True)
+                embed.add_field(name="Failed Bans", value=str(failed_count), inline=True)
                 embed.set_footer(text="Automated raid defense system")
 
                 try:

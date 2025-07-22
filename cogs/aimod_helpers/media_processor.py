@@ -1,10 +1,5 @@
 import discord
-import io
 import os
-import tempfile
-import cv2
-import numpy as np
-from PIL import Image
 
 
 class MediaProcessor:
@@ -51,9 +46,7 @@ class MediaProcessor:
             print(f"Error processing video: {e}")
             return None, None
 
-    async def process_attachment(
-        self, attachment: discord.Attachment
-    ) -> tuple[str, bytes, str]:
+    async def process_attachment(self, attachment: discord.Attachment) -> tuple[str, bytes, str]:
         """Process any attachment and return the appropriate image data."""
         if not attachment:
             return None, None, None

@@ -4,7 +4,6 @@ This module handles the setup and configuration of LiteLLM with OpenRouter as th
 """
 
 import os
-import asyncio
 from typing import Dict, Any, Optional, List
 import litellm
 from litellm import acompletion
@@ -58,9 +57,7 @@ class LiteLLMClient:
         """
         self.api_key = api_key or OPENROUTER_API_KEY
         if not self.api_key:
-            raise ValueError(
-                "OpenRouter API key not found. Please set SLIPSTREAM_OPENROUTER_KEY environment variable."
-            )
+            raise ValueError("OpenRouter API key not found. Please set SLIPSTREAM_OPENROUTER_KEY environment variable.")
 
         # Configure LiteLLM for OpenRouter
         os.environ["OPENROUTER_API_KEY"] = self.api_key
@@ -207,9 +204,7 @@ class LiteLLMResponse:
             if hasattr(self._response, "usage"):
                 return {
                     "prompt_tokens": getattr(self._response.usage, "prompt_tokens", 0),
-                    "completion_tokens": getattr(
-                        self._response.usage, "completion_tokens", 0
-                    ),
+                    "completion_tokens": getattr(self._response.usage, "completion_tokens", 0),
                     "total_tokens": getattr(self._response.usage, "total_tokens", 0),
                 }
         except Exception:

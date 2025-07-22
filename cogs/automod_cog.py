@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 from .aimod_helpers import gemini_client
 
+
 class AutoModCog(commands.Cog, name="Discord AutoMod"):
     """Commands to manage Discord AutoMod rules."""
 
@@ -64,6 +65,7 @@ class AutoModCog(commands.Cog, name="Discord AutoMod"):
             enabled=True,
         )
         await ctx.send(f"Created AI rule `{rule.name}` with regex `{regex.strip()}`")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AutoModCog(bot))

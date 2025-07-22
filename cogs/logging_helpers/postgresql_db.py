@@ -6,8 +6,7 @@ Replaces the JSON-based version with PostgreSQL operations.
 # pylint: disable=no-member,function-redefined
 
 import logging
-from typing import Optional, List, Dict, Any, Union
-from datetime import datetime, timezone
+from typing import Optional, List, Dict, Any
 
 from database.operations import (
     add_mod_log_entry as db_add_mod_log,
@@ -60,16 +59,12 @@ async def get_mod_log(case_id: int) -> Optional[Dict[str, Any]]:
         return None
 
 
-async def get_user_mod_logs(
-    guild_id: int, user_id: int, limit: int = 50
-) -> List[Dict[str, Any]]:
+async def get_user_mod_logs(guild_id: int, user_id: int, limit: int = 50) -> List[Dict[str, Any]]:
     """Gets moderation logs for a specific user in a guild."""
     try:
         return await db_get_user_mod_logs(guild_id, user_id, limit)
     except Exception as e:
-        log.error(
-            f"Error getting user mod logs for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Error getting user mod logs for user {user_id} in guild {guild_id}: {e}")
         return []
 
 
@@ -91,9 +86,7 @@ async def update_mod_log_reason(case_id: int, new_reason: str) -> bool:
         return False
 
 
-async def update_mod_log_message_details(
-    case_id: int, message_id: int, channel_id: int
-) -> bool:
+async def update_mod_log_message_details(case_id: int, message_id: int, channel_id: int) -> bool:
     """Updates the message details for a moderation log entry."""
     try:
         from database.connection import execute_query
@@ -133,9 +126,7 @@ async def clear_user_mod_logs(guild_id: int, user_id: int) -> bool:
             user_id,
         )
     except Exception as e:
-        log.error(
-            f"Error clearing mod logs for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Error clearing mod logs for user {user_id} in guild {guild_id}: {e}")
         return False
 
 
@@ -184,9 +175,7 @@ async def set_logging_webhook(guild_id: int, webhook_url: Optional[str]) -> bool
 # Log Event Toggle Functions
 
 
-async def is_log_event_enabled(
-    guild_id: int, event_key: str, default_enabled: bool = True
-) -> bool:
+async def is_log_event_enabled(guild_id: int, event_key: str, default_enabled: bool = True) -> bool:
     """Checks if a specific log event is enabled for a guild."""
     try:
         return await db_get_log_event_enabled(guild_id, event_key, default_enabled)

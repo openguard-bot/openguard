@@ -4,11 +4,10 @@ This module defines the structure of all database tables and provides
 type hints for better code organization.
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
-import uuid
 
 
 class AppealStatus(Enum):

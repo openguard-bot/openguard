@@ -1,5 +1,5 @@
 import discord
-from typing import Callable, Awaitable, Dict, Any
+from typing import Callable, Awaitable
 
 # Define a mapping from our action names to Discord permissions
 ACTION_PERMISSION_MAP = {
@@ -57,9 +57,7 @@ class ActionConfirmationView(discord.ui.View):
         return True
 
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success)
-    async def confirm(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
         Confirms the action, executes the callback, and disables the view.
         """
@@ -68,9 +66,7 @@ class ActionConfirmationView(discord.ui.View):
         # Update the original message to show it was confirmed
         new_embed = interaction.message.embeds[0]
         new_embed.color = discord.Color.green()
-        new_embed.set_footer(
-            text=f"Action confirmed by {interaction.user.display_name}"
-        )
+        new_embed.set_footer(text=f"Action confirmed by {interaction.user.display_name}")
         await interaction.response.edit_message(embed=new_embed, view=self)
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger)
@@ -102,9 +98,7 @@ class AppealButton(discord.ui.View):
         style=discord.ButtonStyle.secondary,
         custom_id="appeal_info_button",
     )
-    async def appeal_info(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def appeal_info(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
             "To appeal, please use the `/aimod appeals appeal` command in this DM or in any server where I am present.\n\n"
             "**Example:** `/aimod appeals appeal reason: I believe my message was misinterpreted.`",

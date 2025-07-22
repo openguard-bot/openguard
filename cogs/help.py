@@ -143,10 +143,7 @@ class HelpView(discord.ui.View):
                 continue
 
             # If it's a hybrid command or group, prefer its slash representation
-            if (
-                isinstance(cmd, (commands.HybridCommand, commands.HybridGroup))
-                and cmd.app_command
-            ):
+            if isinstance(cmd, (commands.HybridCommand, commands.HybridGroup)) and cmd.app_command:
                 app_cmd = cmd.app_command
                 # If it's a hybrid group, we don't list the group itself, but its subcommands will be handled by walk_commands
                 if isinstance(app_cmd, app_commands.Group):
@@ -156,29 +153,21 @@ class HelpView(discord.ui.View):
 
                 # This is a hybrid command (not a group)
                 signature = f"/{app_cmd.qualified_name}"
-                params = [
-                    f"<{p.name}>" if p.required else f"[{p.name}]"
-                    for p in app_cmd.parameters
-                ]
+                params = [f"<{p.name}>" if p.required else f"[{p.name}]" for p in app_cmd.parameters]
                 if params:
                     signature += " " + " ".join(params)
 
                 categorized_commands[category].append(
                     {
                         "name": signature,
-                        "description": app_cmd.description
-                        or "No description available",
+                        "description": app_cmd.description or "No description available",
                         "type": "slash",
                     }
                 )
-                processed_qnames.add(
-                    cmd.qualified_name
-                )  # Mark the hybrid command as processed
+                processed_qnames.add(cmd.qualified_name)  # Mark the hybrid command as processed
 
             # If it's a pure prefix command (or a hybrid command that somehow doesn't have app_command)
-            elif (
-                cmd.qualified_name not in processed_qnames
-            ):  # Ensure it hasn't been processed as a slash command
+            elif cmd.qualified_name not in processed_qnames:  # Ensure it hasn't been processed as a slash command
                 signature = f"o!{cmd.name}"
                 if cmd.signature:
                     signature += f" {cmd.signature}"
@@ -215,9 +204,7 @@ class HelpView(discord.ui.View):
                 continue
 
             signature = f"/{cmd.qualified_name}"
-            params = [
-                f"<{p.name}>" if p.required else f"[{p.name}]" for p in cmd.parameters
-            ]
+            params = [f"<{p.name}>" if p.required else f"[{p.name}]" for p in cmd.parameters]
             if params:
                 signature += " " + " ".join(params)
 
@@ -237,9 +224,7 @@ class HelpView(discord.ui.View):
                 final_categorized_commands[category] = command_list
 
         self.categories = {
-            k: v
-            for k, v in self.categories.items()
-            if k in final_categorized_commands or k == "overview"
+            k: v for k, v in self.categories.items() if k in final_categorized_commands or k == "overview"
         }
 
         self._command_cache = final_categorized_commands
@@ -301,9 +286,7 @@ class HelpView(discord.ui.View):
             except (discord.NotFound, discord.Forbidden):
                 pass
 
-    async def create_category_embed(
-        self, category: str, ctx: commands.Context
-    ) -> discord.Embed:
+    async def create_category_embed(self, category: str, ctx: commands.Context) -> discord.Embed:
         """Create an embed for the specified category."""
         if not self.categories:
             await self._discover_commands()
@@ -350,11 +333,7 @@ class HelpView(discord.ui.View):
 
             if current_field_value:
                 embed.add_field(
-                    name=(
-                        "Commands"
-                        if field_count == 1
-                        else f"Commands (Part {field_count})"
-                    ),
+                    name=("Commands" if field_count == 1 else f"Commands (Part {field_count})"),
                     value=current_field_value,
                     inline=False,
                 )
@@ -418,9 +397,7 @@ class HelpView(discord.ui.View):
             ),
             inline=False,
         )
-        embed.set_footer(
-            text="Select a category from the dropdown to view specific commands."
-        )
+        embed.set_footer(text="Select a category from the dropdown to view specific commands.")
         return embed
 
 
@@ -440,9 +417,7 @@ class RefreshButton(discord.ui.Button):
     """Button to refresh the help menu."""
 
     def __init__(self):
-        super().__init__(
-            style=discord.ButtonStyle.secondary, emoji="🔄", label="Refresh"
-        )
+        super().__init__(style=discord.ButtonStyle.secondary, emoji="🔄", label="Refresh")
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -463,12 +438,8 @@ class HelpCog(commands.Cog):
         # Remove the default help command
         self.bot.remove_command("help")
 
-    @commands.hybrid_command(
-        name="help", aliases=["h"], description="Show help information for the bot."
-    )
-    async def help_command(
-        self, ctx: commands.Context, *, command: Optional[str] = None
-    ):
+    @commands.hybrid_command(name="help", aliases=["h"], description="Show help information for the bot.")
+    async def help_command(self, ctx: commands.Context, *, command: Optional[str] = None):
         """
         Show help information for the bot.
         """
@@ -488,9 +459,7 @@ class HelpCog(commands.Cog):
             message = await ctx.send(embed=embed, view=view)
             view.message = message
         except discord.Forbidden:
-            await ctx.send(
-                "❌ I need permission to send embeds to display the help menu properly."
-            )
+            await ctx.send("❌ I need permission to send embeds to display the help menu properly.")
 
     async def show_command_help(self, ctx: commands.Context, command_name: str):
         """Show detailed help for a specific command."""
@@ -503,9 +472,7 @@ class HelpCog(commands.Cog):
         # Try to find slash command
         slash_cmd = None
         for cmd in self.bot.tree.walk_commands():
-            if cmd.name == command_name or (
-                hasattr(cmd, "qualified_name") and cmd.qualified_name == command_name
-            ):
+            if cmd.name == command_name or (hasattr(cmd, "qualified_name") and cmd.qualified_name == command_name):
                 slash_cmd = cmd
                 break
 
@@ -530,9 +497,7 @@ class HelpCog(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    async def show_prefix_command_help(
-        self, ctx: commands.Context, command: commands.Command
-    ):
+    async def show_prefix_command_help(self, ctx: commands.Context, command: commands.Command):
         """Show help for a prefix command."""
         embed = discord.Embed(
             title=f"📖 Command: {command.name}",
@@ -561,15 +526,11 @@ class HelpCog(commands.Cog):
                     elif "admin" in check.__name__:
                         perms.append("Administrator")
             if perms:
-                embed.add_field(
-                    name="🔒 Required Permissions", value=", ".join(perms), inline=False
-                )
+                embed.add_field(name="🔒 Required Permissions", value=", ".join(perms), inline=False)
 
         await ctx.send(embed=embed)
 
-    async def show_slash_command_help(
-        self, ctx: commands.Context, command: app_commands.Command
-    ):
+    async def show_slash_command_help(self, ctx: commands.Context, command: app_commands.Command):
         """Show help for a slash command."""
         embed = discord.Embed(
             title=f"📖 Slash Command: /{command.qualified_name}",
@@ -596,16 +557,12 @@ class HelpCog(commands.Cog):
             param_details = []
             for param in command.parameters:
                 required = "Required" if param.required else "Optional"
-                param_details.append(
-                    f"• `{param.name}` ({required}): {param.description or 'No description'}"
-                )
+                param_details.append(f"• `{param.name}` ({required}): {param.description or 'No description'}")
 
             if param_details:
                 embed.add_field(
                     name="📋 Parameters",
-                    value="\n".join(
-                        param_details[:5]
-                    ),  # Limit to 5 to avoid embed limits
+                    value="\n".join(param_details[:5]),  # Limit to 5 to avoid embed limits
                     inline=False,
                 )
 

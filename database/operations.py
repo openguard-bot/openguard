@@ -15,22 +15,10 @@ from .cache import delete_cache, get_cache, set_cache
 
 from .connection import (
     execute_query,
-    get_connection,
-    get_transaction,
     insert_or_update,
     delete_record,
-    count_records,
 )
 from .models import (
-    GuildConfig,
-    UserInfraction,
-    Appeal,
-    GlobalBan,
-    ModerationLog,
-    GuildSetting,
-    LogEventToggle,
-    BotDetectConfig,
-    UserData,
     GuildAPIKey,
     AppealStatus,
     CaptchaConfig,
@@ -177,31 +165,23 @@ async def get_user_infractions(guild_id: int, user_id: int) -> List[Dict[str, An
         )
         return [dict(row) for row in results]
     except Exception as e:
-        log.error(
-            f"Failed to get user infractions for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to get user infractions for user {user_id} in guild {guild_id}: {e}")
         return []
 
 
 async def clear_user_infractions(guild_id: int, user_id: int) -> bool:
     """Clear all infractions for a user in a guild."""
     try:
-        return await delete_record(
-            "user_infractions", "guild_id = $1 AND user_id = $2", guild_id, user_id
-        )
+        return await delete_record("user_infractions", "guild_id = $1 AND user_id = $2", guild_id, user_id)
     except Exception as e:
-        log.error(
-            f"Failed to clear user infractions for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to clear user infractions for user {user_id} in guild {guild_id}: {e}")
         return False
 
 
 # Appeals Operations
 
 
-async def create_appeal(
-    user_id: int, reason: str, original_infraction: Dict[str, Any]
-) -> Optional[str]:
+async def create_appeal(user_id: int, reason: str, original_infraction: Dict[str, Any]) -> Optional[str]:
     """Create a new appeal and return the appeal ID."""
     try:
         appeal_id = str(uuid.uuid4())
@@ -235,9 +215,7 @@ async def get_appeal(appeal_id: str) -> Optional[Dict[str, Any]]:
         if result:
             appeal_data = dict(result)
             if appeal_data["original_infraction"]:
-                appeal_data["original_infraction"] = json.loads(
-                    appeal_data["original_infraction"]
-                )
+                appeal_data["original_infraction"] = json.loads(appeal_data["original_infraction"])
             return appeal_data
         return None
     except Exception as e:
@@ -248,9 +226,7 @@ async def get_appeal(appeal_id: str) -> Optional[Dict[str, Any]]:
 async def update_appeal_status(appeal_id: str, status: str) -> bool:
     """Update the status of an appeal."""
     try:
-        await execute_query(
-            "UPDATE appeals SET status = $1 WHERE appeal_id = $2", status, appeal_id
-        )
+        await execute_query("UPDATE appeals SET status = $1 WHERE appeal_id = $2", status, appeal_id)
         return True
     except Exception as e:
         log.error(f"Failed to update appeal status for {appeal_id}: {e}")
@@ -270,9 +246,7 @@ async def get_user_appeals(user_id: int) -> List[Dict[str, Any]]:
         for row in results:
             appeal_data = dict(row)
             if appeal_data["original_infraction"]:
-                appeal_data["original_infraction"] = json.loads(
-                    appeal_data["original_infraction"]
-                )
+                appeal_data["original_infraction"] = json.loads(appeal_data["original_infraction"])
             appeals.append(appeal_data)
         return appeals
     except Exception as e:
@@ -283,9 +257,7 @@ async def get_user_appeals(user_id: int) -> List[Dict[str, Any]]:
 # Global Bans Operations
 
 
-async def add_global_ban(
-    user_id: int, reason: Optional[str] = None, banned_by: Optional[int] = None
-) -> bool:
+async def add_global_ban(user_id: int, reason: Optional[str] = None, banned_by: Optional[int] = None) -> bool:
     """Add a user to the global ban list."""
     try:
         await execute_query(
@@ -312,9 +284,7 @@ async def remove_global_ban(user_id: int) -> bool:
 async def is_globally_banned(user_id: int) -> bool:
     """Check if a user is globally banned."""
     try:
-        result = await execute_query(
-            "SELECT 1 FROM global_bans WHERE user_id = $1", user_id, fetch_one=True
-        )
+        result = await execute_query("SELECT 1 FROM global_bans WHERE user_id = $1", user_id, fetch_one=True)
         return result is not None
     except Exception as e:
         log.error(f"Failed to check global ban status for user {user_id}: {e}")
@@ -324,9 +294,7 @@ async def is_globally_banned(user_id: int) -> bool:
 async def get_all_global_bans() -> List[int]:
     """Get all globally banned user IDs."""
     try:
-        results = await execute_query(
-            "SELECT user_id FROM global_bans ORDER BY banned_at DESC", fetch_all=True
-        )
+        results = await execute_query("SELECT user_id FROM global_bans ORDER BY banned_at DESC", fetch_all=True)
         return [row["user_id"] for row in results]
     except Exception as e:
         log.error(f"Failed to get global bans: {e}")
@@ -393,9 +361,7 @@ async def update_mod_log_reason(case_id: int, new_reason: str) -> bool:
         return False
 
 
-async def get_user_mod_logs(
-    guild_id: int, user_id: int, limit: int = 50
-) -> List[Dict[str, Any]]:
+async def get_user_mod_logs(guild_id: int, user_id: int, limit: int = 50) -> List[Dict[str, Any]]:
     """Get moderation logs for a specific user."""
     try:
         results = await execute_query(
@@ -489,9 +455,7 @@ async def set_guild_setting(guild_id: int, key: str, value: Any) -> bool:
 # Log Event Toggles Operations
 
 
-async def get_log_event_enabled(
-    guild_id: int, event_key: str, default_enabled: bool = True
-) -> bool:
+async def get_log_event_enabled(guild_id: int, event_key: str, default_enabled: bool = True) -> bool:
     """Check if a log event is enabled for a guild."""
     try:
         result = await execute_query(
@@ -502,9 +466,7 @@ async def get_log_event_enabled(
         )
         return result["enabled"] if result else default_enabled  # Use provided default
     except Exception as e:
-        log.error(
-            f"Failed to get log event status for {event_key} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to get log event status for {event_key} in guild {guild_id}: {e}")
         return default_enabled
 
 
@@ -512,13 +474,9 @@ async def set_log_event_enabled(guild_id: int, event_key: str, enabled: bool) ->
     """Set the enabled status for a log event."""
     try:
         data = {"guild_id": guild_id, "event_key": event_key, "enabled": enabled}
-        return await insert_or_update(
-            "log_event_toggles", ["guild_id", "event_key"], data
-        )
+        return await insert_or_update("log_event_toggles", ["guild_id", "event_key"], data)
     except Exception as e:
-        log.error(
-            f"Failed to set log event status for {event_key} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to set log event status for {event_key} in guild {guild_id}: {e}")
         return False
 
 
@@ -618,15 +576,9 @@ async def get_all_botdetect_config(guild_id: int) -> Dict[str, Any]:
 async def get_user_data(user_id: int) -> Dict[str, Any]:
     """Get custom user data."""
     try:
-        result = await execute_query(
-            "SELECT data FROM user_data WHERE user_id = $1", user_id, fetch_one=True
-        )
+        result = await execute_query("SELECT data FROM user_data WHERE user_id = $1", user_id, fetch_one=True)
         if result and result["data"]:
-            return (
-                json.loads(result["data"])
-                if isinstance(result["data"], str)
-                else result["data"]
-            )
+            return json.loads(result["data"]) if isinstance(result["data"], str) else result["data"]
         return {}
     except Exception as e:
         log.error(f"Failed to get user data for user {user_id}: {e}")
@@ -684,9 +636,7 @@ async def set_guild_api_key(
                 if isinstance(o, datetime):
                     return o.isoformat()
 
-            encrypted_string = encrypt_data(
-                json.dumps(key_data, default=datetime_converter)
-            )
+            encrypted_string = encrypt_data(json.dumps(key_data, default=datetime_converter))
             encrypted_github_auth = json.dumps({"data": encrypted_string})
         elif isinstance(key_data, str):
             encrypted_key = encrypt_data(key_data)
@@ -720,9 +670,7 @@ async def get_guild_api_key(guild_id: int) -> Optional[GuildAPIKey]:
         return GuildAPIKey(**cached)
 
     try:
-        result = await execute_query(
-            "SELECT * FROM guild_api_keys WHERE guild_id = $1", guild_id, fetch_one=True
-        )
+        result = await execute_query("SELECT * FROM guild_api_keys WHERE guild_id = $1", guild_id, fetch_one=True)
         if not result:
             return None
 
@@ -740,9 +688,7 @@ async def get_guild_api_key(guild_id: int) -> Optional[GuildAPIKey]:
             decrypted_auth_str = decrypt_data(encrypted_string)
             github_auth_info = json.loads(decrypted_auth_str)
             if "expires_at" in github_auth_info:
-                github_auth_info["expires_at"] = datetime.fromisoformat(
-                    github_auth_info["expires_at"]
-                )
+                github_auth_info["expires_at"] = datetime.fromisoformat(github_auth_info["expires_at"])
 
         guild_key = GuildAPIKey(
             guild_id=db_data["guild_id"],
@@ -810,9 +756,7 @@ async def add_ai_decision(
         return None
 
 
-async def get_ai_decisions(
-    guild_id: int, limit: int = 20, offset: int = 0
-) -> List[Dict[str, Any]]:
+async def get_ai_decisions(guild_id: int, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
     """Retrieve AI decisions for a guild."""
     try:
         results = await execute_query(
@@ -840,11 +784,7 @@ async def get_ai_decisions(
                     "author_id": row["author_id"],
                     "author_name": row["author_name"],
                     "message_content_snippet": row["message_content_snippet"],
-                    "timestamp": (
-                        row["decision_timestamp"].isoformat()
-                        if row["decision_timestamp"]
-                        else None
-                    ),
+                    "timestamp": (row["decision_timestamp"].isoformat() if row["decision_timestamp"] else None),
                     "ai_decision": decision,
                 }
             )
@@ -865,9 +805,7 @@ async def get_captcha_config(guild_id: int) -> Optional[CaptchaConfig]:
         return CaptchaConfig(**cached)
 
     try:
-        result = await execute_query(
-            "SELECT * FROM captcha_config WHERE guild_id = $1", guild_id, fetch_one=True
-        )
+        result = await execute_query("SELECT * FROM captcha_config WHERE guild_id = $1", guild_id, fetch_one=True)
         if result:
             config = CaptchaConfig(**dict(result))
             await set_cache(cache_key, config.__dict__)
@@ -910,9 +848,7 @@ async def update_captcha_config_field(guild_id: int, field: str, value: Any) -> 
         await delete_cache(f"captcha_config:{guild_id}")
         return True
     except Exception as e:
-        log.error(
-            f"Failed to update captcha config field {field} for guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to update captcha config field {field} for guild {guild_id}: {e}")
         return False
 
 
@@ -930,15 +866,11 @@ async def get_captcha_attempt(guild_id: int, user_id: int) -> Optional[CaptchaAt
         )
         return CaptchaAttempt(**dict(result)) if result else None
     except Exception as e:
-        log.error(
-            f"Failed to get captcha attempt for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to get captcha attempt for user {user_id} in guild {guild_id}: {e}")
         return None
 
 
-async def update_captcha_attempt(
-    guild_id: int, user_id: int, increment: bool = True, verified: bool = False
-) -> bool:
+async def update_captcha_attempt(guild_id: int, user_id: int, increment: bool = True, verified: bool = False) -> bool:
     """Update or create captcha attempt record."""
     try:
         current_time = datetime.now(timezone.utc)
@@ -947,9 +879,7 @@ async def update_captcha_attempt(
         existing = await get_captcha_attempt(guild_id, user_id)
 
         if existing:
-            new_count = (
-                existing.attempt_count + 1 if increment else existing.attempt_count
-            )
+            new_count = existing.attempt_count + 1 if increment else existing.attempt_count
             await execute_query(
                 """UPDATE captcha_attempts
                    SET attempt_count = $1, last_attempt = $2, verified = $3
@@ -973,31 +903,23 @@ async def update_captcha_attempt(
             )
         return True
     except Exception as e:
-        log.error(
-            f"Failed to update captcha attempt for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to update captcha attempt for user {user_id} in guild {guild_id}: {e}")
         return False
 
 
 async def reset_captcha_attempts(guild_id: int, user_id: int) -> bool:
     """Reset captcha attempts for a user."""
     try:
-        return await delete_record(
-            "captcha_attempts", "guild_id = $1 AND user_id = $2", guild_id, user_id
-        )
+        return await delete_record("captcha_attempts", "guild_id = $1 AND user_id = $2", guild_id, user_id)
     except Exception as e:
-        log.error(
-            f"Failed to reset captcha attempts for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to reset captcha attempts for user {user_id} in guild {guild_id}: {e}")
         return False
 
 
 # Verification Token Operations
 
 
-async def store_verification_token(
-    guild_id: int, user_id: int, token: str, expires_at: datetime
-) -> bool:
+async def store_verification_token(guild_id: int, user_id: int, token: str, expires_at: datetime) -> bool:
     """Store a verification token with expiration."""
     try:
         await execute_query(
@@ -1012,9 +934,7 @@ async def store_verification_token(
         )
         return True
     except Exception as e:
-        log.error(
-            f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to store verification token for user {user_id} in guild {guild_id}: {e}")
         return False
 
 
@@ -1030,9 +950,7 @@ async def get_verification_token(guild_id: int, user_id: int) -> Optional[str]:
         )
         return result["token"] if result else None
     except Exception as e:
-        log.error(
-            f"Failed to get verification token for user {user_id} in guild {guild_id}: {e}"
-        )
+        log.error(f"Failed to get verification token for user {user_id} in guild {guild_id}: {e}")
         return None
 
 
@@ -1054,9 +972,7 @@ async def validate_verification_token(token: str) -> Optional[tuple[int, int]]:
 async def cleanup_expired_tokens() -> bool:
     """Clean up expired verification tokens."""
     try:
-        await execute_query(
-            "DELETE FROM verification_tokens WHERE expires_at <= CURRENT_TIMESTAMP"
-        )
+        await execute_query("DELETE FROM verification_tokens WHERE expires_at <= CURRENT_TIMESTAMP")
         return True
     except Exception as e:
         log.error(f"Failed to cleanup expired tokens: {e}")

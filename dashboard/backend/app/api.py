@@ -3,7 +3,6 @@ import aiohttp
 import logging
 import asyncio
 import json
-import uuid
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -19,7 +18,6 @@ from cogs.aimod_helpers import gemini_client
 # pylint: disable=no-member
 from .db import get_db
 from sqlalchemy.orm import Session
-from sqlalchemy import text  # type: ignore
 from database.cache import get_cache
 from cachetools import TTLCache
 import redis.asyncio as redis
@@ -33,9 +31,7 @@ redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost"))
 # --- Configuration ---
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
-DISCORD_REDIRECT_URI = os.getenv(
-    "DISCORD_REDIRECT_URI", "http://localhost/api/callback"
-)
+DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "http://localhost/api/callback")
 DISCORD_API_URL = "https://discord.com/api"
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
@@ -56,16 +52,12 @@ def handle_rate_limit(func):
             except HTTPException as e:
                 if e.status_code == 429:
                     retry_after = int(e.headers.get("Retry-After", delay))
-                    logger.warning(
-                        f"Rate limited. Retrying after {retry_after} seconds."
-                    )
+                    logger.warning(f"Rate limited. Retrying after {retry_after} seconds.")
                     await asyncio.sleep(retry_after)
                     delay *= 2
                 else:
                     raise e
-        raise HTTPException(
-            status_code=429, detail="Exceeded retry limit for rate-limited requests."
-        )
+        raise HTTPException(status_code=429, detail="Exceeded retry limit for rate-limited requests.")
 
     return wrapper
 
@@ -77,9 +69,7 @@ def handle_rate_limit(func):
 async def _fetch_discord_guilds_from_api(access_token: str):
     headers = {"Authorization": f"Bearer {access_token}"}
     async with aiohttp.ClientSession() as session:
-        async with session.get(
-            f"{DISCORD_API_URL}/users/@me/guilds", headers=headers
-        ) as resp:
+        async with session.get(f"{DISCORD_API_URL}/users/@me/guilds", headers=headers) as resp:
             if resp.status != 200:
                 raise HTTPException(
                     status_code=resp.status,
@@ -90,18 +80,12 @@ async def _fetch_discord_guilds_from_api(access_token: str):
 
 
 @handle_rate_limit
-async def _fetch_from_discord_api(
-    endpoint: str, method: str = "GET", json: Optional[dict] = None
-):
+async def _fetch_from_discord_api(endpoint: str, method: str = "GET", json: Optional[dict] = None):
     headers = {"Authorization": f"Bot {os.getenv('DISCORD_TOKEN')}"}
     async with aiohttp.ClientSession() as session:
-        async with session.request(
-            method, f"{DISCORD_API_URL}{endpoint}", headers=headers, json=json
-        ) as resp:
+        async with session.request(method, f"{DISCORD_API_URL}{endpoint}", headers=headers, json=json) as resp:
             if resp.status not in [200, 204]:
-                logger.error(
-                    f"Discord API error on {method} {endpoint}: {resp.status} {await resp.text()}"
-                )
+                logger.error(f"Discord API error on {method} {endpoint}: {resp.status} {await resp.text()}")
                 raise HTTPException(
                     status_code=resp.status,
                     detail=f"Failed to {method} {endpoint} from Discord",
@@ -188,9 +172,7 @@ async def has_admin_permissions(guild_id: int, request: Request):
     """
     token = request.cookies.get("access_token")
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     try:
         token = token.split(" ")[1]
@@ -198,15 +180,11 @@ async def has_admin_permissions(guild_id: int, request: Request):
         access_token = payload.get("access_token")
         user_id = payload.get("id")
     except (JWTError, IndexError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     guilds_data = await fetch_user_guilds(access_token, user_id)
 
-    user_guild = next(
-        (guild for guild in guilds_data if int(guild["id"]) == guild_id), None
-    )
+    user_guild = next((guild for guild in guilds_data if int(guild["id"]) == guild_id), None)
 
     if not user_guild:
         raise HTTPException(
@@ -294,13 +272,9 @@ async def callback(code: str, db: Session = Depends(get_db)):
     }
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     async with aiohttp.ClientSession() as session:
-        async with session.post(
-            f"{DISCORD_API_URL}/oauth2/token", data=data, headers=headers
-        ) as resp:
+        async with session.post(f"{DISCORD_API_URL}/oauth2/token", data=data, headers=headers) as resp:
             if resp.status != 200:
-                raise HTTPException(
-                    status_code=400, detail="Failed to get token from Discord"
-                )
+                raise HTTPException(status_code=400, detail="Failed to get token from Discord")
             token_data = await resp.json()
 
     access_token = token_data["access_token"]
@@ -310,9 +284,7 @@ async def callback(code: str, db: Session = Depends(get_db)):
     async with aiohttp.ClientSession() as session:
         async with session.get(f"{DISCORD_API_URL}/users/@me", headers=headers) as resp:
             if resp.status != 200:
-                raise HTTPException(
-                    status_code=400, detail="Failed to get user info from Discord"
-                )
+                raise HTTPException(status_code=400, detail="Failed to get user info from Discord")
             user_data = await resp.json()
 
     # Create JWT
@@ -326,9 +298,7 @@ async def callback(code: str, db: Session = Depends(get_db)):
     jwt_token = create_access_token(data=jwt_data)
 
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
-    response = RedirectResponse(
-        url=f"{frontend_url}/dashboard/"
-    )  # Redirect to frontend dashboard with trailing slash
+    response = RedirectResponse(url=f"{frontend_url}/dashboard/")  # Redirect to frontend dashboard with trailing slash
     response.set_cookie(
         key="access_token",
         value=f"Bearer {jwt_token}",
@@ -429,18 +399,14 @@ async def get_guild(
 
     token = request.cookies.get("access_token")
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     try:
         token = token.split(" ")[1]
         payload = jose_jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         access_token = payload.get("access_token")
     except (JWTError, IndexError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     user_id = payload.get("id")
 
@@ -591,9 +557,7 @@ async def get_system_health(request: Request):
     latency = 50  # This would come from Discord API latency check
 
     launch_time_timestamp = await get_cache("bot_launch_time")
-    uptime_seconds = (
-        int(time.time() - float(launch_time_timestamp)) if launch_time_timestamp else 0
-    )
+    uptime_seconds = int(time.time() - float(launch_time_timestamp)) if launch_time_timestamp else 0
 
     return schemas.SystemHealth(
         cpu_usage=cpu_percent,
@@ -633,9 +597,7 @@ async def get_blog_posts(
 ):
     """Get a list of blog posts."""
     skip = (page - 1) * per_page
-    posts = await crud.get_blog_posts(
-        db, skip=skip, limit=per_page, published_only=published_only
-    )
+    posts = await crud.get_blog_posts(db, skip=skip, limit=per_page, published_only=published_only)
     total = await crud.count_blog_posts(db, published_only=published_only)
 
     return schemas.BlogPostList(posts=posts, total=total, page=page, per_page=per_page)
@@ -669,9 +631,7 @@ async def create_blog_post(
     # Check if slug already exists
     existing_post = await crud.get_blog_post_by_slug(db, post.slug)
     if existing_post:
-        raise HTTPException(
-            status_code=400, detail="A post with this slug already exists"
-        )
+        raise HTTPException(status_code=400, detail="A post with this slug already exists")
 
     return await crud.create_blog_post(db, post, int(current_user.id))
 
@@ -693,9 +653,7 @@ async def update_blog_post(
     if post_update.slug and post_update.slug != existing_post.slug:
         slug_conflict = await crud.get_blog_post_by_slug(db, post_update.slug)
         if slug_conflict:
-            raise HTTPException(
-                status_code=400, detail="A post with this slug already exists"
-            )
+            raise HTTPException(status_code=400, detail="A post with this slug already exists")
 
     updated_post = await crud.update_blog_post(db, post_id, post_update)
     if not updated_post:
@@ -731,14 +689,10 @@ async def get_guild_users(
     Get users in a guild with pagination and search.
     """
     if has_admin:
-        return await crud.get_guild_users(
-            db=db, guild_id=guild_id, page=page, limit=limit, search=search
-        )
+        return await crud.get_guild_users(db=db, guild_id=guild_id, page=page, limit=limit, search=search)
 
 
-@router.get(
-    "/guilds/{guild_id}/infractions", response_model=List[schemas.UserInfraction]
-)
+@router.get("/guilds/{guild_id}/infractions", response_model=List[schemas.UserInfraction])
 async def get_guild_infractions(
     guild_id: int,
     page: int = 1,
@@ -788,9 +742,7 @@ async def respond_to_appeal(
     Respond to an appeal (accept/reject).
     """
     if has_admin:
-        return await crud.respond_to_appeal(
-            db=db, appeal_id=appeal_id, status=response.status, reason=response.reason
-        )
+        return await crud.respond_to_appeal(db=db, appeal_id=appeal_id, status=response.status, reason=response.reason)
 
 
 @router.get("/users/{user_id}/profile", response_model=schemas.UserProfile)
@@ -817,9 +769,7 @@ async def create_moderation_action(
     Create a new moderation action.
     """
     if has_admin:
-        return await crud.create_moderation_action(
-            db=db, guild_id=guild_id, action=action
-        )
+        return await crud.create_moderation_action(db=db, guild_id=guild_id, action=action)
 
 
 # Enhanced Configuration Endpoints
@@ -855,9 +805,7 @@ async def update_security_settings(
     Update security settings for a guild.
     """
     if has_admin:
-        return await crud.update_security_settings(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_security_settings(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.get(
@@ -886,9 +834,7 @@ async def update_bot_detection_settings(
 ):
     """Update bot detection settings for a guild."""
     if has_admin:
-        return await crud.update_bot_detection_config(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_bot_detection_config(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.get(
@@ -917,9 +863,7 @@ async def update_vanity_settings(
 ):
     """Update vanity URL settings for a guild."""
     if has_admin:
-        return await crud.update_vanity_settings(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_vanity_settings(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.get(
@@ -952,9 +896,7 @@ async def update_ai_settings(
     Update AI settings for a guild.
     """
     if has_admin:
-        return await crud.update_ai_settings(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_ai_settings(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.get(
@@ -987,9 +929,7 @@ async def update_channels_settings(
     Update channels settings for a guild.
     """
     if has_admin:
-        return await crud.update_channels_settings(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_channels_settings(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.get(
@@ -1022,9 +962,7 @@ async def update_rate_limiting_settings(
     Update rate limiting settings for a guild.
     """
     if has_admin:
-        return await crud.update_rate_limiting_settings(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_rate_limiting_settings(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.get(
@@ -1053,9 +991,7 @@ async def update_message_rate_settings(
 ):
     """Update message rate settings for a guild."""
     if has_admin:
-        return await crud.update_rate_limiting_settings(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_rate_limiting_settings(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.get(
@@ -1088,9 +1024,7 @@ async def update_raid_defense_settings(
     Update raid defense settings for a guild.
     """
     if has_admin:
-        return await crud.update_raid_defense_config(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_raid_defense_config(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.get("/guilds/{guild_id}/config/general", response_model=schemas.GeneralSettings)
@@ -1117,14 +1051,10 @@ async def update_general_settings(
     Update the general configuration for a specific guild.
     """
     if has_admin:
-        return await crud.update_general_settings(
-            db=db, guild_id=guild_id, settings_data=settings_data
-        )
+        return await crud.update_general_settings(db=db, guild_id=guild_id, settings_data=settings_data)
 
 
-@router.get(
-    "/guilds/{guild_id}/config/moderation", response_model=schemas.ModerationSettings
-)
+@router.get("/guilds/{guild_id}/config/moderation", response_model=schemas.ModerationSettings)
 async def get_moderation_config(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -1137,9 +1067,7 @@ async def get_moderation_config(
         return await crud.get_moderation_settings(db=db, guild_id=guild_id)
 
 
-@router.put(
-    "/guilds/{guild_id}/config/moderation", response_model=schemas.ModerationSettings
-)
+@router.put("/guilds/{guild_id}/config/moderation", response_model=schemas.ModerationSettings)
 async def update_moderation_settings(
     guild_id: int,
     settings_data: schemas.ModerationSettingsUpdate,
@@ -1150,9 +1078,7 @@ async def update_moderation_settings(
     Update the moderation configuration for a specific guild.
     """
     if has_admin:
-        return await crud.update_moderation_settings(
-            db=db, guild_id=guild_id, settings_data=settings_data
-        )
+        return await crud.update_moderation_settings(db=db, guild_id=guild_id, settings_data=settings_data)
 
 
 @router.get(
@@ -1185,9 +1111,7 @@ async def update_logging_settings(
     Update the logging configuration for a specific guild.
     """
     if has_admin:
-        return await crud.update_logging_settings(
-            db=db, guild_id=guild_id, settings_data=settings_data
-        )
+        return await crud.update_logging_settings(db=db, guild_id=guild_id, settings_data=settings_data)
 
 
 @router.post("/guilds/{guild_id}/api_key", response_model=schemas.GuildAPIKey)
@@ -1247,14 +1171,10 @@ async def update_channel_exclusions(
     Update channel exclusions for AI moderation.
     """
     if has_admin:
-        return await crud.update_channel_exclusions(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_channel_exclusions(db=db, guild_id=guild_id, settings=settings)
 
 
-@router.get(
-    "/guilds/{guild_id}/config/channel-rules", response_model=schemas.ChannelRulesUpdate
-)
+@router.get("/guilds/{guild_id}/config/channel-rules", response_model=schemas.ChannelRulesUpdate)
 async def get_channel_rules(
     guild_id: int,
     db: Session = Depends(get_db),
@@ -1267,9 +1187,7 @@ async def get_channel_rules(
         return await crud.get_channel_rules(db=db, guild_id=guild_id)
 
 
-@router.post(
-    "/guilds/{guild_id}/config/channel-rules", response_model=schemas.ChannelRulesUpdate
-)
+@router.post("/guilds/{guild_id}/config/channel-rules", response_model=schemas.ChannelRulesUpdate)
 async def update_channel_rules(
     guild_id: int,
     settings: schemas.ChannelRulesUpdate,
@@ -1280,9 +1198,7 @@ async def update_channel_rules(
     Update channel-specific AI moderation rules.
     """
     if has_admin:
-        return await crud.update_channel_rules(
-            db=db, guild_id=guild_id, settings=settings
-        )
+        return await crud.update_channel_rules(db=db, guild_id=guild_id, settings=settings)
 
 
 @router.delete("/guilds/{guild_id}/config/channel-rules/{channel_id}")
@@ -1296,9 +1212,7 @@ async def delete_channel_rules(
     Delete custom rules for a specific channel.
     """
     if has_admin:
-        return await crud.delete_channel_rules(
-            db=db, guild_id=guild_id, channel_id=channel_id
-        )
+        return await crud.delete_channel_rules(db=db, guild_id=guild_id, channel_id=channel_id)
 
 
 @router.get(
@@ -1316,9 +1230,7 @@ async def get_automod_rules(guild_id: int):
 )
 async def create_automod_rule(guild_id: int, rule: dict):
     """Create an AutoMod rule via Discord API."""
-    return await _fetch_from_discord_api(
-        f"/guilds/{guild_id}/auto-moderation/rules", method="POST", json=rule
-    )
+    return await _fetch_from_discord_api(f"/guilds/{guild_id}/auto-moderation/rules", method="POST", json=rule)
 
 
 @router.delete(
@@ -1327,9 +1239,7 @@ async def create_automod_rule(guild_id: int, rule: dict):
 )
 async def delete_automod_rule(guild_id: int, rule_id: int):
     """Delete an AutoMod rule."""
-    await _fetch_from_discord_api(
-        f"/guilds/{guild_id}/auto-moderation/rules/{rule_id}", method="DELETE"
-    )
+    await _fetch_from_discord_api(f"/guilds/{guild_id}/auto-moderation/rules/{rule_id}", method="DELETE")
     return {"status": "deleted"}
 
 
@@ -1364,9 +1274,7 @@ async def verify_captcha(
         # Get hCaptcha secret from environment
         hcaptcha_secret = os.getenv("HCAPTCHA_SECRET_KEY")
         if not hcaptcha_secret:
-            raise HTTPException(
-                status_code=500, detail="hCaptcha secret key not configured"
-            )
+            raise HTTPException(status_code=500, detail="hCaptcha secret key not configured")
 
         # Verify hCaptcha response
         async with aiohttp.ClientSession() as session:
@@ -1376,13 +1284,9 @@ async def verify_captcha(
                 "remoteip": request.client.host if request.client else None,
             }
 
-            async with session.post(
-                "https://hcaptcha.com/siteverify", data=payload
-            ) as response:
+            async with session.post("https://hcaptcha.com/siteverify", data=payload) as response:
                 if response.status != 200:
-                    raise HTTPException(
-                        status_code=500, detail="Failed to verify hCaptcha"
-                    )
+                    raise HTTPException(status_code=500, detail="Failed to verify hCaptcha")
 
                 result = await response.json()
 
@@ -1467,15 +1371,15 @@ async def verify_captcha(
                 role_assigned = True
             except Exception as e:
                 role_error = str(e)
-                logger.error(
-                    f"Failed to assign role {config.verification_role_id} to user {user_id}: {e}"
-                )
+                logger.error(f"Failed to assign role {config.verification_role_id} to user {user_id}: {e}")
 
         # Prepare success message
         if role_assigned:
             message = "Verification successful! Your role has been assigned."
         elif config.verification_role_id and role_error:
-            message = "Verification successful, but there was an error assigning your role. Please contact an administrator."
+            message = (
+                "Verification successful, but there was an error assigning your role. Please contact an administrator."
+            )
         else:
             message = "Verification successful! No role is configured for assignment."
 
@@ -1490,9 +1394,7 @@ async def verify_captcha(
         raise
     except Exception as e:
         logger.error(f"Error in captcha verification: {e}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error during verification"
-        )
+        raise HTTPException(status_code=500, detail="Internal server error during verification")
 
 
 @router.get("/captcha/config")
@@ -1534,9 +1436,7 @@ async def verification_page(
         return HTMLResponse(content=html_content)
 
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=404, detail="Verification page template not found"
-        )
+        raise HTTPException(status_code=404, detail="Verification page template not found")
     except Exception as e:
         logger.error(f"Error serving verification page: {e}")
         raise HTTPException(status_code=500, detail="Error loading verification page")

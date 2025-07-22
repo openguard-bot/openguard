@@ -52,9 +52,7 @@ async def get_redis() -> Optional[redis.Redis]:
         try:
             # Add a timeout to the connection attempt to avoid long hangs
             log.info("Attempting to connect to Redis...")
-            _redis = redis.Redis(
-                **config.get_connection_kwargs(), socket_connect_timeout=1
-            )
+            _redis = redis.Redis(**config.get_connection_kwargs(), socket_connect_timeout=1)
             await _redis.ping()
             log.info("Successfully connected to Redis.")
         except Exception as exc:

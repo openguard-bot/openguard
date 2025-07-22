@@ -1,4 +1,3 @@
-import datetime
 import os
 from typing import Union
 import discord
@@ -9,14 +8,11 @@ import traceback
 import sys
 import functools
 from discord import app_commands
-import sys
-import io
 import json
 
 # Import database connection management
 from database.connection import initialize_database, get_pool, close_pool
 from database.cache import close_redis, set_cache, get_redis_client
-import shutil
 from cachetools import TTLCache
 from lists import config
 
@@ -92,9 +88,7 @@ async def prefix_update_listener():
 
     while True:
         try:
-            message = await pubsub.get_message(
-                ignore_subscribe_messages=True, timeout=1.0
-            )
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message and message["type"] == "message":
                 print(f"Received raw prefix update: {message['data']}")
                 data = message["data"].decode("utf-8")
@@ -122,9 +116,7 @@ def catch_exceptions(func):
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            tb_string = "".join(
-                traceback.format_exception(type(e), e, e.__traceback__)
-            ).strip()
+            tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__)).strip()
 
             print(f"Uncaught exception in {func.__name__}:")
             print(tb_string)
@@ -170,9 +162,7 @@ async def load_cogs():
                 print(f"Loaded cog: {cog_name}")
             except Exception as e:
                 print(f"Failed to load cog {cog_name}: {e}")
-                tb_string = "".join(
-                    traceback.format_exception(type(e), e, e.__traceback__)
-                )
+                tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
                 try:
                     await send_error_dm(
                         bot,
@@ -185,9 +175,7 @@ async def load_cogs():
                     print(f"Failed to send error DM for cog loading error: {dm_error}")
 
 
-async def send_error_dm(
-    bot_instance, error_type, error_message, error_traceback=None, context_info=None
-):
+async def send_error_dm(bot_instance, error_type, error_message, error_traceback=None, context_info=None):
     try:
         error_content = f"**Error Type:** {error_type}\n"
         error_content += f"**Error Message:** {error_message}\n"
@@ -204,24 +192,18 @@ async def send_error_dm(
             channel = bot_instance.get_channel(ERROR_NOTIFICATION_CHANNEL_ID)
             if channel is None:
                 try:
-                    channel = await bot_instance.fetch_channel(
-                        ERROR_NOTIFICATION_CHANNEL_ID
-                    )
+                    channel = await bot_instance.fetch_channel(ERROR_NOTIFICATION_CHANNEL_ID)
                 except Exception:
                     channel = None
             if not channel:
-                print(
-                    f"Could not find channel with ID {ERROR_NOTIFICATION_CHANNEL_ID} to send error notification"
-                )
+                print(f"Could not find channel with ID {ERROR_NOTIFICATION_CHANNEL_ID} to send error notification")
                 return
             await channel.send(error_content)
             return
 
         user = await bot_instance.fetch_user(ERROR_NOTIFICATION_USER_ID)
         if not user:
-            print(
-                f"Could not find user with ID {ERROR_NOTIFICATION_USER_ID} to send error notification"
-            )
+            print(f"Could not find user with ID {ERROR_NOTIFICATION_USER_ID} to send error notification")
             return
 
         await user.send(error_content)
@@ -232,9 +214,7 @@ async def send_error_dm(
 @bot.event
 async def on_error(event, *args, **kwargs):
     error_type, error_value, error_traceback = sys.exc_info()
-    tb_string = "".join(
-        traceback.format_exception(error_type, error_value, error_traceback)
-    )
+    tb_string = "".join(traceback.format_exception(error_type, error_value, error_traceback))
 
     print(f"Error in event {event}:")
     print(tb_string)
@@ -280,7 +260,9 @@ async def on_command_error(ctx, error):
         should_notify_owner = False
     elif isinstance(error, commands.BotMissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
-        user_message = f"❌ I don't have the required permissions to execute this command. Missing permissions: {missing_perms}"
+        user_message = (
+            f"❌ I don't have the required permissions to execute this command. Missing permissions: {missing_perms}"
+        )
         should_notify_owner = False
     elif isinstance(error, commands.NoPrivateMessage):
         user_message = "❌ This command cannot be used in private messages."
@@ -292,9 +274,7 @@ async def on_command_error(ctx, error):
         user_message = "❌ This command can only be used by the bot owner."
         should_notify_owner = False
     elif isinstance(error, commands.CommandOnCooldown):
-        user_message = (
-            f"❌ Command is on cooldown. Try again in {error.retry_after:.2f} seconds."
-        )
+        user_message = f"❌ Command is on cooldown. Try again in {error.retry_after:.2f} seconds."
         should_notify_owner = False
     elif isinstance(error, commands.DisabledCommand):
         user_message = "❌ This command is currently disabled."
@@ -308,17 +288,13 @@ async def on_command_error(ctx, error):
         if user_message:
             await ctx.send(user_message)
         else:
-            await ctx.send(
-                "❌ An error occurred while executing the command. The bot owner has been notified."
-            )
+            await ctx.send("❌ An error occurred while executing the command. The bot owner has been notified.")
     except Exception:
         pass
 
     # Only notify owner for unexpected errors
     if should_notify_owner:
-        tb_string = "".join(
-            traceback.format_exception(type(error), error, error.__traceback__)
-        )
+        tb_string = "".join(traceback.format_exception(type(error), error, error.__traceback__))
 
         print(f"Command error in {ctx.command.name}:")
         print(tb_string)
@@ -335,9 +311,7 @@ async def on_command_error(ctx, error):
 
 
 @bot.tree.error
-async def on_app_command_error(
-    interaction: discord.Interaction, error: app_commands.AppCommandError
-):
+async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     error = getattr(error, "original", error)
 
     # Handle specific user-facing errors
@@ -349,13 +323,13 @@ async def on_app_command_error(
         should_notify_owner = False
     elif isinstance(error, app_commands.MissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
-        user_message = (
-            f"❌ You are missing the following required permissions: {missing_perms}"
-        )
+        user_message = f"❌ You are missing the following required permissions: {missing_perms}"
         should_notify_owner = False
     elif isinstance(error, app_commands.BotMissingPermissions):
         missing_perms = ", ".join(error.missing_permissions)
-        user_message = f"❌ I don't have the required permissions to execute this command. Missing permissions: {missing_perms}"
+        user_message = (
+            f"❌ I don't have the required permissions to execute this command. Missing permissions: {missing_perms}"
+        )
         should_notify_owner = False
     elif isinstance(error, app_commands.NoPrivateMessage):
         user_message = "❌ This command cannot be used in private messages."
@@ -402,9 +376,7 @@ async def on_app_command_error(
 
     # Only notify owner for unexpected errors
     if should_notify_owner:
-        tb_string = "".join(
-            traceback.format_exception(type(error), error, error.__traceback__)
-        ).strip()
+        tb_string = "".join(traceback.format_exception(type(error), error, error.__traceback__)).strip()
 
         command_name = interaction.command.name if interaction.command else "Unknown"
         print(f"App command error in {command_name}:")
@@ -439,9 +411,7 @@ async def on_ready():
         )
 
     print(f"Logged in as {bot.user}")
-    print(
-        f"Global error handling is active - errors will be sent to user ID: {ERROR_NOTIFICATION_USER_ID}"
-    )
+    print(f"Global error handling is active - errors will be sent to user ID: {ERROR_NOTIFICATION_USER_ID}")
     await update_bot_guilds_cache()
     await update_launch_time_cache()
     await update_all_guild_member_caches()
@@ -514,13 +484,9 @@ async def update_guild_member_cache(guild):
         if member_ids:
             pipe.sadd(key, *member_ids)
         await pipe.execute()
-        print(
-            f"Updated member cache for guild {guild.name} ({guild.id}) with {len(member_ids)} members."
-        )
+        print(f"Updated member cache for guild {guild.name} ({guild.id}) with {len(member_ids)} members.")
     except discord.Forbidden:
-        print(
-            f"Missing permissions to fetch members for guild {guild.name} ({guild.id})."
-        )
+        print(f"Missing permissions to fetch members for guild {guild.name} ({guild.id}).")
     except Exception as e:
         print(f"Error caching members for guild {guild.name} ({guild.id}): {e}")
 
@@ -544,13 +510,9 @@ async def test_error(ctx):
     raise ValueError("This is a test error to verify error handling")
 
 
-@bot.tree.command(
-    name="testerror", description="Test slash command to verify error handling"
-)
+@bot.tree.command(name="testerror", description="Test slash command to verify error handling")
 async def test_error_slash(interaction: discord.Interaction):
-    await interaction.response.send_message(
-        "Testing error handling in slash command..."
-    )
+    await interaction.response.send_message("Testing error handling in slash command...")
     raise ValueError("This is a test error to verify slash command error handling")
 
 
@@ -590,9 +552,7 @@ if __name__ == "__main__":
         tb_string = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         print(tb_string)
 
-        print(
-            f"Could not send error notification to user ID {ERROR_NOTIFICATION_USER_ID} - bot not running"
-        )
+        print(f"Could not send error notification to user ID {ERROR_NOTIFICATION_USER_ID} - bot not running")
         print(f"Error Type: {type(e).__name__}")
         print(f"Error Message: {str(e)}")
         print(f"Traceback: {tb_string}")

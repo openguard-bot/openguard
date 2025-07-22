@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands, tasks
-from discord import AllowedMentions, ui, app_commands
+from discord import AllowedMentions, ui
 import datetime
 import asyncio
 import aiohttp  # Added for webhook sending
@@ -9,7 +9,6 @@ from typing import Optional, Union
 
 # Import our JSON-based settings manager
 from .logging_helpers import settings_manager
-from .aimod_helpers.config_manager import get_guild_config_async
 
 log = logging.getLogger(__name__)  # Setup logger for this cog
 
@@ -85,16 +84,12 @@ class LoggingCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.session: Optional[aiohttp.ClientSession] = None  # Session for webhooks
-        self.last_audit_log_ids: dict[int, Optional[int]] = (
-            {}
-        )  # Store last ID per guild
+        self.last_audit_log_ids: dict[int, Optional[int]] = {}  # Store last ID per guild
         # Start the audit log poller task if the bot is ready, otherwise wait
         if bot.is_ready():
             asyncio.create_task(self.initialize_cog())  # Use async init helper
         else:
-            asyncio.create_task(
-                self.start_audit_log_poller_when_ready()
-            )  # Keep this for initial start
+            asyncio.create_task(self.start_audit_log_poller_when_ready())  # Keep this for initial start
 
     class LogView(ui.LayoutView):
         """View used for logging messages."""
@@ -120,18 +115,14 @@ class LoggingCog(commands.Cog):
 
             self.header_section: Optional[ui.Section] = None
             if author is not None:
-                self.header_section = ui.Section(
-                    accessory=ui.Thumbnail(media=author.display_avatar.url)
-                )
+                self.header_section = ui.Section(accessory=ui.Thumbnail(media=author.display_avatar.url))
                 for item in self.header_items:
                     self.header_section.add_item(item)
                 self.container.add_item(self.header_section)
             else:
                 for item in self.header_items:
                     self.container.add_item(item)
-            self.container.add_item(
-                ui.Separator(spacing=discord.SeparatorSpacing.small)
-            )
+            self.container.add_item(ui.Separator(spacing=discord.SeparatorSpacing.small))
 
             # Use same container to avoid nesting issues and track separator
             self.content_container = self.container
@@ -166,9 +157,7 @@ class LoggingCog(commands.Cog):
         def set_author(self, user: discord.abc.User) -> None:
             """Add or update the thumbnail and append the user ID to the footer."""
             if self.header_section is None:
-                self.header_section = ui.Section(
-                    accessory=ui.Thumbnail(media=user.display_avatar.url)
-                )
+                self.header_section = ui.Section(accessory=ui.Thumbnail(media=user.display_avatar.url))
                 for item in self.header_items:
                     self.container.remove_item(item)
                     self.header_section.add_item(item)
@@ -178,9 +167,7 @@ class LoggingCog(commands.Cog):
                 else:
                     self.container.add_item(self.header_section)
             else:
-                self.header_section.accessory = ui.Thumbnail(
-                    media=user.display_avatar.url
-                )
+                self.header_section.accessory = ui.Thumbnail(media=user.display_avatar.url)
             if "User ID:" not in self.footer_display.content:
                 self.footer_display.content += f" | User ID: {user.id}"
 
@@ -210,41 +197,27 @@ class LoggingCog(commands.Cog):
         """Fetch the latest audit log ID for each guild the bot is in."""
         log.info("Initializing last audit log IDs for guilds...")
         for guild in self.bot.guilds:
-            if (
-                guild.id not in self.last_audit_log_ids
-            ):  # Only initialize if not already set
+            if guild.id not in self.last_audit_log_ids:  # Only initialize if not already set
                 try:
                     if guild.me.guild_permissions.view_audit_log:
                         async for entry in guild.audit_logs(limit=1):
                             self.last_audit_log_ids[guild.id] = entry.id
-                            log.debug(
-                                f"Initialized last_audit_log_id for guild {guild.id} to {entry.id}"
-                            )
+                            log.debug(f"Initialized last_audit_log_id for guild {guild.id} to {entry.id}")
                             break  # Only need the latest one
                     else:
                         log.warning(
                             f"Missing 'View Audit Log' permission in guild {guild.id}. Cannot initialize audit log ID."
                         )
-                        self.last_audit_log_ids[guild.id] = (
-                            None  # Mark as unable to fetch
-                        )
+                        self.last_audit_log_ids[guild.id] = None  # Mark as unable to fetch
                 except discord.Forbidden:
-                    log.warning(
-                        f"Forbidden error fetching initial audit log ID for guild {guild.id}."
-                    )
+                    log.warning(f"Forbidden error fetching initial audit log ID for guild {guild.id}.")
                     self.last_audit_log_ids[guild.id] = None
                 except discord.HTTPException as e:
-                    log.error(
-                        f"HTTP error fetching initial audit log ID for guild {guild.id}: {e}"
-                    )
+                    log.error(f"HTTP error fetching initial audit log ID for guild {guild.id}: {e}")
                     self.last_audit_log_ids[guild.id] = None
                 except Exception as e:
-                    log.exception(
-                        f"Unexpected error fetching initial audit log ID for guild {guild.id}: {e}"
-                    )
-                    self.last_audit_log_ids[guild.id] = (
-                        None  # Mark as unable on other errors
-                    )
+                    log.exception(f"Unexpected error fetching initial audit log ID for guild {guild.id}: {e}")
+                    self.last_audit_log_ids[guild.id] = None  # Mark as unable on other errors
         log.info("Finished initializing audit log IDs.")
 
     async def start_audit_log_poller_when_ready(self):
@@ -263,16 +236,12 @@ class LoggingCog(commands.Cog):
     async def _send_log_embed(self, guild: discord.Guild, embed: ui.LayoutView) -> None:
         """Sends the log view via the configured webhook for the guild."""
         if not self.session or self.session.closed:
-            log.error(
-                f"aiohttp session not available or closed in LoggingCog for guild {guild.id}. Cannot send log."
-            )
+            log.error(f"aiohttp session not available or closed in LoggingCog for guild {guild.id}. Cannot send log.")
             return
 
         webhook_url = await settings_manager.get_logging_webhook(guild.id)
 
-        log.info(
-            f"For guild {guild.id}, retrieved webhook_url: {webhook_url} (type: {type(webhook_url)})"
-        )
+        log.info(f"For guild {guild.id}, retrieved webhook_url: {webhook_url} (type: {type(webhook_url)})")
         if not webhook_url:
             # log.debug(f"Logging webhook not configured for guild {guild.id}. Skipping log.") # Can be noisy
             return
@@ -291,23 +260,15 @@ class LoggingCog(commands.Cog):
             )
             # log.debug(f"Sent log embed via webhook for guild {guild.id}") # Can be noisy
         except ValueError as e:
-            log.exception(
-                f"ValueError sending log via webhook for guild {guild.id}. Error: {e}"
-            )
+            log.exception(f"ValueError sending log via webhook for guild {guild.id}. Error: {e}")
         except (discord.Forbidden, discord.NotFound):
-            log.error(
-                f"Webhook permissions error or webhook not found for guild {guild.id}. URL: {webhook_url}"
-            )
+            log.error(f"Webhook permissions error or webhook not found for guild {guild.id}. URL: {webhook_url}")
         except discord.HTTPException as e:
             log.error(f"HTTP error sending log via webhook for guild {guild.id}: {e}")
         except aiohttp.ClientError as e:
-            log.error(
-                f"aiohttp client error sending log via webhook for guild {guild.id}: {e}"
-            )
+            log.error(f"aiohttp client error sending log via webhook for guild {guild.id}: {e}")
         except Exception as e:
-            log.exception(
-                f"Unexpected error sending log via webhook for guild {guild.id}: {e}"
-            )
+            log.exception(f"Unexpected error sending log via webhook for guild {guild.id}: {e}")
 
     def _create_log_embed(
         self,
@@ -358,9 +319,7 @@ class LoggingCog(commands.Cog):
         if not webhook_url:
             return False
         # Then, check if the specific event is enabled (defaults to True if not set)
-        enabled = await settings_manager.is_log_event_enabled(
-            guild_id, event_key, default_enabled=True
-        )
+        enabled = await settings_manager.is_log_event_enabled(guild_id, event_key, default_enabled=True)
         return enabled
 
     async def _is_recent_audit_log_for_target(
@@ -375,8 +334,7 @@ class LoggingCog(commands.Cog):
             async for entry in guild.audit_logs(limit=1, action=action):
                 if (
                     entry.target.id == target_id
-                    and (discord.utils.utcnow() - entry.created_at).total_seconds()
-                    <= max_age
+                    and (discord.utils.utcnow() - entry.created_at).total_seconds() <= max_age
                 ):
                     return True
             return False
@@ -410,19 +368,13 @@ class LoggingCog(commands.Cog):
                 if guild.me.guild_permissions.view_audit_log:
                     async for entry in guild.audit_logs(limit=1):
                         self.last_audit_log_ids[guild.id] = entry.id
-                        log.debug(
-                            f"Initialized last_audit_log_id for new guild {guild.id} to {entry.id}"
-                        )
+                        log.debug(f"Initialized last_audit_log_id for new guild {guild.id} to {entry.id}")
                         break
                 else:
-                    log.warning(
-                        f"Missing 'View Audit Log' permission in new guild {guild.id}."
-                    )
+                    log.warning(f"Missing 'View Audit Log' permission in new guild {guild.id}.")
                     self.last_audit_log_ids[guild.id] = None
             except Exception as e:
-                log.exception(
-                    f"Error fetching initial audit log ID for new guild {guild.id}: {e}"
-                )
+                log.exception(f"Error fetching initial audit log ID for new guild {guild.id}: {e}")
                 self.last_audit_log_ids[guild.id] = None
 
     @commands.Cog.listener()
@@ -469,9 +421,7 @@ class LoggingCog(commands.Cog):
         await self._send_log_embed(member.guild, embed)
 
     @commands.Cog.listener()
-    async def on_member_ban(
-        self, guild: discord.Guild, user: Union[discord.User, discord.Member]
-    ):
+    async def on_member_ban(self, guild: discord.Guild, user: Union[discord.User, discord.Member]):
         event_key = "member_ban_event"
         if not await self._check_log_enabled(guild.id, event_key):
             return

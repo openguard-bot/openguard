@@ -5,7 +5,7 @@ from discord import app_commands, Object
 from cogs.ban_appeal_cog import BanAppealView
 import datetime
 import logging
-from typing import Optional, Union, List
+from typing import Optional, Union
 
 # Use absolute import for ModLogCog
 from cogs.mod_log_cog import ModLogCog
@@ -23,9 +23,7 @@ class HumanModerationCog(commands.Cog):
 
         # Create the main command group for this cog
 
-    @commands.hybrid_group(
-        name="moderate", description="Moderation commands for server management"
-    )
+    @commands.hybrid_group(name="moderate", description="Moderation commands for server management")
     async def moderate(self, ctx: commands.Context):
         """Moderation commands for server management"""
         await ctx.send_help(ctx.command)
@@ -103,9 +101,7 @@ class HumanModerationCog(commands.Cog):
                     ephemeral=True,
                 )
             else:
-                await ctx.send(
-                    "❌ Please provide either a member or a user ID, but not both."
-                )
+                await ctx.send("❌ Please provide either a member or a user ID, but not both.")
             return
 
         target: Union[discord.Member, discord.User, Object]
@@ -122,9 +118,7 @@ class HumanModerationCog(commands.Cog):
                         ephemeral=True,
                     )
                 else:
-                    await ctx.send(
-                        "❌ Invalid user ID. Please provide a valid user ID."
-                    )
+                    await ctx.send("❌ Invalid user ID. Please provide a valid user ID.")
                 return
         else:
             target = member
@@ -151,37 +145,28 @@ class HumanModerationCog(commands.Cog):
         # --- Target Checks ---
         if target.id == ctx.author.id:
             if ctx.interaction:
-                await ctx.interaction.response.send_message(
-                    "❌ You cannot ban yourself.", ephemeral=True
-                )
+                await ctx.interaction.response.send_message("❌ You cannot ban yourself.", ephemeral=True)
             else:
                 await ctx.send("❌ You cannot ban yourself.")
             return
 
         if target.id == self.bot.user.id:
             if ctx.interaction:
-                await ctx.interaction.response.send_message(
-                    "❌ I cannot ban myself.", ephemeral=True
-                )
+                await ctx.interaction.response.send_message("❌ I cannot ban myself.", ephemeral=True)
             else:
                 await ctx.send("❌ I cannot ban myself.")
             return
 
         # If the target is a member in the server, perform role hierarchy checks
         if isinstance(target, discord.Member):
-            if (
-                ctx.author.top_role.position <= target.top_role.position
-                and ctx.author.id != ctx.guild.owner_id
-            ):
+            if ctx.author.top_role.position <= target.top_role.position and ctx.author.id != ctx.guild.owner_id:
                 if ctx.interaction:
                     await ctx.interaction.response.send_message(
                         "❌ You cannot ban someone with a higher or equal role.",
                         ephemeral=True,
                     )
                 else:
-                    await ctx.send(
-                        "❌ You cannot ban someone with a higher or equal role."
-                    )
+                    await ctx.send("❌ You cannot ban someone with a higher or equal role.")
                 return
             if ctx.guild.me.top_role.position <= target.top_role.position:
                 if ctx.interaction:
@@ -190,9 +175,7 @@ class HumanModerationCog(commands.Cog):
                         ephemeral=True,
                     )
                 else:
-                    await ctx.send(
-                        "❌ I cannot ban someone with a higher or equal role than me."
-                    )
+                    await ctx.send("❌ I cannot ban someone with a higher or equal role than me.")
                 return
 
         if ctx.interaction:
@@ -230,22 +213,16 @@ class HumanModerationCog(commands.Cog):
                         value=reason or "No reason provided",
                         inline=False,
                     )
-                    embed.add_field(
-                        name="Moderator", value=ctx.author.name, inline=False
-                    )
+                    embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
                     embed.set_footer(
                         text=f"Server ID: {ctx.guild.id} • {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC • Use the button or send !banappeal to appeal"
                     )
-                    await full_user_object.send(
-                        embed=embed, view=BanAppealView(ctx.guild.id)
-                    )
+                    await full_user_object.send(embed=embed, view=BanAppealView(ctx.guild.id))
                     dm_sent = True
                 except discord.Forbidden:
                     pass  # User has DMs closed or is not fetchable
                 except Exception as e:
-                    logger.error(
-                        f"Error sending ban DM to {full_user_object} (ID: {full_user_object.id}): {e}"
-                    )
+                    logger.error(f"Error sending ban DM to {full_user_object} (ID: {full_user_object.id}): {e}")
 
             # Use the original target (Object or Member) for the ban action
             await ctx.guild.ban(target, reason=reason, delete_message_days=delete_days)
@@ -268,11 +245,7 @@ class HumanModerationCog(commands.Cog):
                 )
 
             # --- Confirmation Message ---
-            target_text = (
-                self._user_display(log_target)
-                if full_user_object
-                else f"User ID `{target.id}`"
-            )
+            target_text = self._user_display(log_target) if full_user_object else f"User ID `{target.id}`"
             dm_status = ""
             if send_dm:
                 dm_status = (
@@ -281,9 +254,7 @@ class HumanModerationCog(commands.Cog):
                     else "❌ Could not send DM notification (user may have DMs disabled or could not be fetched)"
                 )
 
-            response_message = (
-                f"🔨 **Banned {target_text}**! Reason: {reason or 'No reason provided'}"
-            )
+            response_message = f"🔨 **Banned {target_text}**! Reason: {reason or 'No reason provided'}"
             if dm_status:
                 response_message += f"\n{dm_status}"
 
@@ -322,19 +293,13 @@ class HumanModerationCog(commands.Cog):
                 else:
                     await ctx.send(f"❌ User with ID `{target.id}` is already banned.")
             elif ctx.interaction:
-                await ctx.interaction.followup.send(
-                    f"❌ An error occurred while banning the user: {e}", ephemeral=True
-                )
+                await ctx.interaction.followup.send(f"❌ An error occurred while banning the user: {e}", ephemeral=True)
             else:
                 await ctx.send(f"❌ An error occurred while banning the user: {e}")
 
     @moderate.command(name="unban", description="Unban a user from the server")
-    @app_commands.describe(
-        user_id="The ID of the user to unban", reason="The reason for the unban"
-    )
-    async def moderate_unban_callback(
-        self, ctx: commands.Context, user_id: str, reason: str = None
-    ):
+    @app_commands.describe(user_id="The ID of the user to unban", reason="The reason for the unban")
+    async def moderate_unban_callback(self, ctx: commands.Context, user_id: str, reason: str = None):
         """Unban a user from the server."""
         if ctx.interaction:
             await ctx.interaction.response.defer(ephemeral=True, thinking=False)
@@ -344,9 +309,7 @@ class HumanModerationCog(commands.Cog):
                 if ctx.interaction.response.is_done():
                     await ctx.interaction.followup.send(message, ephemeral=ephemeral)
                 else:
-                    await ctx.interaction.response.send_message(
-                        message, ephemeral=ephemeral
-                    )
+                    await ctx.interaction.response.send_message(message, ephemeral=ephemeral)
             else:
                 await ctx.send(message)
 
@@ -378,9 +341,7 @@ class HumanModerationCog(commands.Cog):
             await send_response("❌ I don't have permission to view the ban list.")
             return
         except discord.HTTPException as e:
-            await send_response(
-                f"❌ An error occurred while checking the ban list: {e}"
-            )
+            await send_response(f"❌ An error occurred while checking the ban list: {e}")
             return
 
         # Perform the unban
@@ -416,9 +377,7 @@ class HumanModerationCog(commands.Cog):
             await send_response(f"❌ An error occurred while unbanning the user: {e}")
 
     @moderate.command(name="kick", description="Kick a member from the server")
-    @app_commands.describe(
-        member="The member to kick", reason="The reason for the kick"
-    )
+    @app_commands.describe(member="The member to kick", reason="The reason for the kick")
     async def moderate_kick_callback(
         self,
         ctx: commands.Context,
@@ -434,24 +393,18 @@ class HumanModerationCog(commands.Cog):
                 if ctx.interaction.response.is_done():
                     await ctx.interaction.followup.send(message, ephemeral=ephemeral)
                 else:
-                    await ctx.interaction.response.send_message(
-                        message, ephemeral=ephemeral
-                    )
+                    await ctx.interaction.response.send_message(message, ephemeral=ephemeral)
             else:
                 await ctx.send(message)
 
         # Check if the user has permission to kick members
         if not ctx.author.guild_permissions.kick_members:
-            await send_response(
-                "❌ You don't have permission to kick members.", ephemeral=True
-            )
+            await send_response("❌ You don't have permission to kick members.", ephemeral=True)
             return
 
         # Check if the bot has permission to kick members
         if not ctx.guild.me.guild_permissions.kick_members:
-            await send_response(
-                "❌ I don't have permission to kick members.", ephemeral=True
-            )
+            await send_response("❌ I don't have permission to kick members.", ephemeral=True)
             return
 
         # Check if the user is trying to kick themselves
@@ -465,10 +418,7 @@ class HumanModerationCog(commands.Cog):
             return
 
         # Check if the user is trying to kick someone with a higher role
-        if (
-            ctx.author.top_role.position <= member.top_role.position
-            and ctx.author.id != ctx.guild.owner_id
-        ):
+        if ctx.author.top_role.position <= member.top_role.position and ctx.author.id != ctx.guild.owner_id:
             await send_response(
                 "❌ You cannot kick someone with a higher or equal role.",
                 ephemeral=True,
@@ -491,9 +441,7 @@ class HumanModerationCog(commands.Cog):
                 description=f"You have been kicked from **{ctx.guild.name}**",
                 color=discord.Color.orange(),
             )
-            embed.add_field(
-                name="Reason", value=reason or "No reason provided", inline=False
-            )
+            embed.add_field(name="Reason", value=reason or "No reason provided", inline=False)
             embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
             embed.set_footer(
                 text=f"Server ID: {ctx.guild.id} • {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC"
@@ -540,13 +488,9 @@ class HumanModerationCog(commands.Cog):
                 ephemeral=False,
             )
         except discord.Forbidden:
-            await send_response(
-                "❌ I don't have permission to kick this member.", ephemeral=True
-            )
+            await send_response("❌ I don't have permission to kick this member.", ephemeral=True)
         except discord.HTTPException as e:
-            await send_response(
-                f"❌ An error occurred while kicking the member: {e}", ephemeral=True
-            )
+            await send_response(f"❌ An error occurred while kicking the member: {e}", ephemeral=True)
 
     @moderate.command(name="timeout", description="Timeout a member in the server")
     @app_commands.describe(
@@ -568,24 +512,18 @@ class HumanModerationCog(commands.Cog):
         async def send_response(message, ephemeral=True, embed=None):
             if ctx.interaction:
                 # After deferring, we must use followup
-                await ctx.interaction.followup.send(
-                    message, ephemeral=ephemeral, embed=embed
-                )
+                await ctx.interaction.followup.send(message, ephemeral=ephemeral, embed=embed)
             else:
                 await ctx.send(message, embed=embed)
 
         # Check if the user has permission to moderate members
         if not ctx.author.guild_permissions.moderate_members:
-            await send_response(
-                "❌ You don't have permission to timeout members.", ephemeral=True
-            )
+            await send_response("❌ You don't have permission to timeout members.", ephemeral=True)
             return
 
         # Check if the bot has permission to moderate members
         if not ctx.guild.me.guild_permissions.moderate_members:
-            await send_response(
-                "❌ I don't have permission to timeout members.", ephemeral=True
-            )
+            await send_response("❌ I don't have permission to timeout members.", ephemeral=True)
             return
 
         # Check if the user is trying to timeout themselves
@@ -599,10 +537,7 @@ class HumanModerationCog(commands.Cog):
             return
 
         # Check if the user is trying to timeout someone with a higher role
-        if (
-            ctx.author.top_role.position <= member.top_role.position
-            and ctx.author.id != ctx.guild.owner_id
-        ):
+        if ctx.author.top_role.position <= member.top_role.position and ctx.author.id != ctx.guild.owner_id:
             await send_response(
                 "❌ You cannot timeout someone with a higher or equal role.",
                 ephemeral=True,
@@ -629,9 +564,7 @@ class HumanModerationCog(commands.Cog):
         # Check if the duration is within Discord's limits (max 28 days)
         max_timeout = datetime.timedelta(days=28)
         if delta > max_timeout:
-            await send_response(
-                "❌ Timeout duration cannot exceed 28 days.", ephemeral=True
-            )
+            await send_response("❌ Timeout duration cannot exceed 28 days.", ephemeral=True)
             return
 
         # Calculate the end time
@@ -645,14 +578,10 @@ class HumanModerationCog(commands.Cog):
                 description=f"You have been timed out in **{ctx.guild.name}** for {duration}",
                 color=discord.Color.gold(),
             )
-            embed.add_field(
-                name="Reason", value=reason or "No reason provided", inline=False
-            )
+            embed.add_field(name="Reason", value=reason or "No reason provided", inline=False)
             embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
             embed.add_field(name="Duration", value=duration, inline=False)
-            embed.add_field(
-                name="Expires", value=f"<t:{int(until.timestamp())}:F>", inline=False
-            )
+            embed.add_field(name="Expires", value=f"<t:{int(until.timestamp())}:F>", inline=False)
             embed.set_footer(
                 text=f"Server ID: {ctx.guild.id} • {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC"
             )
@@ -698,17 +627,11 @@ class HumanModerationCog(commands.Cog):
                 ephemeral=False,
             )
         except discord.Forbidden:
-            await send_response(
-                "❌ I don't have permission to timeout this member.", ephemeral=True
-            )
+            await send_response("❌ I don't have permission to timeout this member.", ephemeral=True)
         except discord.HTTPException as e:
-            await send_response(
-                f"❌ An error occurred while timing out the member: {e}", ephemeral=True
-            )
+            await send_response(f"❌ An error occurred while timing out the member: {e}", ephemeral=True)
 
-    @moderate.command(
-        name="removetimeout", description="Remove a timeout from a member"
-    )
+    @moderate.command(name="removetimeout", description="Remove a timeout from a member")
     @app_commands.describe(
         member="The member to remove timeout from",
         reason="The reason for removing the timeout",
@@ -728,24 +651,18 @@ class HumanModerationCog(commands.Cog):
                 if ctx.interaction.response.is_done():
                     await ctx.interaction.followup.send(message, ephemeral=ephemeral)
                 else:
-                    await ctx.interaction.response.send_message(
-                        message, ephemeral=ephemeral
-                    )
+                    await ctx.interaction.response.send_message(message, ephemeral=ephemeral)
             else:
                 await ctx.send(message)
 
         # Check if the user has permission to moderate members
         if not ctx.author.guild_permissions.moderate_members:
-            await send_response(
-                "❌ You don't have permission to remove timeouts.", ephemeral=True
-            )
+            await send_response("❌ You don't have permission to remove timeouts.", ephemeral=True)
             return
 
         # Check if the bot has permission to moderate members
         if not ctx.guild.me.guild_permissions.moderate_members:
-            await send_response(
-                "❌ I don't have permission to remove timeouts.", ephemeral=True
-            )
+            await send_response("❌ I don't have permission to remove timeouts.", ephemeral=True)
             return
 
         # Check if the member is timed out
@@ -761,9 +678,7 @@ class HumanModerationCog(commands.Cog):
                 description=f"Your timeout in **{ctx.guild.name}** has been removed",
                 color=discord.Color.green(),
             )
-            embed.add_field(
-                name="Reason", value=reason or "No reason provided", inline=False
-            )
+            embed.add_field(name="Reason", value=reason or "No reason provided", inline=False)
             embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
             embed.set_footer(
                 text=f"Server ID: {ctx.guild.id} • {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC"
@@ -775,9 +690,7 @@ class HumanModerationCog(commands.Cog):
             # User has DMs closed, ignore
             pass
         except Exception as e:
-            logger.error(
-                f"Error sending timeout removal DM to {member} (ID: {member.id}): {e}"
-            )
+            logger.error(f"Error sending timeout removal DM to {member} (ID: {member.id}): {e}")
 
         # Perform the timeout removal
         try:
@@ -817,13 +730,9 @@ class HumanModerationCog(commands.Cog):
                 ephemeral=True,
             )
         except discord.HTTPException as e:
-            await send_response(
-                f"❌ An error occurred while removing the timeout: {e}", ephemeral=True
-            )
+            await send_response(f"❌ An error occurred while removing the timeout: {e}", ephemeral=True)
 
-    @moderate.command(
-        name="purge", description="Delete a specified number of messages from a channel"
-    )
+    @moderate.command(name="purge", description="Delete a specified number of messages from a channel")
     @app_commands.describe(
         amount="Number of messages to delete (1-100)",
         user="Optional: Only delete messages from this user",
@@ -859,9 +768,7 @@ class HumanModerationCog(commands.Cog):
 
         # Validate the amount
         if amount < 1 or amount > 100:
-            await send_response(
-                "❌ You can only purge between 1 and 100 messages at a time."
-            )
+            await send_response("❌ You can only purge between 1 and 100 messages at a time.")
             return
 
         # Perform the purge
@@ -882,9 +789,7 @@ class HumanModerationCog(commands.Cog):
                 )
 
                 # Send confirmation message
-                await send_response(
-                    f"🧹 **Purged {len(deleted)} messages** from {self._user_display(user)}!"
-                )
+                await send_response(f"🧹 **Purged {len(deleted)} messages** from {self._user_display(user)}!")
             else:
                 # Delete messages from anyone
                 deleted = await channel.purge(limit=amount)
@@ -897,19 +802,13 @@ class HumanModerationCog(commands.Cog):
                 # Send confirmation message
                 await send_response(f"🧹 **Purged {len(deleted)} messages**!")
         except discord.Forbidden:
-            await send_response(
-                "❌ I don't have permission to delete messages in this channel."
-            )
+            await send_response("❌ I don't have permission to delete messages in this channel.")
         except discord.HTTPException as e:
             await send_response(f"❌ An error occurred while purging messages: {e}")
 
     @moderate.command(name="warn", description="Warn a member in the server")
-    @app_commands.describe(
-        member="The member to warn", reason="The reason for the warning"
-    )
-    async def moderate_warn_callback(
-        self, ctx: commands.Context, member: discord.Member, reason: str
-    ):
+    @app_commands.describe(member="The member to warn", reason="The reason for the warning")
+    async def moderate_warn_callback(self, ctx: commands.Context, member: discord.Member, reason: str):
         """Warn a member in the server."""
         if ctx.interaction:
             # A warning is a public action, so we don't defer ephemerally
@@ -920,17 +819,13 @@ class HumanModerationCog(commands.Cog):
                 if ctx.interaction.response.is_done():
                     await ctx.interaction.followup.send(message, ephemeral=ephemeral)
                 else:
-                    await ctx.interaction.response.send_message(
-                        message, ephemeral=ephemeral
-                    )
+                    await ctx.interaction.response.send_message(message, ephemeral=ephemeral)
             else:
                 await ctx.send(message)
 
         # Check if the user has permission to kick members (using kick permission as a baseline for warning)
         if not ctx.author.guild_permissions.kick_members:
-            await send_response(
-                "❌ You don't have permission to warn members.", ephemeral=True
-            )
+            await send_response("❌ You don't have permission to warn members.", ephemeral=True)
             return
 
         # Check if the user is trying to warn themselves
@@ -944,10 +839,7 @@ class HumanModerationCog(commands.Cog):
             return
 
         # Check if the user is trying to warn someone with a higher role
-        if (
-            ctx.author.top_role.position <= member.top_role.position
-            and ctx.author.id != ctx.guild.owner_id
-        ):
+        if ctx.author.top_role.position <= member.top_role.position and ctx.author.id != ctx.guild.owner_id:
             await send_response(
                 "❌ You cannot warn someone with a higher or equal role.",
                 ephemeral=True,
@@ -973,9 +865,7 @@ class HumanModerationCog(commands.Cog):
         # -------------------------
 
         # Send warning message in the channel
-        await send_response(
-            f"⚠️ **{self._user_display(member)} has been warned**! Reason: {reason}"
-        )
+        await send_response(f"⚠️ **{self._user_display(member)} has been warned**! Reason: {reason}")
 
         # Try to DM the user about the warning
         try:
@@ -1002,18 +892,14 @@ class HumanModerationCog(commands.Cog):
         user_id="The ID of the banned user to DM",
         message="The message to send to the banned user",
     )
-    async def moderate_dm_banned_callback(
-        self, ctx: commands.Context, user_id: str, message: str
-    ):
+    async def moderate_dm_banned_callback(self, ctx: commands.Context, user_id: str, message: str):
         """Send a DM to a banned user."""
         if ctx.interaction:
             await ctx.interaction.response.defer(ephemeral=True)
 
         async def send_response(message, ephemeral=True, embed=None):
             if ctx.interaction:
-                await ctx.interaction.followup.send(
-                    message, ephemeral=ephemeral, embed=embed
-                )
+                await ctx.interaction.followup.send(message, ephemeral=ephemeral, embed=embed)
             else:
                 await ctx.send(message, embed=embed)
 
@@ -1040,9 +926,7 @@ class HumanModerationCog(commands.Cog):
             await send_response("❌ I don't have permission to view the ban list.")
             return
         except discord.HTTPException as e:
-            await send_response(
-                f"❌ An error occurred while checking the ban list: {e}"
-            )
+            await send_response(f"❌ An error occurred while checking the ban list: {e}")
             return
 
         # Try to send a DM to the banned user
@@ -1075,33 +959,23 @@ class HumanModerationCog(commands.Cog):
         except discord.HTTPException as e:
             await send_response(f"❌ An error occurred while sending the DM: {e}")
         except Exception as e:
-            logger.error(
-                f"Error sending DM to banned user {banned_user} (ID: {banned_user.id}): {e}"
-            )
+            logger.error(f"Error sending DM to banned user {banned_user} (ID: {banned_user.id}): {e}")
             await send_response(f"❌ An unexpected error occurred: {e}")
 
-    @moderate.command(
-        name="infractions", description="View moderation infractions for a user"
-    )
+    @moderate.command(name="infractions", description="View moderation infractions for a user")
     @app_commands.describe(member="The member whose infractions to view")
-    async def moderate_view_infractions_callback(
-        self, ctx: commands.Context, member: discord.Member
-    ):
+    async def moderate_view_infractions_callback(self, ctx: commands.Context, member: discord.Member):
         """View moderation infractions for a user."""
         if ctx.interaction:
             await ctx.interaction.response.defer(ephemeral=True)
 
         async def send_response(message=None, ephemeral=True, embed=None):
             if ctx.interaction:
-                await ctx.interaction.followup.send(
-                    message, ephemeral=ephemeral, embed=embed
-                )
+                await ctx.interaction.followup.send(message, ephemeral=ephemeral, embed=embed)
             else:
                 await ctx.send(message, embed=embed)
 
-        if (
-            not ctx.author.guild_permissions.kick_members
-        ):  # Using kick_members as a general mod permission
+        if not ctx.author.guild_permissions.kick_members:  # Using kick_members as a general mod permission
             await send_response("❌ You don't have permission to view infractions.")
             return
 
@@ -1110,19 +984,13 @@ class HumanModerationCog(commands.Cog):
             logger.error("Cannot view infractions: pg_pool is None.")
             return
 
-        infractions = await mod_log_db.get_user_mod_logs(
-            self.bot.pg_pool, ctx.guild.id, member.id
-        )
+        infractions = await mod_log_db.get_user_mod_logs(self.bot.pg_pool, ctx.guild.id, member.id)
 
         if not infractions:
-            await send_response(
-                f"No infractions found for {self._user_display(member)}."
-            )
+            await send_response(f"No infractions found for {self._user_display(member)}.")
             return
 
-        embed = discord.Embed(
-            title=f"Infractions for {member.display_name}", color=discord.Color.orange()
-        )
+        embed = discord.Embed(title=f"Infractions for {member.display_name}", color=discord.Color.orange())
         embed.set_thumbnail(url=member.display_avatar.url)
 
         for infraction in infractions[:25]:  # Display up to 25 infractions
@@ -1159,9 +1027,7 @@ class HumanModerationCog(commands.Cog):
         case_id="The case ID of the infraction to remove",
         reason="The reason for removing the infraction",
     )
-    async def moderate_remove_infraction_callback(
-        self, ctx: commands.Context, case_id: int, reason: str = None
-    ):
+    async def moderate_remove_infraction_callback(self, ctx: commands.Context, case_id: int, reason: str = None):
         """Remove a specific infraction by its case ID."""
         if ctx.interaction:
             await ctx.interaction.response.defer(ephemeral=True)
@@ -1172,9 +1038,7 @@ class HumanModerationCog(commands.Cog):
             else:
                 await ctx.send(message)
 
-        if (
-            not ctx.author.guild_permissions.ban_members
-        ):  # Higher permission for removing infractions
+        if not ctx.author.guild_permissions.ban_members:  # Higher permission for removing infractions
             await send_response("❌ You don't have permission to remove infractions.")
             return
 
@@ -1186,14 +1050,10 @@ class HumanModerationCog(commands.Cog):
         # Fetch the infraction to ensure it exists and to log details
         infraction_to_remove = await mod_log_db.get_mod_log(self.bot.pg_pool, case_id)
         if not infraction_to_remove or infraction_to_remove["guild_id"] != ctx.guild.id:
-            await send_response(
-                f"❌ Infraction with Case ID {case_id} not found in this server."
-            )
+            await send_response(f"❌ Infraction with Case ID {case_id} not found in this server.")
             return
 
-        deleted = await mod_log_db.delete_mod_log(
-            self.bot.pg_pool, case_id, ctx.guild.id
-        )
+        deleted = await mod_log_db.delete_mod_log(self.bot.pg_pool, case_id, ctx.guild.id)
 
         if deleted:
             logger.info(
@@ -1204,9 +1064,7 @@ class HumanModerationCog(commands.Cog):
             mod_log_cog: ModLogCog = self.bot.get_cog("ModLogCog")
             if mod_log_cog:
                 target_user_id = infraction_to_remove["target_user_id"]
-                target_user = await self.bot.fetch_user(
-                    target_user_id
-                )  # Fetch user for logging
+                target_user = await self.bot.fetch_user(target_user_id)  # Fetch user for logging
 
                 await mod_log_cog.log_action(
                     guild=ctx.guild,
@@ -1242,9 +1100,7 @@ class HumanModerationCog(commands.Cog):
         # This command uses a view, so it must be an interaction.
         # If it's a prefix command, we inform the user it's not supported.
         if not ctx.interaction:
-            await ctx.send(
-                "This command can only be used as a slash command due to the confirmation buttons."
-            )
+            await ctx.send("This command can only be used as a slash command due to the confirmation buttons.")
             return
 
         interaction = ctx.interaction
@@ -1258,9 +1114,7 @@ class HumanModerationCog(commands.Cog):
             return
 
         if not self.bot.pg_pool:
-            await interaction.response.send_message(
-                "❌ Database connection is not available.", ephemeral=True
-            )
+            await interaction.response.send_message("❌ Database connection is not available.", ephemeral=True)
             logger.error("Cannot clear infractions: pg_pool is None.")
             return
 
@@ -1284,9 +1138,7 @@ class HumanModerationCog(commands.Cog):
                 )
                 return
 
-            deleted_count = await mod_log_db.clear_user_mod_logs(
-                self.bot.pg_pool, interaction.guild.id, member.id
-            )
+            deleted_count = await mod_log_db.clear_user_mod_logs(self.bot.pg_pool, interaction.guild.id, member.id)
 
             if deleted_count > 0:
                 logger.info(
@@ -1325,9 +1177,7 @@ class HumanModerationCog(commands.Cog):
                     "❌ You are not authorized to cancel this action.", ephemeral=True
                 )
                 return
-            await interaction_cancel.response.edit_message(
-                content="🚫 Infraction clearing cancelled.", view=None
-            )
+            await interaction_cancel.response.edit_message(content="🚫 Infraction clearing cancelled.", view=None)
 
         confirm_button.callback = confirm_callback
         cancel_button.callback = cancel_callback
@@ -1377,9 +1227,7 @@ class BanModal(discord.ui.Modal, title="Ban User"):
         if cog:
             reason = self.reason.value or "No reason provided"
             delete_days = (
-                int(self.delete_days.value)
-                if self.delete_days.value and self.delete_days.value.isdigit()
-                else 0
+                int(self.delete_days.value) if self.delete_days.value and self.delete_days.value.isdigit() else 0
             )
             # Create a context and call the existing ban callback
             ctx = await cog.bot.get_context(interaction)
@@ -1392,9 +1240,7 @@ class BanModal(discord.ui.Modal, title="Ban User"):
                 send_dm=self.send_dm,
             )
         else:
-            await interaction.followup.send(
-                "Error: Moderation cog not found.", ephemeral=True
-            )
+            await interaction.followup.send("Error: Moderation cog not found.", ephemeral=True)
 
 
 class KickModal(discord.ui.Modal, title="Kick User"):
@@ -1421,9 +1267,7 @@ class KickModal(discord.ui.Modal, title="Kick User"):
             ctx.author = interaction.user
             await cog.moderate_kick_callback(ctx, member=self.member, reason=reason)
         else:
-            await interaction.followup.send(
-                "Error: Moderation cog not found.", ephemeral=True
-            )
+            await interaction.followup.send("Error: Moderation cog not found.", ephemeral=True)
 
 
 class TimeoutModal(discord.ui.Modal, title="Timeout User"):
@@ -1456,13 +1300,9 @@ class TimeoutModal(discord.ui.Modal, title="Timeout User"):
             # Create a context and call the existing timeout callback
             ctx = await cog.bot.get_context(interaction)
             ctx.author = interaction.user
-            await cog.moderate_timeout_callback(
-                ctx, member=self.member, duration=duration, reason=reason
-            )
+            await cog.moderate_timeout_callback(ctx, member=self.member, duration=duration, reason=reason)
         else:
-            await interaction.followup.send(
-                "Error: Moderation cog not found.", ephemeral=True
-            )
+            await interaction.followup.send("Error: Moderation cog not found.", ephemeral=True)
 
 
 class RemoveTimeoutModal(discord.ui.Modal, title="Remove Timeout"):
@@ -1487,13 +1327,9 @@ class RemoveTimeoutModal(discord.ui.Modal, title="Remove Timeout"):
             # Create a context and call the existing remove timeout callback
             ctx = await cog.bot.get_context(interaction)
             ctx.author = interaction.user
-            await cog.moderate_remove_timeout_callback(
-                ctx, member=self.member, reason=reason
-            )
+            await cog.moderate_remove_timeout_callback(ctx, member=self.member, reason=reason)
         else:
-            await interaction.followup.send(
-                "Error: Moderation cog not found.", ephemeral=True
-            )
+            await interaction.followup.send("Error: Moderation cog not found.", ephemeral=True)
 
 
 # Context menu commands must be defined at module level
@@ -1508,16 +1344,10 @@ class BanOptionsView(discord.ui.View):
 
     def update_button_label(self):
         self.toggle_dm_button.label = f"Send DM: {'Yes' if self.send_dm else 'No'}"
-        self.toggle_dm_button.style = (
-            discord.ButtonStyle.green if self.send_dm else discord.ButtonStyle.red
-        )
+        self.toggle_dm_button.style = discord.ButtonStyle.green if self.send_dm else discord.ButtonStyle.red
 
-    @discord.ui.button(
-        label="Send DM: Yes", style=discord.ButtonStyle.green, custom_id="toggle_dm"
-    )
-    async def toggle_dm_button(
-        self, interaction: discord.Interaction, _: discord.ui.Button
-    ):
+    @discord.ui.button(label="Send DM: Yes", style=discord.ButtonStyle.green, custom_id="toggle_dm")
+    async def toggle_dm_button(self, interaction: discord.Interaction, _: discord.ui.Button):
         # Toggle the send_dm value
         self.send_dm = not self.send_dm
         self.update_button_label()
@@ -1528,9 +1358,7 @@ class BanOptionsView(discord.ui.View):
         style=discord.ButtonStyle.danger,
         custom_id="continue_ban",
     )
-    async def continue_button(
-        self, interaction: discord.Interaction, _: discord.ui.Button
-    ):
+    async def continue_button(self, interaction: discord.Interaction, _: discord.ui.Button):
         # Create and show the modal
         modal = BanModal(self.member)
         modal.send_dm = self.send_dm  # Pass the send_dm setting to the modal
@@ -1540,20 +1368,14 @@ class BanOptionsView(discord.ui.View):
 
 
 @app_commands.context_menu(name="Ban User")
-async def ban_user_context_menu(
-    interaction: discord.Interaction, member: discord.Member
-):
+async def ban_user_context_menu(interaction: discord.Interaction, member: discord.Member):
     """Bans the selected user via a modal."""
     # Check permissions before showing the modal
     if not interaction.user.guild_permissions.ban_members:
-        await interaction.response.send_message(
-            "❌ You don't have permission to ban members.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ You don't have permission to ban members.", ephemeral=True)
         return
     if not interaction.guild.me.guild_permissions.ban_members:
-        await interaction.response.send_message(
-            "❌ I don't have permission to ban members.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ I don't have permission to ban members.", ephemeral=True)
         return
     if (
         interaction.user.top_role.position <= member.top_role.position
@@ -1570,14 +1392,10 @@ async def ban_user_context_menu(
         )
         return
     if member.id == interaction.user.id:
-        await interaction.response.send_message(
-            "❌ You cannot ban yourself.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ You cannot ban yourself.", ephemeral=True)
         return
     if member.id == interaction.client.user.id:
-        await interaction.response.send_message(
-            "❌ I cannot ban myself.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ I cannot ban myself.", ephemeral=True)
         return
 
     # Show options view first
@@ -1590,20 +1408,14 @@ async def ban_user_context_menu(
 
 
 @app_commands.context_menu(name="Kick User")
-async def kick_user_context_menu(
-    interaction: discord.Interaction, member: discord.Member
-):
+async def kick_user_context_menu(interaction: discord.Interaction, member: discord.Member):
     """Kicks the selected user via a modal."""
     # Check permissions before showing the modal
     if not interaction.user.guild_permissions.kick_members:
-        await interaction.response.send_message(
-            "❌ You don't have permission to kick members.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ You don't have permission to kick members.", ephemeral=True)
         return
     if not interaction.guild.me.guild_permissions.kick_members:
-        await interaction.response.send_message(
-            "❌ I don't have permission to kick members.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ I don't have permission to kick members.", ephemeral=True)
         return
     if (
         interaction.user.top_role.position <= member.top_role.position
@@ -1620,14 +1432,10 @@ async def kick_user_context_menu(
         )
         return
     if member.id == interaction.user.id:
-        await interaction.response.send_message(
-            "❌ You cannot kick yourself.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ You cannot kick yourself.", ephemeral=True)
         return
     if member.id == interaction.client.user.id:
-        await interaction.response.send_message(
-            "❌ I cannot kick myself.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ I cannot kick myself.", ephemeral=True)
         return
 
     modal = KickModal(member)
@@ -1635,20 +1443,14 @@ async def kick_user_context_menu(
 
 
 @app_commands.context_menu(name="Timeout User")
-async def timeout_user_context_menu(
-    interaction: discord.Interaction, member: discord.Member
-):
+async def timeout_user_context_menu(interaction: discord.Interaction, member: discord.Member):
     """Timeouts the selected user via a modal."""
     # Check permissions before showing the modal
     if not interaction.user.guild_permissions.moderate_members:
-        await interaction.response.send_message(
-            "❌ You don't have permission to timeout members.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ You don't have permission to timeout members.", ephemeral=True)
         return
     if not interaction.guild.me.guild_permissions.moderate_members:
-        await interaction.response.send_message(
-            "❌ I don't have permission to timeout members.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ I don't have permission to timeout members.", ephemeral=True)
         return
     if (
         interaction.user.top_role.position <= member.top_role.position
@@ -1665,14 +1467,10 @@ async def timeout_user_context_menu(
         )
         return
     if member.id == interaction.user.id:
-        await interaction.response.send_message(
-            "❌ You cannot timeout yourself.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ You cannot timeout yourself.", ephemeral=True)
         return
     if member.id == interaction.client.user.id:
-        await interaction.response.send_message(
-            "❌ I cannot timeout myself.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ I cannot timeout myself.", ephemeral=True)
         return
 
     modal = TimeoutModal(member)
@@ -1680,26 +1478,18 @@ async def timeout_user_context_menu(
 
 
 @app_commands.context_menu(name="Remove Timeout")
-async def remove_timeout_context_menu(
-    interaction: discord.Interaction, member: discord.Member
-):
+async def remove_timeout_context_menu(interaction: discord.Interaction, member: discord.Member):
     """Removes timeout from the selected user via a modal."""
     # Check permissions before showing the modal
     if not interaction.user.guild_permissions.moderate_members:
-        await interaction.response.send_message(
-            "❌ You don't have permission to remove timeouts.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ You don't have permission to remove timeouts.", ephemeral=True)
         return
     if not interaction.guild.me.guild_permissions.moderate_members:
-        await interaction.response.send_message(
-            "❌ I don't have permission to remove timeouts.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ I don't have permission to remove timeouts.", ephemeral=True)
         return
     # Check if the member is timed out before showing the modal
     if not member.timed_out_until:
-        await interaction.response.send_message(
-            "❌ This member is not timed out.", ephemeral=True
-        )
+        await interaction.response.send_message("❌ This member is not timed out.", ephemeral=True)
         return
 
     modal = RemoveTimeoutModal(member)

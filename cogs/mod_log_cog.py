@@ -7,7 +7,6 @@ import datetime
 
 # Import our JSON-based database modules
 from .logging_helpers import mod_log_db
-from .logging_helpers import settings_manager as sm
 from .aimod_helpers.config_manager import get_guild_config_async
 
 log = logging.getLogger(__name__)
@@ -44,9 +43,7 @@ class ModLogCog(commands.Cog):
             self.footer_display = ui.TextDisplay(footer)
             container.add_item(self.footer_display)
 
-    def _format_user(
-        self, user: Union[Member, User, Object], guild: Optional[discord.Guild] = None
-    ) -> str:
+    def _format_user(self, user: Union[Member, User, Object], guild: Optional[discord.Guild] = None) -> str:
         """Return a string with display name, username and ID for a user-like object."""
         if isinstance(user, Object):
             return f"Unknown User (ID: {user.id})"
@@ -57,11 +54,7 @@ class ModLogCog(commands.Cog):
             display = member.display_name if member else user.name
         else:
             display = user.name
-        username = (
-            f"{user.name}#{user.discriminator}"
-            if isinstance(user, (Member, User))
-            else "Unknown"
-        )
+        username = f"{user.name}#{user.discriminator}" if isinstance(user, (Member, User)) else "Unknown"
         return f"{display} ({username}) [ID: {user.id}]"
 
     async def _fetch_user_display(self, user_id: int, guild: discord.Guild) -> str:
@@ -92,17 +85,13 @@ class ModLogCog(commands.Cog):
         self,
         guild: discord.Guild,
         moderator: Union[User, Member],  # For bot actions
-        target: Union[
-            User, Member, Object
-        ],  # Can be user, member, or just an ID object
+        target: Union[User, Member, Object],  # Can be user, member, or just an ID object
         action_type: str,
         reason: Optional[str],
         duration: Optional[datetime.timedelta] = None,
         source: str = "BOT",  # Default source is the bot itself
         ai_details: Optional[Dict[str, Any]] = None,  # Details from AI API
-        moderator_id_override: Optional[
-            int
-        ] = None,  # Allow overriding moderator ID for AI source
+        moderator_id_override: Optional[int] = None,  # Allow overriding moderator ID for AI source
     ):
         """Logs a moderation action to the database and configured channel."""
         if not guild:
@@ -111,9 +100,7 @@ class ModLogCog(commands.Cog):
 
         guild_id = guild.id
         # Use override if provided (for AI source), otherwise use moderator object ID
-        moderator_id = (
-            moderator_id_override if moderator_id_override is not None else moderator.id
-        )
+        moderator_id = moderator_id_override if moderator_id_override is not None else moderator.id
         target_user_id = target.id
         duration_seconds = int(duration.total_seconds()) if duration else None
 
@@ -129,16 +116,12 @@ class ModLogCog(commands.Cog):
         )
 
         if not case_id:
-            log.error(
-                f"Failed to get case_id when logging action {action_type} in guild {guild_id}"
-            )
+            log.error(f"Failed to get case_id when logging action {action_type} in guild {guild_id}")
             return  # Don't proceed if we couldn't save the initial log
 
         # 2. Check settings and send log message
         try:
-            log_channel_id = await get_guild_config_async(
-                guild_id, "moderation_log_channel_id"
-            )
+            log_channel_id = await get_guild_config_async(guild_id, "moderation_log_channel_id")
             log_enabled = bool(log_channel_id)
 
             if not log_enabled or not log_channel_id:
@@ -149,9 +132,7 @@ class ModLogCog(commands.Cog):
 
             log_channel = guild.get_channel(log_channel_id)
             if not log_channel or not isinstance(log_channel, discord.TextChannel):
-                log.warning(
-                    f"Mod log channel {log_channel_id} not found or not a text channel in guild {guild_id}."
-                )
+                log.warning(f"Mod log channel {log_channel_id} not found or not a text channel in guild {guild_id}.")
                 return
 
             # 3. Format and send view
@@ -170,9 +151,7 @@ class ModLogCog(commands.Cog):
             log_message = await log_channel.send(view=view)
 
             # 4. Update DB with message details
-            await mod_log_db.update_mod_log_message_details(
-                None, case_id, log_message.id, log_channel.id
-            )
+            await mod_log_db.update_mod_log_message_details(None, case_id, log_message.id, log_channel.id)
 
         except Exception as e:
             log.exception(
@@ -203,16 +182,8 @@ class ModLogCog(commands.Cog):
             "AI_ALERT": Color.purple(),
             "AI_DELETE_REQUESTED": Color.dark_grey(),
         }
-        embed_color = (
-            Color.blurple()
-            if source == "AI_API"
-            else color_map.get(action_type.upper(), Color.greyple())
-        )
-        action_title_prefix = (
-            "🤖 AI Moderation Action"
-            if source == "AI_API"
-            else action_type.replace("_", " ").title()
-        )
+        embed_color = Color.blurple() if source == "AI_API" else color_map.get(action_type.upper(), Color.greyple())
+        action_title_prefix = "🤖 AI Moderation Action" if source == "AI_API" else action_type.replace("_", " ").title()
         action_title = f"{action_title_prefix} | Case #{case_id}"
         target_display = self._format_user(target, guild)
         moderator_display = (
@@ -226,9 +197,7 @@ class ModLogCog(commands.Cog):
                 lines.append(f"**Rule Violated:** {ai_details['rule_violated']}")
             if "reasoning" in ai_details:
                 reason_to_display = reason or ai_details["reasoning"]
-                lines.append(
-                    f"**Reason / AI Reasoning:** {reason_to_display or 'No reason provided.'}"
-                )
+                lines.append(f"**Reason / AI Reasoning:** {reason_to_display or 'No reason provided.'}")
                 if reason and reason != ai_details["reasoning"]:
                     lines.append(f"**Original Bot Reason:** {reason}")
             else:
@@ -279,9 +248,7 @@ class ModLogCog(commands.Cog):
         guild_id = interaction.guild_id
 
         if not guild_id:
-            await interaction.followup.send(
-                "❌ This command can only be used in a server.", ephemeral=True
-            )
+            await interaction.followup.send("❌ This command can only be used in a server.", ephemeral=True)
             return
 
         records = []
@@ -293,9 +260,7 @@ class ModLogCog(commands.Cog):
             title = f"Recent Moderation Logs for {interaction.guild.name}"
 
         if not records:
-            await interaction.followup.send(
-                "No moderation logs found matching your criteria.", ephemeral=True
-            )
+            await interaction.followup.send("No moderation logs found matching your criteria.", ephemeral=True)
             return
 
         # Format the logs into a text response
@@ -303,20 +268,12 @@ class ModLogCog(commands.Cog):
         for record in records:
             timestamp_str = record["timestamp"][:19]  # Remove timezone info for display
             reason_str = record["reason"] or "N/A"
-            duration_str = (
-                f" ({record['duration_seconds']}s)"
-                if record["duration_seconds"]
-                else ""
-            )
-            target_disp = await self._fetch_user_display(
-                record["target_user_id"], interaction.guild
-            )
+            duration_str = f" ({record['duration_seconds']}s)" if record["duration_seconds"] else ""
+            target_disp = await self._fetch_user_display(record["target_user_id"], interaction.guild)
             if record["moderator_id"] == 0:
                 mod_disp = "AI System"
             else:
-                mod_disp = await self._fetch_user_display(
-                    record["moderator_id"], interaction.guild
-                )
+                mod_disp = await self._fetch_user_display(record["moderator_id"], interaction.guild)
             response_lines.append(
                 f"`Case #{record['case_id']}` [{timestamp_str}] **{record['action_type']}** "
                 f"Target: {target_disp} Mod: {mod_disp} "
@@ -342,16 +299,12 @@ class ModLogCog(commands.Cog):
         record = await mod_log_db.get_mod_log(None, case_id)
 
         if not record:
-            await interaction.followup.send(
-                f"❌ Case ID #{case_id} not found.", ephemeral=True
-            )
+            await interaction.followup.send(f"❌ Case ID #{case_id} not found.", ephemeral=True)
             return
 
         # Ensure the case belongs to the current guild for security/privacy
         if record["guild_id"] != interaction.guild_id:
-            await interaction.followup.send(
-                f"❌ Case ID #{case_id} does not belong to this server.", ephemeral=True
-            )
+            await interaction.followup.send(f"❌ Case ID #{case_id} does not belong to this server.", ephemeral=True)
             return
 
         # Fetch user objects if possible to show names
@@ -363,35 +316,21 @@ class ModLogCog(commands.Cog):
             try:
                 moderator = await self.bot.fetch_user(record["moderator_id"])
             except discord.NotFound:
-                log.warning(
-                    f"Moderator with ID {record['moderator_id']} not found when viewing case {case_id}"
-                )
+                log.warning(f"Moderator with ID {record['moderator_id']} not found when viewing case {case_id}")
                 moderator = None
 
         try:
             target = await self.bot.fetch_user(record["target_user_id"])
         except discord.NotFound:
-            log.warning(
-                f"Target user with ID {record['target_user_id']} not found when viewing case {case_id}"
-            )
+            log.warning(f"Target user with ID {record['target_user_id']} not found when viewing case {case_id}")
             target = None
 
-        duration = (
-            datetime.timedelta(seconds=record["duration_seconds"])
-            if record["duration_seconds"]
-            else None
-        )
+        duration = datetime.timedelta(seconds=record["duration_seconds"]) if record["duration_seconds"] else None
 
         view = self._format_log_embed(
             case_id,
-            moderator
-            or Object(
-                id=record["moderator_id"]
-            ),  # Fallback to Object if user not found
-            target
-            or Object(
-                id=record["target_user_id"]
-            ),  # Fallback to Object if user not found
+            moderator or Object(id=record["moderator_id"]),  # Fallback to Object if user not found
+            target or Object(id=record["target_user_id"]),  # Fallback to Object if user not found
             record["action_type"],
             record["reason"],
             duration,
@@ -422,14 +361,10 @@ class ModLogCog(commands.Cog):
         # 1. Get the original record to verify guild and existence
         original_record = await mod_log_db.get_mod_log(None, case_id)
         if not original_record:
-            await interaction.followup.send(
-                f"❌ Case ID #{case_id} not found.", ephemeral=True
-            )
+            await interaction.followup.send(f"❌ Case ID #{case_id} not found.", ephemeral=True)
             return
         if original_record["guild_id"] != interaction.guild_id:
-            await interaction.followup.send(
-                f"❌ Case ID #{case_id} does not belong to this server.", ephemeral=True
-            )
+            await interaction.followup.send(f"❌ Case ID #{case_id} does not belong to this server.", ephemeral=True)
             return
 
         # 2. Update the reason in the database
@@ -442,20 +377,14 @@ class ModLogCog(commands.Cog):
             )
             return
 
-        await interaction.followup.send(
-            f"✅ Updated reason for Case ID #{case_id}.", ephemeral=True
-        )
+        await interaction.followup.send(f"✅ Updated reason for Case ID #{case_id}.", ephemeral=True)
 
         # 3. (Optional but recommended) Update the original log message embed
         if original_record["log_message_id"] and original_record["log_channel_id"]:
             try:
-                log_channel = interaction.guild.get_channel(
-                    original_record["log_channel_id"]
-                )
+                log_channel = interaction.guild.get_channel(original_record["log_channel_id"])
                 if log_channel and isinstance(log_channel, discord.TextChannel):
-                    log_message = await log_channel.fetch_message(
-                        original_record["log_message_id"]
-                    )
+                    log_message = await log_channel.fetch_message(original_record["log_message_id"])
                     if log_message and log_message.author == self.bot.user:
                         # Re-fetch users/duration to reconstruct embed accurately
                         # Special handling for AI moderator (ID 0) to avoid Discord API 404 error
@@ -464,9 +393,7 @@ class ModLogCog(commands.Cog):
                             moderator = None
                         else:
                             try:
-                                moderator = await self.bot.fetch_user(
-                                    original_record["moderator_id"]
-                                )
+                                moderator = await self.bot.fetch_user(original_record["moderator_id"])
                             except discord.NotFound:
                                 log.warning(
                                     f"Moderator with ID {original_record['moderator_id']} not found when updating case {case_id}"
@@ -474,9 +401,7 @@ class ModLogCog(commands.Cog):
                                 moderator = None
 
                         try:
-                            target = await self.bot.fetch_user(
-                                original_record["target_user_id"]
-                            )
+                            target = await self.bot.fetch_user(original_record["target_user_id"])
                         except discord.NotFound:
                             log.warning(
                                 f"Target user with ID {original_record['target_user_id']} not found when updating case {case_id}"
@@ -484,9 +409,7 @@ class ModLogCog(commands.Cog):
                             target = None
 
                         duration = (
-                            datetime.timedelta(
-                                seconds=original_record["duration_seconds"]
-                            )
+                            datetime.timedelta(seconds=original_record["duration_seconds"])
                             if original_record["duration_seconds"]
                             else None
                         )
@@ -501,30 +424,24 @@ class ModLogCog(commands.Cog):
                             interaction.guild,
                         )
                         link = f"https://discord.com/channels/{original_record['guild_id']}/{original_record['log_channel_id']}/{original_record['log_message_id']}"
-                        new_view.footer_display.content += f" | [Jump to Log]({link}) | Updated By: {interaction.user.mention}"
+                        new_view.footer_display.content += (
+                            f" | [Jump to Log]({link}) | Updated By: {interaction.user.mention}"
+                        )
 
                         await log_message.edit(view=new_view)
-                        log.info(
-                            f"Successfully updated log message view for case {case_id}"
-                        )
+                        log.info(f"Successfully updated log message view for case {case_id}")
             except discord.NotFound:
-                log.warning(
-                    f"Original log message or channel not found for case {case_id} when updating reason."
-                )
+                log.warning(f"Original log message or channel not found for case {case_id} when updating reason.")
             except discord.Forbidden:
-                log.warning(
-                    f"Missing permissions to edit original log message for case {case_id}."
-                )
+                log.warning(f"Missing permissions to edit original log message for case {case_id}.")
             except Exception as e:
-                log.exception(
-                    f"Error updating original log message embed for case {case_id}: {e}"
-                )
+                log.exception(f"Error updating original log message embed for case {case_id}: {e}")
 
     async def cog_load(self):
         """
         Method called when the cog is loaded.
         """
-        print(f"ModLogCog has been loaded.")
+        print("ModLogCog has been loaded.")
 
 
 async def setup(bot: commands.Bot):

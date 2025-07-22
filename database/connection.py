@@ -3,7 +3,6 @@ Database connection management for PostgreSQL.
 Handles connection pooling and database initialization.
 """
 
-import asyncio
 import asyncpg
 import logging
 import os
@@ -80,23 +79,15 @@ async def initialize_database() -> bool:
         # This allows for incremental updates without dropping existing data.
 
         # Execute schema creation statements
-        for statement in SCHEMA_SQL.split(";")[
-            :-1
-        ]:  # Split by semicolon, ignore last empty string
+        for statement in SCHEMA_SQL.split(";")[:-1]:  # Split by semicolon, ignore last empty string
             if statement.strip():
                 try:
                     await conn.execute(statement)
-                    log.info(
-                        f"Executed schema statement: {statement.strip().splitlines()[0]}..."
-                    )
+                    log.info(f"Executed schema statement: {statement.strip().splitlines()[0]}...")
                 except asyncpg.exceptions.DuplicateTableError:
-                    log.info(
-                        f"Table already exists for statement: {statement.strip().splitlines()[0]}..."
-                    )
+                    log.info(f"Table already exists for statement: {statement.strip().splitlines()[0]}...")
                 except Exception as e:
-                    log.error(
-                        f"Error executing schema statement: {statement.strip().splitlines()[0]}... Error: {e}"
-                    )
+                    log.error(f"Error executing schema statement: {statement.strip().splitlines()[0]}... Error: {e}")
                     raise
 
         log.info("Database schema initialization complete.")
@@ -106,17 +97,11 @@ async def initialize_database() -> bool:
             if statement.strip():
                 try:
                     await conn.execute(statement)
-                    log.info(
-                        f"Executed index statement: {statement.strip().splitlines()[0]}..."
-                    )
+                    log.info(f"Executed index statement: {statement.strip().splitlines()[0]}...")
                 except asyncpg.exceptions.DuplicateObjectError:
-                    log.info(
-                        f"Index already exists for statement: {statement.strip().splitlines()[0]}..."
-                    )
+                    log.info(f"Index already exists for statement: {statement.strip().splitlines()[0]}...")
                 except Exception as e:
-                    log.error(
-                        f"Error executing index statement: {statement.strip().splitlines()[0]}... Error: {e}"
-                    )
+                    log.error(f"Error executing index statement: {statement.strip().splitlines()[0]}... Error: {e}")
                     raise
 
         log.info("Database indexes initialization complete.")
@@ -178,9 +163,7 @@ async def get_transaction():
             yield conn
 
 
-async def execute_query(
-    query: str, *args, fetch_one: bool = False, fetch_all: bool = False
-):
+async def execute_query(query: str, *args, fetch_one: bool = False, fetch_all: bool = False):
     """Execute a database query with automatic connection management."""
     async with get_connection() as conn:
         if fetch_one:
@@ -209,13 +192,11 @@ async def insert_or_update(table: str, conflict_columns: list, data: dict) -> bo
     """Insert or update a record using ON CONFLICT."""
     columns = list(data.keys())
     values = list(data.values())
-    placeholders = [f"${i+1}" for i in range(len(values))]
+    placeholders = [f"${i + 1}" for i in range(len(values))]
 
     # Build the conflict resolution part
     conflict_cols = ", ".join(conflict_columns)
-    update_cols = ", ".join(
-        [f"{col} = EXCLUDED.{col}" for col in columns if col not in conflict_columns]
-    )
+    update_cols = ", ".join([f"{col} = EXCLUDED.{col}" for col in columns if col not in conflict_columns])
 
     query = f"""
         INSERT INTO {table} ({", ".join(columns)})
