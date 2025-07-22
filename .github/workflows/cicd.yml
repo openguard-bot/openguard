@@ -69,11 +69,8 @@ jobs:
       - name: Run Pyright
         run: pyright
 
-      - name: Run Bot Tests
-        run: pytest tests/
-
-      - name: Run Backend Tests
-        run: pytest dashboard/backend/tests/
+      - name: Run Python Tests
+        run: pytest
 
   changes:
     name: "Detect Changes"
