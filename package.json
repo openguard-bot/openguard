@@ -13,8 +13,5 @@
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
     "lint": "yarn workspaces run lint"
-  },
-  "devDependencies": {
-    "eslint-formatter-github": "^1.1.4"
   }
 }
