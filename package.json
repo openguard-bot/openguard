@@ -10,9 +10,9 @@
   "author": "Slipstream <me@slipstreamm.dev>",
   "license": "MIT",
   "scripts": {
-    "build": "yarn workspaces run build",
-    "test": "yarn workspaces run test",
-    "lint": "yarn workspaces run lint"
+    "build": "yarn workspaces foreach -pt --exclude openguard -A run build",
+    "test": "yarn workspaces foreach -pt --exclude openguard -A run test",
+    "lint": "yarn workspaces foreach -pt --exclude openguard -A run lint"
   },
   "devDependencies": {
     "eslint-formatter-github": "^1.1.4"
