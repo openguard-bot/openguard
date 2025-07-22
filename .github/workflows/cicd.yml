@@ -61,12 +61,10 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install -r requirements.txt
-          pip install -r dashboard/backend/requirements.txt
-          pip install pyright pytest ruff
+          pip install -r requirements.txt -r dashboard/backend/requirements.txt pyright pytest ruff
 
       - name: Run Ruff
-        run: ruff check bot.py dashboard/backend --output-format=github --exit-zero
+        run: ruff check bot.py cogs/ dashboard/backend --output-format=github
 
       - name: Run Pyright
         run: pyright
