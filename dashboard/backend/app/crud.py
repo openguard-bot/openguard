@@ -1432,9 +1432,11 @@ async def update_table_row(
     db: Session, table_name: str, pk_values: Dict[str, Any], row_data: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Update a row in a specific table, handling composite keys."""
-    safe_table_name = "".join(c for c in table_name if c.isalnum() or c == "_")
-    if safe_table_name != table_name:
-        raise ValueError("Invalid table name")
+    # Define a whitelist of allowed table names
+    allowed_table_names = {"guild_settings", "user_data", "audit_logs"}  # Add all valid table names here
+    if table_name not in allowed_table_names:
+        raise ValueError(f"Invalid table name: {table_name}")
+    safe_table_name = table_name
 
     pk_columns = await get_primary_key_columns(db, safe_table_name)
     if not pk_columns:
