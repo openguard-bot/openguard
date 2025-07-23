@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, call
+import types
 import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType
@@ -618,6 +619,49 @@ async def test_load_cogs_send_error_dm_failure(mock_bot, temp_cogs_dir):
 
         mock_send_error_dm.assert_called_once()
         mock_print.assert_any_call("Failed to send error DM for cog loading error: DM error")
+
+
+@pytest.mark.asyncio
+async def test_load_cogs_skips_config_cog(mock_bot, temp_cogs_dir):
+    mock_bot.load_extension = AsyncMock()
+
+    (temp_cogs_dir / "config_cog.py").write_text("# dummy config cog")
+    (temp_cogs_dir / "other.py").write_text("# other cog")
+
+    original = getattr(config, "LOAD_CONFIG_COG", True)
+    config.LOAD_CONFIG_COG = False
+    config.Dashboard = types.SimpleNamespace(COMMAND_ENABLED=False)
+
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("builtins.print"),
+        patch("bot.send_error_dm", new=AsyncMock()),
+    ):
+        await load_cogs()
+
+    config.LOAD_CONFIG_COG = original
+
+    mock_bot.load_extension.assert_called_once_with("cogs.other")
+
+
+@pytest.mark.asyncio
+async def test_load_cogs_skips_dashboard_cog(mock_bot, temp_cogs_dir):
+    mock_bot.load_extension = AsyncMock()
+
+    (temp_cogs_dir / "dashboard_link_cog.py").write_text("# dummy dashboard cog")
+    (temp_cogs_dir / "else_cog.py").write_text("# other cog")
+
+    config.LOAD_CONFIG_COG = True
+    config.Dashboard = types.SimpleNamespace(COMMAND_ENABLED=False)
+
+    with (
+        patch("bot.bot", new=mock_bot),
+        patch("builtins.print"),
+        patch("bot.send_error_dm", new=AsyncMock()),
+    ):
+        await load_cogs()
+
+    mock_bot.load_extension.assert_called_once_with("cogs.else_cog")
 
 
 # --- on_error Tests ---
