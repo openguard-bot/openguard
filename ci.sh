@@ -132,7 +132,7 @@ run_nodejs_checks() {
     
     # Build projects
     print_status "Building Node.js projects..."
-    yarn build
+    yarn workspaces foreach --all run build
     print_success "Node.js build completed"
 }
 

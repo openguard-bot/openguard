@@ -625,8 +625,8 @@ class CaptchaCog(commands.Cog):
                     embed.add_field(
                         name=f"Embed #{i}",
                         value=f"**Channel:** {channel_name}\n"
-                              f"**Message ID:** {embed_data['message_id']}\n"
-                              f"**Created:** <t:{int(embed_data['created_at'].timestamp())}:R>",
+                        f"**Message ID:** {embed_data['message_id']}\n"
+                        f"**Created:** <t:{int(embed_data['created_at'].timestamp())}:R>",
                         inline=True,
                     )
 
@@ -939,7 +939,7 @@ class VerificationStartView(discord.ui.View):
         label="Start Verification",
         style=discord.ButtonStyle.primary,
         emoji="🔐",
-        custom_id="captcha_start_verification"
+        custom_id="captcha_start_verification",
     )
     async def start_verification(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Start the verification process for a user."""
