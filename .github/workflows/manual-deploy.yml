@@ -68,6 +68,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Cache node modules
         uses: actions/cache@v4
         with:
@@ -135,6 +138,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Cache node modules
         uses: actions/cache@v4
