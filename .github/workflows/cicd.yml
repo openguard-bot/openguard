@@ -34,6 +34,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      - name: Install Node.js dependencies
+        run: yarn install --immutable
+
       - name: Lint Node.js projects
         run: yarn lint
 
@@ -143,6 +146,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      - name: Install dependencies
+        run: yarn install --immutable
+
       - name: Build Website
         run: yarn build
 
@@ -204,6 +210,9 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install --immutable
 
       - name: Build Dashboard Frontend
         run: yarn build
