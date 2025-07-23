@@ -237,7 +237,7 @@ class CaptchaCog(commands.Cog):
                         continue
 
                     try:
-                        message = await channel.fetch_message(message_id)
+                        await channel.fetch_message(message_id)
                         # Create and add the persistent view
                         view = VerificationStartView(self)
                         self.bot.add_view(view, message_id=message_id)
