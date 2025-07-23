@@ -19,3 +19,5 @@ sqlalchemy
 pytest_asyncio
 cachetools
 aiosqlite
+GPUtil
+WMI
