@@ -22,7 +22,7 @@ OpenGuard is a modular and extensible Discord moderation bot, designed to automa
 Clone the repository:
 
 ```sh
-git clone https://github.com/discordOpenGuard/OpenGuard.git
+git clone https://github.com/openguard-bot/openguard.git
 cd OpenGuard
 ```
 
