@@ -39,6 +39,9 @@ pip install -r requirements.txt
    cp config.example.yaml config.yaml
    ```
 2. Edit `config.yaml` to add your Discord bot token and server-specific settings.
+   - Set `Dashboard.ENABLED` to `true` and provide a `URL` if you want to enable the dashboard interface.
+   - Set `Dashboard.COMMAND_ENABLED` to `true` to load a command that links users to the dashboard.
+   - Set `LOAD_CONFIG_COG` to `false` if you do not want the configuration commands loaded.
 
 ### Running the Bot
 

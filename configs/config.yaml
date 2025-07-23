@@ -26,3 +26,12 @@ Owners:
 
 # Optional channel ID to send error notifications instead of DMing the user
 ERROR_NOTIFICATION_CHANNEL_ID: 1396224455876939786
+
+# Control whether the optional dashboard is enabled
+Dashboard:
+  ENABLED: false
+  URL: "http://localhost:3000"
+  COMMAND_ENABLED: false
+
+# Toggle loading of the ConfigCog
+LOAD_CONFIG_COG: true

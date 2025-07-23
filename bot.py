@@ -152,6 +152,11 @@ async def load_cogs():
         "aimod",  # Deprecated, functionality split into other cogs
         "ban_appeal_cog",  # Obsolete, functionality replaced by appeal_cog
     }
+    if not getattr(config, "LOAD_CONFIG_COG", True):
+        cogs_to_exclude.add("config_cog")
+    dashboard_cfg = getattr(config, "Dashboard", None)
+    if not (dashboard_cfg and getattr(dashboard_cfg, "COMMAND_ENABLED", False)):
+        cogs_to_exclude.add("dashboard_link_cog")
     for filename in os.listdir("cogs"):
         if filename.endswith(".py"):
             cog_name = filename[:-3]
