@@ -75,7 +75,7 @@ setup_nodejs() {
     fi
     
     print_status "Installing Node.js dependencies..."
-    yarn install --frozen-lockfile
+    yarn install --immutable
     
     print_success "Node.js dependencies installed"
 }
