@@ -197,6 +197,18 @@ class CaptchaConfig:
 
 
 @dataclass
+class CaptchaEmbed:
+    """Captcha verification embed tracking model."""
+
+    id: Optional[int] = None
+    guild_id: int = 0
+    channel_id: int = 0
+    message_id: int = 0
+    is_active: bool = True
+    created_at: Optional[datetime] = None
+
+
+@dataclass
 class CaptchaAttempt:
     """Captcha attempt tracking model."""
 
@@ -395,6 +407,17 @@ CREATE TABLE IF NOT EXISTS captcha_solutions (
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(guild_id, user_id)
+);
+
+-- Captcha verification embeds table
+CREATE TABLE IF NOT EXISTS captcha_embeds (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    message_id BIGINT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(guild_id, channel_id, message_id)
 );
 """
 

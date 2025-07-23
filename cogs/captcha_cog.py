@@ -22,6 +22,10 @@ from database.operations import (
     update_captcha_config_field,
     get_captcha_attempt,
     update_captcha_attempt,
+    store_captcha_embed,
+    get_active_captcha_embeds,
+    deactivate_captcha_embed,
+    cleanup_inactive_captcha_embeds,
 )
 from database.models import CaptchaConfig
 
@@ -190,6 +194,8 @@ class CaptchaCog(commands.Cog):
         """Initialize when cog loads."""
         # Start cleanup task
         self.cleanup_task.start()
+        # Restore persistent views
+        await self.restore_persistent_views()
 
     async def cog_unload(self):
         """Clean up when cog unloads."""
@@ -201,9 +207,57 @@ class CaptchaCog(commands.Cog):
         """Periodic cleanup of expired captcha data."""
         try:
             await self._cleanup_expired_captchas()
-            log.info("Cleaned up expired captcha data")
+            await cleanup_inactive_captcha_embeds()
+            log.info("Cleaned up expired captcha data and inactive embeds")
         except Exception as e:
             log.error(f"Error cleaning up expired captchas: {e}")
+
+    async def restore_persistent_views(self):
+        """Restore persistent views for active captcha embeds."""
+        try:
+            active_embeds = await get_active_captcha_embeds()
+            restored_count = 0
+
+            for embed_data in active_embeds:
+                guild_id = embed_data["guild_id"]
+                channel_id = embed_data["channel_id"]
+                message_id = embed_data["message_id"]
+
+                try:
+                    guild = self.bot.get_guild(guild_id)
+                    if not guild:
+                        # Guild not found, deactivate embed
+                        await deactivate_captcha_embed(guild_id, channel_id, message_id)
+                        continue
+
+                    channel = guild.get_channel(channel_id)
+                    if not channel:
+                        # Channel not found, deactivate embed
+                        await deactivate_captcha_embed(guild_id, channel_id, message_id)
+                        continue
+
+                    try:
+                        message = await channel.fetch_message(message_id)
+                        # Create and add the persistent view
+                        view = VerificationStartView(self)
+                        self.bot.add_view(view, message_id=message_id)
+                        restored_count += 1
+                        log.debug(f"Restored persistent view for message {message_id} in guild {guild_id}")
+                    except discord.NotFound:
+                        # Message not found, deactivate embed
+                        await deactivate_captcha_embed(guild_id, channel_id, message_id)
+                        log.debug(f"Message {message_id} not found, deactivated embed")
+                    except discord.Forbidden:
+                        # No permission to fetch message, but keep embed active
+                        log.warning(f"No permission to fetch message {message_id} in guild {guild_id}")
+
+                except Exception as e:
+                    log.error(f"Error restoring view for embed {message_id}: {e}")
+
+            log.info(f"Restored {restored_count} persistent captcha verification views")
+
+        except Exception as e:
+            log.error(f"Error restoring persistent views: {e}")
 
     async def store_captcha(
         self, guild_id: int, user_id: int, captcha_id: str, captcha_text: str, expires_at: datetime
@@ -464,7 +518,10 @@ class CaptchaCog(commands.Cog):
         view = VerificationStartView(self)
 
         try:
-            await channel.send(embed=verification_embed, view=view)
+            message = await channel.send(embed=verification_embed, view=view)
+
+            # Store the embed in database for persistence
+            await store_captcha_embed(guild_id, channel.id, message.id)
 
             success_embed = discord.Embed(
                 title="✅ Verification Embed Sent",
@@ -487,6 +544,105 @@ class CaptchaCog(commands.Cog):
 
         response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
         await response_func(embed=success_embed, ephemeral=False)
+
+    @embed_group.command(name="remove", description="Remove verification embed from a channel.")
+    @app_commands.describe(channel="The channel to remove verification embeds from")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def remove_verification_embed(self, ctx: commands.Context, channel: discord.TextChannel):
+        """Remove verification embeds from specified channel."""
+        guild_id = ctx.guild.id
+
+        try:
+            # Get active embeds for this channel
+            active_embeds = await get_active_captcha_embeds(guild_id)
+            channel_embeds = [embed for embed in active_embeds if embed["channel_id"] == channel.id]
+
+            removed_count = 0
+            for embed_data in channel_embeds:
+                message_id = embed_data["message_id"]
+                try:
+                    # Try to delete the message
+                    message = await channel.fetch_message(message_id)
+                    await message.delete()
+                except (discord.NotFound, discord.Forbidden):
+                    # Message already deleted or no permission
+                    pass
+
+                # Deactivate in database
+                await deactivate_captcha_embed(guild_id, channel.id, message_id)
+                removed_count += 1
+
+            if removed_count > 0:
+                embed = discord.Embed(
+                    title="✅ Verification Embeds Removed",
+                    description=f"Removed {removed_count} verification embed(s) from {channel.mention}.",
+                    color=discord.Color.green(),
+                )
+            else:
+                embed = discord.Embed(
+                    title="ℹ️ No Embeds Found",
+                    description=f"No active verification embeds found in {channel.mention}.",
+                    color=discord.Color.blue(),
+                )
+
+        except Exception as e:
+            log.error(f"Error removing verification embeds: {e}")
+            embed = discord.Embed(
+                title="❌ Error",
+                description="Failed to remove verification embeds. Please try again.",
+                color=discord.Color.red(),
+            )
+
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
+        await response_func(embed=embed, ephemeral=False)
+
+    @embed_group.command(name="list", description="List all active verification embeds in this server.")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def list_verification_embeds(self, ctx: commands.Context):
+        """List all active verification embeds in the server."""
+        guild_id = ctx.guild.id
+
+        try:
+            active_embeds = await get_active_captcha_embeds(guild_id)
+
+            if not active_embeds:
+                embed = discord.Embed(
+                    title="ℹ️ No Active Embeds",
+                    description="No active verification embeds found in this server.",
+                    color=discord.Color.blue(),
+                )
+            else:
+                embed = discord.Embed(
+                    title="📋 Active Verification Embeds",
+                    description=f"Found {len(active_embeds)} active verification embed(s):",
+                    color=discord.Color.blue(),
+                )
+
+                for i, embed_data in enumerate(active_embeds[:10], 1):  # Limit to 10 embeds
+                    channel = ctx.guild.get_channel(embed_data["channel_id"])
+                    channel_name = channel.mention if channel else f"Unknown Channel ({embed_data['channel_id']})"
+
+                    embed.add_field(
+                        name=f"Embed #{i}",
+                        value=f"**Channel:** {channel_name}\n"
+                              f"**Message ID:** {embed_data['message_id']}\n"
+                              f"**Created:** <t:{int(embed_data['created_at'].timestamp())}:R>",
+                        inline=True,
+                    )
+
+                if len(active_embeds) > 10:
+                    embed.set_footer(text=f"Showing first 10 of {len(active_embeds)} embeds")
+
+        except Exception as e:
+            log.error(f"Error listing verification embeds: {e}")
+            embed = discord.Embed(
+                title="❌ Error",
+                description="Failed to list verification embeds. Please try again.",
+                color=discord.Color.red(),
+            )
+
+        response_func = ctx.interaction.response.send_message if ctx.interaction else ctx.send
+        await response_func(embed=embed, ephemeral=False)
 
     @captcha.command(
         name="verify",
@@ -779,7 +935,12 @@ class VerificationStartView(discord.ui.View):
         super().__init__(timeout=None)  # Persistent view
         self.cog = cog
 
-    @discord.ui.button(label="Start Verification", style=discord.ButtonStyle.primary, emoji="🔐")
+    @discord.ui.button(
+        label="Start Verification",
+        style=discord.ButtonStyle.primary,
+        emoji="🔐",
+        custom_id="captcha_start_verification"
+    )
     async def start_verification(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Start the verification process for a user."""
         user = interaction.user
