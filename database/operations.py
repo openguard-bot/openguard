@@ -916,6 +916,70 @@ async def reset_captcha_attempts(guild_id: int, user_id: int) -> bool:
         return False
 
 
+# Captcha Embeds Operations
+
+
+async def store_captcha_embed(guild_id: int, channel_id: int, message_id: int) -> bool:
+    """Store a captcha verification embed for persistence."""
+    try:
+        from database.models import CaptchaEmbed
+
+        data = {
+            "guild_id": guild_id,
+            "channel_id": channel_id,
+            "message_id": message_id,
+            "is_active": True,
+        }
+        return await insert_or_update("captcha_embeds", ["guild_id", "channel_id", "message_id"], data)
+    except Exception as e:
+        log.error(f"Failed to store captcha embed for guild {guild_id}: {e}")
+        return False
+
+
+async def get_active_captcha_embeds(guild_id: Optional[int] = None) -> list:
+    """Get all active captcha verification embeds."""
+    try:
+        if guild_id:
+            query = "SELECT * FROM captcha_embeds WHERE guild_id = $1 AND is_active = TRUE"
+            params = [guild_id]
+        else:
+            query = "SELECT * FROM captcha_embeds WHERE is_active = TRUE"
+            params = []
+
+        results = await execute_query(query, *params, fetch_all=True)
+        return [dict(result) for result in results] if results else []
+    except Exception as e:
+        log.error(f"Failed to get active captcha embeds: {e}")
+        return []
+
+
+async def deactivate_captcha_embed(guild_id: int, channel_id: int, message_id: int) -> bool:
+    """Deactivate a captcha verification embed."""
+    try:
+        await execute_query(
+            "UPDATE captcha_embeds SET is_active = FALSE WHERE guild_id = $1 AND channel_id = $2 AND message_id = $3",
+            guild_id,
+            channel_id,
+            message_id,
+        )
+        return True
+    except Exception as e:
+        log.error(f"Failed to deactivate captcha embed for guild {guild_id}: {e}")
+        return False
+
+
+async def cleanup_inactive_captcha_embeds() -> bool:
+    """Clean up inactive captcha embeds older than 30 days."""
+    try:
+        await execute_query(
+            "DELETE FROM captcha_embeds WHERE is_active = FALSE AND created_at < NOW() - INTERVAL '30 days'"
+        )
+        return True
+    except Exception as e:
+        log.error(f"Failed to cleanup inactive captcha embeds: {e}")
+        return False
+
+
 # Verification Token Operations
 
 
