@@ -38,13 +38,13 @@ jobs:
         run: yarn install --immutable
 
       - name: Lint Node.js projects
-        run: yarn lint
+        run: yarn workspaces foreach --all run lint
 
       - name: Run Node.js tests
-        run: yarn test
+        run: yarn workspaces foreach --all run test
 
       - name: Build Node.js projects
-        run: yarn build
+        run: yarn workspaces foreach --all run build
 
       - name: Set up Python
         uses: actions/setup-python@v5

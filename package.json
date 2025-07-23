@@ -9,9 +9,8 @@
   "repository": "https://github.com/discordaimod/openguard.git",
   "author": "Slipstream <me@slipstreamm.dev>",
   "license": "MIT",
-  "scripts": {
-    "build": "yarn workspaces run build",
-    "test": "yarn workspaces run test",
-    "lint": "yarn workspaces run lint"
+  "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "vitest": "^3.2.4"
   }
 }

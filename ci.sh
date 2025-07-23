@@ -117,17 +117,17 @@ run_nodejs_checks() {
     print_status "Running Node.js linting and tests..."
     
     # Run linter (assuming it has --fix capability)
-    print_status "Running yarn lint..."
-    if yarn lint --fix 2>/dev/null; then
+    print_status "Running yarn workspaces foreach --all run lint..."
+    if yarn workspaces foreach --all run lint --fix 2>/dev/null; then
         print_success "Linting passed (with fixes applied)"
     else
         print_warning "Linting failed or --fix not supported. Running without --fix..."
-        yarn lint
+        yarn workspaces foreach --all run lint
     fi
     
     # Run tests
     print_status "Running Node.js tests..."
-    yarn test
+    yarn workspaces foreach --all run test
     print_success "Node.js tests passed"
     
     # Build projects
