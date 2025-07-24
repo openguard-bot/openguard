@@ -61,7 +61,7 @@ jobs:
             ${{ runner.os }}-uv-
 
       - name: Install Python dependencies
-        run: uv pip install -r pyproject.toml --all-extras --group dashboard-backend --group dev
+        run: uv pip install -r pyproject.toml --all-extras --system
 
       - name: Run Ruff
         run: ruff check bot.py cogs/ dashboard/backend --output-format=github
