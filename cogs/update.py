@@ -94,7 +94,7 @@ class UpdateCog(commands.Cog):
             deps_result = await self._check_and_install_dependencies()
 
             # 5. Decide whether to restart or reload
-            critical_files = ["bot.py", "requirements.txt"]
+            critical_files = ["bot.py", "pyproject.toml", "requirements.txt"]
             if force_restart or any(f in changed_files for f in critical_files):
                 await self._perform_full_restart(status_msg, git_result, deps_result, changed_files, force_restart)
             else:

@@ -12,7 +12,7 @@ This document outlines project-specific guidelines for developing the OpenGuard 
 
 ## Backend Development (Python)
 - **Frameworks**: Utilize `discord.py` for bot functionality and `FastAPI` for the dashboard API.
-- **Dependency Management**: `requirements.txt` for Python dependencies.
+- **Dependency Management**: `pyproject.toml` for Python dependencies.
 - **Database Interaction**: Use the `database/` module for all database operations, preferring `SQLAlchemy` ORM patterns where applicable.
 - **Modularity**: Organize bot features into cogs within the `cogs/` directory.
 - **API Design**: Follow RESTful principles for the FastAPI endpoints.
