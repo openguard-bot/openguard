@@ -4,7 +4,7 @@ set -e
 cd /home/discordbot/openguard
 
 echo "Installing Python dependencies..."
-sudo -u discordbot uv pip install -r pyproject.toml --group dashboard-backend --group dev
+sudo -su discordbot uv pip install -r pyproject.toml --group dashboard-backend --group dev
 
 echo "Restarting backend service..."
 systemctl restart openguard-backend.service
