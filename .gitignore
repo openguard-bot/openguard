@@ -8,3 +8,10 @@ bot.log
 **dist/
 **build/
 **.wrangler/
+
+.pnp.*
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
