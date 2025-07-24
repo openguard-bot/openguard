@@ -250,7 +250,7 @@ async def migrate_logging_data():
                         log_entry.get("channel_id"),
                     )
                 else:
-                    case_id = await add_mod_log(
+                    await add_mod_log(
                         guild_id=log_entry.get("guild_id"),
                         moderator_id=log_entry.get("moderator_id"),
                         target_user_id=log_entry.get("target_user_id"),

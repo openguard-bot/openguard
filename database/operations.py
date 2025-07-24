@@ -922,8 +922,6 @@ async def reset_captcha_attempts(guild_id: int, user_id: int) -> bool:
 async def store_captcha_embed(guild_id: int, channel_id: int, message_id: int) -> bool:
     """Store a captcha verification embed for persistence."""
     try:
-        from database.models import CaptchaEmbed
-
         data = {
             "guild_id": guild_id,
             "channel_id": channel_id,

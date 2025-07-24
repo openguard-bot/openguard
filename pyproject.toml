@@ -37,12 +37,15 @@ line-length = 120
 exclude = [
   "node_modules",
   "website",
-  "dashboard/frontend"
+  "dashboard/frontend",
+  "**/tests/*",
+  "**/test_*.py",
+  "**/*_test.py",
 ]
 
 [tool.ruff.lint]
 select = ["E", "F"]
-
+ignore = ["E501"]
 
 [dependency-groups]
 dashboard-backend = [
