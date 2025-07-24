@@ -7,7 +7,7 @@ User=http
 Group=http
 WorkingDirectory=/home/discordbot/openguard
 Environment="PYTHONPATH=/home/discordbot/openguard"
-ExecStart=/home/discordbot/openguard/.venv/bin/uvicorn dashboard.backend.main:app --host 0.0.0.0 --port 5030 --env-file /home/discordbot/openguard/.env
+ExecStart=/home/discordbot/.local/bin/uv run uvicorn dashboard.backend.main:app --host 0.0.0.0 --port 5030 --env-file /home/discordbot/openguard/.env
 Restart=always
 RestartSec=5s
 
