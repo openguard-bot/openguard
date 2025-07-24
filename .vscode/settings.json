@@ -1,0 +1,7 @@
+{
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "ruff",
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  }
+}

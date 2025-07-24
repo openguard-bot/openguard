@@ -23,13 +23,14 @@ Clone the repository:
 
 ```sh
 git clone https://github.com/openguard-bot/openguard.git
-cd OpenGuard
+cd openguard
 ```
 
 Install dependencies:
 
 ```sh
-pip install -r requirements.txt
+yarn install
+uv pip install -r pyproject.toml --all-extras
 ```
 
 ### Configuration

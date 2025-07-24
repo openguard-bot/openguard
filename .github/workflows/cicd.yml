@@ -20,14 +20,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Enable Corepack
         run: corepack enable
-
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
-
       - uses: actions/cache@v4
         id: yarn-cache
         with:
@@ -35,16 +32,12 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-
       - name: Install Node.js dependencies
         run: yarn install --immutable
-
       - name: Lint Node.js projects
         run: yarn workspaces foreach --all run lint
-
       - name: Run Node.js tests
         run: yarn workspaces foreach --all run test
-
       - name: Build Node.js projects
         run: yarn workspaces foreach --all run build
 
@@ -53,17 +46,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Cache pip packages
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Cache uv packages
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-uv-
 
       - name: Install Python dependencies
-        run: |
-          pip install -r requirements.txt -r dashboard/backend/requirements.txt pyright pytest ruff
+        run: uv pip install -r requirements.txt -r dashboard/backend/requirements.txt pyright pytest ruff
 
       - name: Run Ruff
         run: ruff check bot.py cogs/ dashboard/backend --output-format=github
@@ -126,22 +124,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: production
           ref: ${{ github.sha }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Enable Corepack
         run: corepack enable
-
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
-
       - uses: actions/cache@v4
         id: yarn-cache
         with:
@@ -149,22 +142,17 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-
       - name: Install dependencies
         run: yarn install --immutable
-
       - name: Build Website
         run: yarn build
-
       - name: Install Wrangler
         run: yarn global add wrangler
-
       - name: Deploy Website
         run: wrangler deploy
         working-directory: ./website
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
       - name: Update deployment status
         uses: bobheadxi/deployments@v1
         if: always()
@@ -193,22 +181,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: frontend-prod
           ref: ${{ github.sha }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Enable Corepack
         run: corepack enable
-
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
-
       - uses: actions/cache@v4
         id: yarn-cache
         with:
@@ -216,24 +199,19 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-
       - name: Install dependencies
         run: yarn install --immutable
-
       - name: Build Dashboard Frontend
         run: yarn build
         env:
           VITE_DISCORD_CLIENT_ID: ${{ vars.VITE_DISCORD_CLIENT_ID }}
-
       - name: Install Wrangler
         run: yarn global add wrangler
-
       - name: Deploy Dashboard Frontend
         run: wrangler deploy
         working-directory: ./dashboard/frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
       - name: Update deployment status
         uses: bobheadxi/deployments@v1
         if: always()
@@ -261,7 +239,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: backend-prod
           ref: ${{ github.sha }}
-
       - name: Deploy Dashboard Backend
         uses: appleboy/ssh-action@master
         with:
@@ -272,7 +249,6 @@ jobs:
             cd /home/discordbot/openguard
             git pull origin main
             sudo /home/discordbot/openguard/scripts/deploy_backend.sh
-
       - name: Update deployment status
         uses: bobheadxi/deployments@v1
         if: always()
@@ -300,7 +276,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: bot-prod
           ref: ${{ github.sha }}
-
       - name: Deploy Discord Bot
         uses: appleboy/ssh-action@master
         with:
@@ -310,9 +285,8 @@ jobs:
           script: |
             cd /home/discordbot/openguard
             git pull origin main
-            /home/discordbot/.pyenv/versions/3.11.2/bin/python -m pip install -r requirements.txt
+            uv pip install -r requirements.txt
             sudo systemctl restart openguard-bot.service
-
       - name: Update deployment status
         uses: bobheadxi/deployments@v1
         if: always()
@@ -322,3 +296,4 @@ jobs:
           status: ${{ job.status }}
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
           env: bot-prod
+
