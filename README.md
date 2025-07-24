@@ -30,7 +30,7 @@ Install dependencies:
 
 ```sh
 yarn install
-uv pip install -r pyproject.toml --all-extras
+uv pip install -r pyproject.toml --group dashboard-backend --group dev
 ```
 
 ### Configuration

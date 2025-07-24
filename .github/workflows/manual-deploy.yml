@@ -228,7 +228,7 @@ jobs:
           script: |
             cd /home/discordbot/openguard
             git pull origin main
-            uv pip install -r pyproject.toml --all-extras
+            uv pip install -r pyproject.toml --group dashboard-backend --group dev
             sudo systemctl restart openguard-bot.service
       - name: Mark Deployment as Successful
         if: success()

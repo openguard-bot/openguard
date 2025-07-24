@@ -2,7 +2,7 @@
 # Navigate to the directory containing this script
 
 # Install Python dependencies if not already installed
-uv pip install -r pyproject.toml --all-extras
+uv pip install -r pyproject.toml --group dashboard-backend --group dev
 
 # Ensure the project root is on the Python path so the backend can
 # import modules such as the `database` package.

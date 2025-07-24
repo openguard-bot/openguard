@@ -95,7 +95,7 @@ setup_python() {
     
     # Install main requirements
     if [ -f "pyproject.toml" ]; then
-        uv pip install -r pyproject.toml --all-extras
+        uv pip install -r pyproject.toml --group dashboard-backend --group dev
     fi
     
     # Install dashboard backend requirements using dependency groups
