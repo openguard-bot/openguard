@@ -2,7 +2,7 @@
 # Navigate to the directory containing this script
 
 # Install Python dependencies if not already installed
-pip install -r requirements.txt
+uv pip install -r pyproject.toml --all-extras
 
 # Ensure the project root is on the Python path so the backend can
 # import modules such as the `database` package.

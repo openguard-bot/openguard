@@ -98,12 +98,12 @@ setup_python() {
     
     # Install main requirements
     if [ -f "requirements.txt" ]; then
-        pip install -r requirements.txt
+        uv pip install -r pyproject.toml --all-extras
     fi
     
     # Install dashboard backend requirements
     if [ -f "dashboard/backend/requirements.txt" ]; then
-        pip install -r dashboard/backend/requirements.txt
+        uv pip install -r dashboard/backend/requirements.txt
     fi
     
     # Install development tools

@@ -61,7 +61,7 @@ jobs:
             ${{ runner.os }}-uv-
 
       - name: Install Python dependencies
-        run: uv pip install -r requirements.txt -r dashboard/backend/requirements.txt pyright pytest ruff
+        run: uv pip install -r pyproject.toml --all-extras -r dashboard/backend/requirements.txt pyright pytest ruff
 
       - name: Run Ruff
         run: ruff check bot.py cogs/ dashboard/backend --output-format=github
@@ -285,7 +285,7 @@ jobs:
           script: |
             cd /home/discordbot/openguard
             git pull origin main
-            uv pip install -r requirements.txt
+            uv pip install -r pyproject.toml --all-extras
             sudo systemctl restart openguard-bot.service
       - name: Update deployment status
         uses: bobheadxi/deployments@v1
