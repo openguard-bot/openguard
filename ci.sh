@@ -53,8 +53,8 @@ check_dependencies() {
         missing_deps+=("python3")
     fi
     
-    if ! command_exists pip; then
-        missing_deps+=("pip")
+    if ! command_exists uv; then
+        missing_deps+=("uv")
     fi
     
     if [ ${#missing_deps[@]} -ne 0 ]; then
@@ -84,30 +84,22 @@ setup_nodejs() {
 setup_python() {
     print_status "Setting up Python environment..."
     
-    # Check if requirements.txt exists
-    if [ ! -f "requirements.txt" ]; then
-        print_warning "requirements.txt not found in root directory"
+    # Check if pyproject.toml exists
+    if [ ! -f "pyproject.toml" ]; then
+        print_warning "pyproject.toml not found in root directory"
     fi
-    
-    # Check if dashboard backend requirements exist
-    if [ ! -f "dashboard/backend/requirements.txt" ]; then
-        print_warning "dashboard/backend/requirements.txt not found"
-    fi
+
+
     
     print_status "Installing Python dependencies..."
     
     # Install main requirements
-    if [ -f "requirements.txt" ]; then
+    if [ -f "pyproject.toml" ]; then
         uv pip install -r pyproject.toml --all-extras
     fi
     
-    # Install dashboard backend requirements
-    if [ -f "dashboard/backend/requirements.txt" ]; then
-        uv pip install -r dashboard/backend/requirements.txt
-    fi
-    
-    # Install development tools
-    pip install pyright pytest ruff
+    # Install dashboard backend requirements using dependency groups
+    uv pip install --group dashboard-backend --group dev
     
     print_success "Python dependencies installed"
 }

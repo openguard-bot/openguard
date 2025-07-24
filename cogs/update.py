@@ -7,6 +7,7 @@ import os
 import asyncio
 import pkg_resources
 import re
+import tomllib
 
 from lists import config
 
@@ -94,7 +95,7 @@ class UpdateCog(commands.Cog):
             deps_result = await self._check_and_install_dependencies()
 
             # 5. Decide whether to restart or reload
-            critical_files = ["bot.py", "pyproject.toml", "requirements.txt"]
+            critical_files = ["bot.py", "pyproject.toml"]
             if force_restart or any(f in changed_files for f in critical_files):
                 await self._perform_full_restart(status_msg, git_result, deps_result, changed_files, force_restart)
             else:
@@ -191,7 +192,7 @@ class UpdateCog(commands.Cog):
 
         if force_restart:
             reason = "Restart was manually triggered."
-        elif "requirements.txt" in changed_files:
+        elif "pyproject.toml" in changed_files:
             reason = "Dependencies were updated."
         else:
             reason = "A critical file was changed."
@@ -315,7 +316,7 @@ class UpdateCog(commands.Cog):
 
     @app_commands.command(
         name="check_deps",
-        description="Check for missing dependencies in requirements.txt (authorized users only).",
+        description="Check for missing dependencies in pyproject.toml (authorized users only).",
     )
     async def check_dependencies(self, ctx: commands.Context):
         """Check for missing dependencies without installing them."""
@@ -335,36 +336,39 @@ class UpdateCog(commands.Cog):
             await ctx.defer()
 
         try:
-            requirements_path = os.path.join(os.getcwd(), "requirements.txt")
+            pyproject_path = os.path.join(os.getcwd(), "pyproject.toml")
 
-            if not os.path.exists(requirements_path):
+            if not os.path.exists(pyproject_path):
                 embed = discord.Embed(
-                    title="❌ Requirements Check",
-                    description="requirements.txt file not found",
+                    title="❌ Dependencies Check",
+                    description="pyproject.toml file not found",
                     color=discord.Color.red(),
                 )
                 response_func = ctx.interaction.followup.send if ctx.interaction else ctx.send
                 await response_func(embed=embed)
                 return
 
-            # Read and parse requirements
-            with open(requirements_path, "r", encoding="utf-8") as f:
-                requirements = f.read().strip().split("\n")
+            # Read and parse pyproject.toml
+            with open(pyproject_path, "rb") as f:
+                pyproject_data = tomllib.load(f)
+
+            # Extract dependencies from pyproject.toml
+            dependencies = pyproject_data.get("project", {}).get("dependencies", [])
 
             installed_packages = {pkg.project_name.lower(): pkg.version for pkg in pkg_resources.working_set}
             missing_packages = []
             installed_count = 0
 
-            for req_line in requirements:
-                req_line = req_line.strip()
-                if not req_line or req_line.startswith("#"):
+            for dep_line in dependencies:
+                dep_line = dep_line.strip()
+                if not dep_line:
                     continue
 
                 # Parse package name
-                package_name = re.split(r"[>=<~!]", req_line)[0].strip()
+                package_name = re.split(r"[>=<~!]", dep_line)[0].strip()
 
                 if package_name.lower() not in installed_packages:
-                    missing_packages.append(req_line)
+                    missing_packages.append(dep_line)
                 else:
                     installed_count += 1
 
@@ -444,36 +448,39 @@ class UpdateCog(commands.Cog):
             }
 
     async def _check_and_install_dependencies(self):
-        """Check requirements.txt and install missing dependencies."""
+        """Check pyproject.toml and install missing dependencies."""
         try:
-            requirements_path = os.path.join(os.getcwd(), "requirements.txt")
+            pyproject_path = os.path.join(os.getcwd(), "pyproject.toml")
 
-            if not os.path.exists(requirements_path):
+            if not os.path.exists(pyproject_path):
                 return {
                     "checked": False,
                     "missing_packages": [],
                     "install_success": False,
-                    "install_output": "requirements.txt not found",
+                    "install_output": "pyproject.toml not found",
                 }
 
-            # Read requirements.txt
-            with open(requirements_path, "r", encoding="utf-8") as f:
-                requirements = f.read().strip().split("\n")
+            # Read pyproject.toml
+            with open(pyproject_path, "rb") as f:
+                pyproject_data = tomllib.load(f)
 
-            # Parse requirements and check which are missing
+            # Extract dependencies from pyproject.toml
+            dependencies = pyproject_data.get("project", {}).get("dependencies", [])
+
+            # Parse dependencies and check which are missing
             missing_packages = []
             installed_packages = {pkg.project_name.lower(): pkg.version for pkg in pkg_resources.working_set}
 
-            for req_line in requirements:
-                req_line = req_line.strip()
-                if not req_line or req_line.startswith("#"):
+            for dep_line in dependencies:
+                dep_line = dep_line.strip()
+                if not dep_line:
                     continue
 
                 # Parse package name (handle version specifiers)
-                package_name = re.split(r"[>=<~!]", req_line)[0].strip()
+                package_name = re.split(r"[>=<~!]", dep_line)[0].strip()
 
                 if package_name.lower() not in installed_packages:
-                    missing_packages.append(req_line)
+                    missing_packages.append(dep_line)
 
             if not missing_packages:
                 return {
@@ -502,10 +509,10 @@ class UpdateCog(commands.Cog):
             }
 
     async def _install_packages(self, packages):
-        """Install packages using pip."""
+        """Install packages using uv pip."""
         try:
-            # Prepare pip install command
-            cmd = [sys.executable, "-m", "pip", "install"] + packages
+            # Prepare uv pip install command
+            cmd = ["uv", "pip", "install"] + packages
 
             process = await asyncio.create_subprocess_exec(
                 *cmd,

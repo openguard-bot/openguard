@@ -56,12 +56,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-uv-
 
       - name: Install Python dependencies
-        run: uv pip install -r pyproject.toml --all-extras -r dashboard/backend/requirements.txt pyright pytest ruff
+        run: uv pip install -r pyproject.toml --all-extras --group dashboard-backend --group dev
 
       - name: Run Ruff
         run: ruff check bot.py cogs/ dashboard/backend --output-format=github
@@ -104,7 +104,7 @@ jobs:
               - 'bot.py'
               - 'cogs/**'
               - 'database/**'
-              - 'requirements.txt'
+              - 'pyproject.toml'
 
   deploy-website:
     name: "Deploy Website"

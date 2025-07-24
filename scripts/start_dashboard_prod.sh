@@ -28,4 +28,4 @@ sudo chown -R http:http /srv/http/dashboard # Ensure correct ownership for web s
 # Start FastAPI backend
 echo "Starting FastAPI backend..."
 export PYTHONPATH="$(pwd)"
-(pip install -r pyproject.toml --all-extras &&cd dashboard/backend && uvicorn main:app --host 0.0.0.0 --port 5030)
+(uv pip install -r pyproject.toml --all-extras &&cd dashboard/backend && uvicorn main:app --host 0.0.0.0 --port 5030)

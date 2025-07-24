@@ -21,7 +21,7 @@ Only the latest stable release of openguard is supported for security updates.
 
 ## Dependencies
 
-openguard relies on Python packages as defined in `requirements.txt`. Please review their security advisories as part of your deployment process.
+openguard relies on Python packages as defined in `pyproject.toml`. Please review their security advisories as part of your deployment process.
 
 ## Disclosure Policy
 

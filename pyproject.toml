@@ -29,6 +29,9 @@ dependencies = [
     "watchdog>=6.0.0",
 ]
 
+[tool.black]
+line-length = 120
+
 [tool.ruff]
 line-length = 120
 exclude = [
@@ -39,7 +42,7 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F"]
-ignore = ["E501"]
+
 
 [dependency-groups]
 dashboard-backend = [
