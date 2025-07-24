@@ -71,17 +71,20 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Cache node modules
-        uses: actions/cache@v4
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        id: yarn-cache
         with:
-          path: website/node_modules
-          key: ${{ runner.os }}-node-website-${{ hashFiles('yarn.lock') }}
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-node-website-
+            ${{ runner.os }}-yarn-
 
       - name: Install dependencies
         run: yarn install --immutable
-        working-directory: ./website
 
       - name: Build Website
         run: yarn build
@@ -142,17 +145,20 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Cache node modules
-        uses: actions/cache@v4
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        id: yarn-cache
         with:
-          path: dashboard/frontend/node_modules
-          key: ${{ runner.os }}-node-frontend-${{ hashFiles('yarn.lock') }}
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-node-frontend-
+            ${{ runner.os }}-yarn-
 
       - name: Install dependencies
         run: yarn install --immutable
-        working-directory: ./dashboard/frontend
 
       - name: Build Dashboard Frontend
         run: yarn build
