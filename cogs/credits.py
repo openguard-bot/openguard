@@ -14,6 +14,22 @@ class CreditsCog(commands.Cog):
         """Initializes the CreditsCog."""
         self.bot = bot
 
+    async def _get_repo_owner_avatar_url(self) -> str | None:
+        """Fetches the avatar URL of the repository owner."""
+        user_url = f"https://api.github.com/users/{REPO_OWNER}"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(user_url) as response:
+                    if response.status == 200:
+                        user_data = await response.json()
+                        return user_data.get('avatar_url')
+                    else:
+                        print(f"Failed to fetch repo owner avatar. GitHub API returned status: {response.status}")
+                        return None
+        except aiohttp.ClientError as e:
+            print(f"An error occurred while trying to connect to GitHub for repo owner avatar: {e}")
+            return None
+
     @app_commands.command(name="credits", description="Show the contributors for OpenGuard.")
     async def credits(self, interaction: discord.Interaction):
         """
@@ -22,11 +38,12 @@ class CreditsCog(commands.Cog):
         await interaction.response.defer()
 
         # The URL for the GitHub API endpoint to get contributors
-        url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contributors"
+        contributors_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contributors"
+        repo_owner_avatar_url = await self._get_repo_owner_avatar_url()
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
+                async with session.get(contributors_url) as response:
                     if response.status == 200:
                         contributors = await response.json()
                         
@@ -36,12 +53,15 @@ class CreditsCog(commands.Cog):
                         # Create the embed
                         embed = discord.Embed(
                             title="OpenGuard Credits",
-                            description="A heartfelt thank you to all our amazing contributors!",
+                            description="tuff coders",
                             color=discord.Color.blue()
                         )
 
-                        if contributors:
-                            # Set the thumbnail to the top contributor's avatar
+                        # Set the thumbnail to the repository owner's avatar
+                        if repo_owner_avatar_url:
+                            embed.set_thumbnail(url=repo_owner_avatar_url)
+                        elif contributors:
+                            # Fallback to top contributor's avatar if repo owner avatar not found
                             embed.set_thumbnail(url=contributors[0]['avatar_url'])
 
                         description_text = ""
