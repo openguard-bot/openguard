@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import aiohttp
-import asyncio
 from .aimod_helpers.config_manager import (
     get_guild_config_async,
     set_guild_config,
