@@ -448,20 +448,33 @@ class CoreAICog(commands.Cog, name="Core AI"):
         api_key = None
         auth_info = None
         model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
+        provider_used = "global_openrouter"  # Default to global OpenRouter
 
         if guild_api_key:
             if guild_api_key.api_provider == "github_copilot":
                 auth_info = guild_api_key.github_auth_info
+                provider_used = "github_copilot"
+                print(f"Using GitHub Copilot for guild {guild_id} with model: {model_used}")
             elif guild_api_key.api_provider == "openrouter":
                 # For OpenRouter, use the API key and ensure proper model handling
                 api_key = guild_api_key.api_key
-                model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
-                print(f"Using OpenRouter API key for guild {guild_id} with model: {model_used}")
+                provider_used = "guild_openrouter"
+                print(f"Using guild-specific OpenRouter API key for guild {guild_id} with model: {model_used}")
             else:
                 # For other providers, the key is the api_key
                 api_key = guild_api_key.api_key
-                # The model is still taken from the guild config, not overridden by the provider name
-                model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
+                provider_used = guild_api_key.api_provider
+                print(f"Using {guild_api_key.api_provider} provider for guild {guild_id} with model: {model_used}")
+        else:
+            # No guild-specific API key found, fall back to global OpenRouter key
+            from .aimod_helpers.litellm_config import OPENROUTER_API_KEY
+            if OPENROUTER_API_KEY:
+                api_key = OPENROUTER_API_KEY
+                provider_used = "global_openrouter"
+                print(f"No guild-specific API key found for guild {guild_id}, using global OpenRouter key with model: {model_used}")
+            else:
+                print(f"ERROR: No API key available for guild {guild_id} - neither guild-specific nor global OpenRouter key found")
+                return None
 
         if custom_rules_text is not None:
             rules_text = custom_rules_text
@@ -553,9 +566,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 messages[-1]["content"] += "\n\nAttachments:\n" + "\n".join(image_descriptions)
 
         try:
-            # Log the provider and model being used for debugging
-            if guild_api_key:
-                print(f"Using {guild_api_key.api_provider} provider for guild {guild_id} with model: {model_used}")
+            # Enhanced logging for provider and model being used
+            print(f"[AI_ANALYSIS] Guild {guild_id}: Using {provider_used} provider with model: {model_used}")
+            if api_key:
+                key_preview = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "***"
+                print(f"[AI_ANALYSIS] Guild {guild_id}: API key preview: {key_preview}")
             
             response = await self.genai_client.generate_content(
                 model=model_used,
@@ -603,22 +618,24 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 return None
         except Exception as e:
             # Enhanced error handling for different providers
-            if guild_api_key and guild_api_key.api_provider == "openrouter":
-                error_str = str(e).lower()
+            error_str = str(e).lower()
+            
+            if provider_used in ["guild_openrouter", "global_openrouter"]:
+                provider_name = "OpenRouter (guild-specific)" if provider_used == "guild_openrouter" else "OpenRouter (global)"
                 if "quota" in error_str or "rate limit" in error_str:
-                    print(f"OpenRouter quota/rate limit exceeded for guild {guild_id} with model {model_used}: {e}")
+                    print(f"[ERROR] {provider_name} quota/rate limit exceeded for guild {guild_id} with model {model_used}: {e}")
                 elif "unauthorized" in error_str or "invalid api key" in error_str:
-                    print(f"OpenRouter authentication failed for guild {guild_id}: Invalid API key")
+                    print(f"[ERROR] {provider_name} authentication failed for guild {guild_id}: Invalid API key")
                 elif "model not found" in error_str or "not available" in error_str:
-                    print(f"OpenRouter model '{model_used}' not found or unavailable for guild {guild_id}: {e}")
+                    print(f"[ERROR] {provider_name} model '{model_used}' not found or unavailable for guild {guild_id}: {e}")
                 elif "insufficient credits" in error_str or "balance" in error_str:
-                    print(f"OpenRouter insufficient credits for guild {guild_id} with model {model_used}: {e}")
+                    print(f"[ERROR] {provider_name} insufficient credits for guild {guild_id} with model {model_used}: {e}")
                 else:
-                    print(f"OpenRouter API error for guild {guild_id} with model {model_used}: {e}")
-            elif guild_api_key and guild_api_key.api_provider == "github_copilot":
-                print(f"GitHub Copilot API error for guild {guild_id} with model {model_used}: {e}")
+                    print(f"[ERROR] {provider_name} API error for guild {guild_id} with model {model_used}: {e}")
+            elif provider_used == "github_copilot":
+                print(f"[ERROR] GitHub Copilot API error for guild {guild_id} with model {model_used}: {e}")
             else:
-                print(f"Exception during LiteLLM API call for guild {guild_id} with model {model_used}: {e}")
+                print(f"[ERROR] {provider_used} API error for guild {guild_id} with model {model_used}: {e}")
             return None
 
     async def _execute_ban(self, message: discord.Message, reason: str, rule_violated: str):

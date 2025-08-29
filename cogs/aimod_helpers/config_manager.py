@@ -9,7 +9,7 @@ from database.operations import (
 )
 
 # OpenRouter/LiteLLM configuration
-DEFAULT_AI_MODEL = "github_copilot/gpt-4.1"
+DEFAULT_AI_MODEL = "openrouter/google/gemini-2.0-flash-001"
 
 # Legacy environment variables (kept for compatibility)
 VERTEX_PROJECT_ID = os.getenv("VERTEX_PROJECT_ID")

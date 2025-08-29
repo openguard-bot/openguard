@@ -18,19 +18,23 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Model mappings from Google models to OpenRouter equivalents
 MODEL_MAPPINGS = {
-    # Gemini models are no longer mapped to prevent automatic "openrouter/" prepending.
-    # Users should provide the full model name, e.g., "openrouter/google/gemini-2.5-pro".
-    # "gemini-2.5-flash-lite": "openrouter/google/gemini-2.5-flash-lite-preview-06-17",
-    # "gemini-2.5-flash": "openrouter/google/gemini-2.5-flash",
-    # "gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+    # Map common model names to OpenRouter equivalents
+    "gemini-2.0-flash-001": "openrouter/google/gemini-2.0-flash-001",
+    "gemini-2.5-flash-lite": "openrouter/google/gemini-2.5-flash-lite-preview-06-17",
+    "gemini-2.5-flash": "openrouter/google/gemini-2.5-flash",
+    "gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+    "gpt-4o": "openrouter/openai/gpt-4o",
+    "gpt-4o-mini": "openrouter/openai/gpt-4o-mini",
+    "claude-3.5-sonnet": "openrouter/anthropic/claude-3.5-sonnet",
+    "claude-3-haiku": "openrouter/anthropic/claude-3-haiku",
     # Default fallback models
-    "default": "github_copilot/gpt-4.1",
-    "fallback": "github_copilot/gpt-4o",
+    "default": "openrouter/google/gemini-2.0-flash-001",
+    "fallback": "openrouter/google/gemini-2.5-flash",
 }
 
 # Default model configuration
-DEFAULT_MODEL = "github_copilot/gpt-4.1"
-FALLBACK_MODEL = "github_copilot/gpt-4o"
+DEFAULT_MODEL = "openrouter/google/gemini-2.0-flash-001"
+FALLBACK_MODEL = "openrouter/google/gemini-2.5-flash"
 
 # Standard generation parameters for OpenRouter
 DEFAULT_GENERATION_CONFIG = {
