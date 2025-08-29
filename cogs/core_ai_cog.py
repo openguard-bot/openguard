@@ -452,6 +452,11 @@ class CoreAICog(commands.Cog, name="Core AI"):
         if guild_api_key:
             if guild_api_key.api_provider == "github_copilot":
                 auth_info = guild_api_key.github_auth_info
+            elif guild_api_key.api_provider == "openrouter":
+                # For OpenRouter, use the API key and ensure proper model handling
+                api_key = guild_api_key.api_key
+                model_used = await get_guild_config_async(guild_id, "AI_MODEL", DEFAULT_VERTEX_AI_MODEL)
+                print(f"Using OpenRouter API key for guild {guild_id} with model: {model_used}")
             else:
                 # For other providers, the key is the api_key
                 api_key = guild_api_key.api_key
@@ -548,6 +553,10 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 messages[-1]["content"] += "\n\nAttachments:\n" + "\n".join(image_descriptions)
 
         try:
+            # Log the provider and model being used for debugging
+            if guild_api_key:
+                print(f"Using {guild_api_key.api_provider} provider for guild {guild_id} with model: {model_used}")
+            
             response = await self.genai_client.generate_content(
                 model=model_used,
                 messages=messages,
@@ -593,7 +602,23 @@ class CoreAICog(commands.Cog, name="Core AI"):
                 print(f"Raw AI response: {ai_response_text}")
                 return None
         except Exception as e:
-            print(f"Exception during LiteLLM API call: {e}")
+            # Enhanced error handling for different providers
+            if guild_api_key and guild_api_key.api_provider == "openrouter":
+                error_str = str(e).lower()
+                if "quota" in error_str or "rate limit" in error_str:
+                    print(f"OpenRouter quota/rate limit exceeded for guild {guild_id} with model {model_used}: {e}")
+                elif "unauthorized" in error_str or "invalid api key" in error_str:
+                    print(f"OpenRouter authentication failed for guild {guild_id}: Invalid API key")
+                elif "model not found" in error_str or "not available" in error_str:
+                    print(f"OpenRouter model '{model_used}' not found or unavailable for guild {guild_id}: {e}")
+                elif "insufficient credits" in error_str or "balance" in error_str:
+                    print(f"OpenRouter insufficient credits for guild {guild_id} with model {model_used}: {e}")
+                else:
+                    print(f"OpenRouter API error for guild {guild_id} with model {model_used}: {e}")
+            elif guild_api_key and guild_api_key.api_provider == "github_copilot":
+                print(f"GitHub Copilot API error for guild {guild_id} with model {model_used}: {e}")
+            else:
+                print(f"Exception during LiteLLM API call for guild {guild_id} with model {model_used}: {e}")
             return None
 
     async def _execute_ban(self, message: discord.Message, reason: str, rule_violated: str):

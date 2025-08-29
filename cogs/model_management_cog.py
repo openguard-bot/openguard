@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import aiohttp
+import asyncio
 from .aimod_helpers.config_manager import (
     get_guild_config_async,
     set_guild_config,
@@ -42,6 +44,83 @@ class ApiKeyModal(discord.ui.Modal):
                 "Failed to set the guild's API key. Please try again later.",
                 ephemeral=True,
             )
+
+
+class OpenRouterApiKeyModal(discord.ui.Modal):
+    def __init__(self, guild_id: int):
+        super().__init__(title="Set OpenRouter API Key")
+        self.guild_id = guild_id
+
+        self.api_key_input = discord.ui.TextInput(
+            label="OpenRouter API Key",
+            style=discord.TextStyle.short,
+            placeholder="sk-or-v1-...",
+            required=True,
+            max_length=200,
+        )
+        self.add_item(self.api_key_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        api_key = self.api_key_input.value.strip()
+        
+        # Validate OpenRouter key format
+        if not api_key.startswith("sk-or-v1-"):
+            await interaction.response.send_message(
+                "❌ Invalid OpenRouter API key format. OpenRouter keys must start with `sk-or-v1-`.",
+                ephemeral=True,
+            )
+            return
+
+        # Test the API key
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            is_valid = await self._test_openrouter_key(api_key)
+            if not is_valid:
+                await interaction.followup.send(
+                    "❌ The provided OpenRouter API key is invalid or has insufficient permissions. Please check your key and try again.",
+                    ephemeral=True,
+                )
+                return
+        except Exception as e:
+            await interaction.followup.send(
+                f"❌ Failed to validate the OpenRouter API key: {str(e)}",
+                ephemeral=True,
+            )
+            return
+
+        # Store the validated key
+        success = await set_guild_api_key(self.guild_id, api_provider="openrouter", key_data=api_key)
+
+        if success:
+            await interaction.followup.send(
+                "✅ OpenRouter API key has been set successfully and validated!",
+                ephemeral=True,
+            )
+        else:
+            await interaction.followup.send(
+                "❌ Failed to store the OpenRouter API key. Please try again later.",
+                ephemeral=True,
+            )
+
+    async def _test_openrouter_key(self, api_key: str) -> bool:
+        """Test the OpenRouter API key by making a simple API call."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                
+                # Test with a simple models list request
+                async with session.get(
+                    "https://openrouter.ai/api/v1/models",
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return response.status == 200
+        except Exception:
+            return False
 
 
 class ModelManagementCog(commands.Cog, name="Model Management"):
@@ -156,6 +235,16 @@ class ModelManagementCog(commands.Cog, name="Model Management"):
     async def byok_copilot_login(self, ctx: commands.Context):
         """Initiates the GitHub Copilot device authentication flow for the guild."""
         await start_copilot_login(ctx, ctx.guild.id)
+
+    @byok.command(
+        name="openrouter",
+        description="Set the guild's OpenRouter API key for AI moderation.",
+    )
+    @app_commands.checks.has_permissions(administrator=True)
+    async def byok_openrouter(self, interaction: discord.Interaction):
+        """Sets the guild's OpenRouter API key via a secure modal."""
+        modal = OpenRouterApiKeyModal(guild_id=interaction.guild.id)
+        await interaction.response.send_modal(modal)
 
 
 async def setup(bot: commands.Bot):

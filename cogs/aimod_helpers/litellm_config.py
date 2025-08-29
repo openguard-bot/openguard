@@ -92,7 +92,7 @@ class LiteLLMClient:
         **kwargs,
     ) -> Any:
         """
-        Generate content using LiteLLM with OpenRouter.
+        Generate content using LiteLLM with support for multiple providers including OpenRouter.
 
         Args:
             model: Model name to use
@@ -114,11 +114,12 @@ class LiteLLMClient:
         # Determine the API key to use
         final_api_key = api_key or self.api_key
 
-        # Prepare extra headers
-        extra_headers = {
-            "editor-version": "vscode/1.85.1",
-            "Copilot-Integration-Id": "vscode-chat",
-        }
+        # Prepare extra headers based on provider type
+        extra_headers = self._get_provider_headers(final_api_key, final_model_name)
+
+        # Handle OpenRouter model name mapping
+        if self._is_openrouter_key(final_api_key):
+            final_model_name = self._ensure_openrouter_model_prefix(final_model_name)
 
         try:
             # Make the API call using LiteLLM
@@ -135,20 +136,22 @@ class LiteLLMClient:
             return LiteLLMResponse(response)
 
         except Exception as e:
-            print(f"Error calling API with model {final_model_name}: {e}")
+            # Handle OpenRouter-specific errors
+            if self._is_openrouter_key(final_api_key):
+                self._handle_openrouter_error(e, final_model_name)
+            else:
+                print(f"Error calling API with model {final_model_name}: {e}")
 
             # Try fallback model if the primary model fails
             if final_model_name != FALLBACK_MODEL:
                 print(f"Retrying with fallback model: {FALLBACK_MODEL}")
                 try:
+                    fallback_headers = self._get_provider_headers(self.api_key, FALLBACK_MODEL)
                     response = await acompletion(
                         model=FALLBACK_MODEL,
                         messages=messages,
                         api_key=self.api_key,  # Use default key for fallback
-                        extra_headers={
-                            "editor-version": "vscode/1.85.1",
-                            "Copilot-Integration-Id": "vscode-chat",
-                        },
+                        extra_headers=fallback_headers,
                         auth=auth_info,
                         **generation_config,
                     )
@@ -157,6 +160,74 @@ class LiteLLMClient:
                     print(f"Fallback model also failed: {fallback_error}")
 
             raise e
+
+    def _is_openrouter_key(self, api_key: Optional[str]) -> bool:
+        """Check if the API key is an OpenRouter key."""
+        return api_key is not None and api_key.startswith("sk-or-v1-")
+
+    def _get_provider_headers(self, api_key: Optional[str], model_name: str) -> Dict[str, str]:
+        """Get provider-specific headers based on the API key and model."""
+        if self._is_openrouter_key(api_key):
+            # OpenRouter-specific headers
+            return {
+                "HTTP-Referer": "https://github.com/openguard-1/openguard",
+                "X-Title": "OpenGuard AI Moderation Bot",
+            }
+        else:
+            # Default headers for GitHub Copilot and other providers
+            return {
+                "editor-version": "vscode/1.85.1",
+                "Copilot-Integration-Id": "vscode-chat",
+            }
+
+    def _ensure_openrouter_model_prefix(self, model_name: str) -> str:
+        """Ensure OpenRouter models have the correct prefix."""
+        # If the model already has openrouter/ prefix, use as-is
+        if model_name.startswith("openrouter/"):
+            return model_name
+        
+        # If it's a known model that should be mapped to OpenRouter, add prefix
+        # This handles cases where users specify just the model name without provider
+        openrouter_models = [
+            "google/gemini-2.5-pro",
+            "google/gemini-2.5-flash",
+            "google/gemini-2.5-flash-lite",
+            "anthropic/claude-3.5-sonnet",
+            "anthropic/claude-3-haiku",
+            "openai/gpt-4o",
+            "openai/gpt-4o-mini",
+            "meta-llama/llama-3.1-405b-instruct",
+            "meta-llama/llama-3.1-70b-instruct",
+            "meta-llama/llama-3.1-8b-instruct",
+        ]
+        
+        # Check if the model name matches any known OpenRouter model patterns
+        for or_model in openrouter_models:
+            if model_name == or_model or model_name == or_model.split("/")[-1]:
+                return f"openrouter/{or_model}"
+        
+        # For other models, assume they need the openrouter/ prefix if using OpenRouter key
+        if "/" not in model_name:
+            # Simple model name, might need provider prefix
+            return f"openrouter/{model_name}"
+        
+        # Model already has provider info, use as-is
+        return model_name
+
+    def _handle_openrouter_error(self, error: Exception, model_name: str) -> None:
+        """Handle OpenRouter-specific errors with detailed logging."""
+        error_str = str(error).lower()
+        
+        if "quota" in error_str or "rate limit" in error_str:
+            print(f"OpenRouter quota/rate limit exceeded for model {model_name}: {error}")
+        elif "unauthorized" in error_str or "invalid api key" in error_str:
+            print(f"OpenRouter authentication failed for model {model_name}: {error}")
+        elif "model not found" in error_str or "not available" in error_str:
+            print(f"OpenRouter model {model_name} not found or unavailable: {error}")
+        elif "insufficient credits" in error_str or "balance" in error_str:
+            print(f"OpenRouter insufficient credits for model {model_name}: {error}")
+        else:
+            print(f"OpenRouter API error for model {model_name}: {error}")
 
 
 class LiteLLMResponse:
