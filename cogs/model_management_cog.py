@@ -181,14 +181,24 @@ class ModelManagementCog(commands.Cog, name="Model Management"):
     @byok.command(name="set", description="Set the guild's API key for a specific provider.")
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.describe(provider="The provider to set the key for (e.g., 'openai', 'anthropic').")
-    async def byok_set(self, interaction: discord.Interaction, provider: str):
+    async def byok_set(self, ctx: commands.Context, provider: str):
         """Sets the guild's API key via a modal."""
-        modal = ApiKeyModal(
-            title=f"Set API Key for {provider}",
-            provider=provider,
-            guild_id=interaction.guild.id,
-        )
-        await interaction.response.send_modal(modal)
+        # Check if this is a slash command (has interaction) or text command
+        if ctx.interaction:
+            # Slash command - can use modal
+            modal = ApiKeyModal(
+                title=f"Set API Key for {provider}",
+                provider=provider,
+                guild_id=ctx.guild.id,
+            )
+            await ctx.interaction.response.send_modal(modal)
+        else:
+            # Text command - cannot use modal, inform user to use slash command
+            await ctx.send(
+                "⚠️ This command requires the use of a secure modal for API key input. "
+                "Please use the slash command version: `/byok set` instead of the text command.",
+                ephemeral=False,
+            )
 
     @byok.command(
         name="info",
@@ -241,10 +251,20 @@ class ModelManagementCog(commands.Cog, name="Model Management"):
         description="Set the guild's OpenRouter API key for AI moderation.",
     )
     @app_commands.checks.has_permissions(administrator=True)
-    async def byok_openrouter(self, interaction: discord.Interaction):
+    async def byok_openrouter(self, ctx: commands.Context):
         """Sets the guild's OpenRouter API key via a secure modal."""
-        modal = OpenRouterApiKeyModal(guild_id=interaction.guild.id)
-        await interaction.response.send_modal(modal)
+        # Check if this is a slash command (has interaction) or text command
+        if ctx.interaction:
+            # Slash command - can use modal
+            modal = OpenRouterApiKeyModal(guild_id=ctx.guild.id)
+            await ctx.interaction.response.send_modal(modal)
+        else:
+            # Text command - cannot use modal, inform user to use slash command
+            await ctx.send(
+                "⚠️ This command requires the use of a secure modal for API key input. "
+                "Please use the slash command version: `/byok openrouter` instead of the text command.",
+                ephemeral=False,
+            )
 
 
 async def setup(bot: commands.Bot):
