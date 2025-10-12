@@ -47,7 +47,7 @@ uv pip install -r pyproject.toml --group dashboard-backend --group dev
 ### Running the Bot
 
 ```sh
-python main.py
+python bot.py
 ```
 
 ## Usage
